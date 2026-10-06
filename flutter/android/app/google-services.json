@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1072830106109",
+    "project_id": "baqueano-natales-prod",
+    "storage_bucket": "baqueano-natales-prod.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072830106109:android:fbc1b17131d59b0d133194",
+        "android_client_info": {
+          "package_name": "cl.baqueanonatales"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072830106109-rb18p4oksc8607kr9c80i6mv92112kf5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales",
+            "certificate_hash": "5c1e05a31092654bc77c8560d7f2fb6b33e0b9f5"
+          }
+        },
+        {
+          "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrbLvF_vLxm-l0u6lm08Tk3TK8C8fHfbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

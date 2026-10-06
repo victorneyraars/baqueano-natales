@@ -2,21 +2,33 @@
 Baqueano Natales - Backend API
 Entry point de FastAPI.
 """
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.firebase import init_firebase
 from app.core.logging import setup_logging
+from app.modules.auth.routes import router as auth_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle: arranque y apagado."""
     setup_logging()
-    logger = __import__("logging").getLogger(__name__)
     logger.info(f"Iniciando Baqueano Natales API [{settings.ENVIRONMENT}]")
+
+    # Inicializar Firebase Admin SDK
+    try:
+        init_firebase()
+    except Exception as e:
+        logger.error(f"Error inicializando Firebase: {e}")
+        raise
+
     yield
     logger.info("Cerrando Baqueano Natales API")
 
@@ -30,7 +42,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS - se ajustará cuando tengamos el dominio definitivo
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -44,6 +56,15 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------
+# Routers
+# ---------------------------------------------------------
+app.include_router(auth_router, prefix="/api/v1")
+
+
+# ---------------------------------------------------------
+# Endpoints de sistema
+# ---------------------------------------------------------
 @app.get("/health", tags=["system"])
 async def health():
     """Healthcheck para Docker y monitoreo."""

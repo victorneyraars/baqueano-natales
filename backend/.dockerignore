@@ -46,3 +46,10 @@ uploads/
 # --- Docs ---
 README.md
 docs/
+
+# --- Secretos (NUNCA a la imagen) ---
+secrets/
+*.pem
+*.key
+*.jks
+*.keystore

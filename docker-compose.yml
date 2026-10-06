@@ -52,6 +52,7 @@ services:
     volumes:
       # Hot reload en dev (comentado por default, se activa con override)
       - ./backend/app:/app/app
+      - ./backend/secrets:/app/secrets:ro
     expose:
       - "8000"
     healthcheck:
