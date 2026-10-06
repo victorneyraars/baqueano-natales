@@ -68,7 +68,16 @@ async def get_or_create_user_from_firebase(
         if len(parts) > 1:
             apellido_parsed = parts[1]
 
-    # 4. Crear o actualizar
+    # 4. Determinar rol inicial
+    # Si el email está en ADMIN_EMAILS, se crea directamente como admin
+    from app.core.config import settings
+
+    rol_inicial = RolUsuario.CLIENTE
+    if email and email.lower() in [e.lower() for e in settings.admin_emails_list]:
+        rol_inicial = RolUsuario.ADMIN
+        logger.info(f"Email admin detectado en login: {email}")
+
+    # 5. Crear o actualizar
     if user is None:
         # Usuario nuevo
         user = Usuario(
@@ -77,7 +86,7 @@ async def get_or_create_user_from_firebase(
             nombre=nombre_parsed,
             apellido=apellido_parsed,
             avatar_url=avatar_url,
-            rol=RolUsuario.CLIENTE,
+            rol=rol_inicial,
             tiene_google=True,
             ultimo_login=datetime.now(timezone.utc),
         )

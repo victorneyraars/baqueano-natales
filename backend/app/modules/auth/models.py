@@ -71,7 +71,11 @@ class Usuario(Base):
 
     # Rol y estado
     rol: Mapped[RolUsuario] = mapped_column(
-        SQLEnum(RolUsuario, name="rol_usuario"),
+        SQLEnum(
+            RolUsuario,
+            name="rol_usuario",
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=RolUsuario.CLIENTE,
         index=True,
