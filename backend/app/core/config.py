@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     # --- Admin ---
     ADMIN_EMAILS: str = ""
 
+    # --- Storage de avatares ---
+    AVATAR_STORAGE_PATH: str = "/app/media/avatars"
+    PUBLIC_API_URL: str = "https://api.baqueanonatales.com"
+    MAX_AVATAR_SIZE_BYTES: int = 5 * 1024 * 1024  # 5 MB
+
     @property
     def admin_emails_list(self) -> list[str]:
         """Lista de emails admin parseados."""
@@ -86,3 +91,4 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+

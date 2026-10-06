@@ -33,6 +33,10 @@ requests==2.32.3
 # --- Rate limiting ---
 slowapi==0.1.9
 
+# --- Procesamiento de imágenes ---
+Pillow==11.0.0
+filetype==1.2.0
+
 # --- Utilidades ---
 python-json-logger==3.2.1
 phonenumbers==8.13.52

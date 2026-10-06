@@ -53,6 +53,7 @@ services:
       # Hot reload en dev (comentado por default, se activa con override)
       - ./backend/app:/app/app
       - ./backend/secrets:/app/secrets:ro
+      - media_data:/app/media
     expose:
       - "8000"
     healthcheck:
@@ -79,6 +80,7 @@ services:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
       - nginx_cache:/var/cache/nginx
+      - media_data:/var/www/media:ro
       # Certificados Let's Encrypt (se montará cuando los tengamos)
       # - ./deploy/certbot/conf:/etc/letsencrypt:ro
       # - ./deploy/certbot/www:/var/www/certbot:ro
@@ -95,6 +97,8 @@ volumes:
   postgres_data:
     driver: local
   nginx_cache:
+    driver: local
+  media_data:
     driver: local
 
 # ---------------------------------------------------------
