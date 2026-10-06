@@ -1,0 +1,78 @@
+# --- Entornos ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+
+# --- Flutter/Dart ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+.idea/
+.vscode/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Docker ---
+*.pid
+*.seed
+*.pid.lock
+
+# --- Secretos ---
+*.jks
+*.keystore
+*.pem
+*.key
+firebase-service-account.json
+google-services.json
+*.gpg
+.env.production
+.env.staging
+
+# --- Datos locales ---
+media/
+uploads/
+logs/
+*.log
+!deploy/scripts/*.log
+
+# --- Backups ---
+*.bak
+*.backup
+backups/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# --- IDE ---
+*.sublime-*
+*.code-workspace

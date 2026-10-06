@@ -1,0 +1,43 @@
+# =========================================================
+# Baqueano Natales - Backend dependencies
+# =========================================================
+
+# --- Core web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# --- Base de datos ---
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+
+# --- Validación y configuración ---
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# --- Auth y seguridad ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+pyjwt==2.10.1
+
+# --- Firebase Admin (Auth + FCM) ---
+firebase-admin==6.6.0
+
+# --- HTTP client (para APIs externas) ---
+httpx==0.28.1
+requests==2.32.3
+
+# --- Rate limiting ---
+slowapi==0.1.9
+
+# --- Utilidades ---
+python-json-logger==3.2.1
+phonenumbers==8.13.52
+pyotp==2.9.0
+
+# --- Tests (dev) ---
+pytest==8.3.4
+pytest-asyncio==0.25.0

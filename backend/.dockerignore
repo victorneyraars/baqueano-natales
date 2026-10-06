@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+
+# --- Entorno ---
+.env
+.env.*
+
+# --- Git ---
+.git/
+.gitignore
+.gitattributes
+
+# --- IDE ---
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# --- Docker ---
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# --- Datos ---
+logs/
+media/
+uploads/
+*.log
+
+# --- Docs ---
+README.md
+docs/
