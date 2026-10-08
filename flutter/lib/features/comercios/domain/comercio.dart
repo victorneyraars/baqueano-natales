@@ -9,6 +9,8 @@
 /// son nullables para permitir el parseo de las 3 variantes.
 library;
 
+import 'package:flutter/foundation.dart';
+
 import 'package:baqueano_natales/features/comercios/domain/categoria.dart';
 import 'package:baqueano_natales/features/comercios/domain/horario.dart';
 
@@ -20,7 +22,6 @@ enum EstadoComercio {
   rechazado,
   suspendido;
 
-  /// Parsea desde string del backend.
   static EstadoComercio fromString(String? value) {
     switch (value) {
       case 'borrador':
@@ -38,7 +39,6 @@ enum EstadoComercio {
     }
   }
 
-  /// Nombre legible en español.
   String get label {
     switch (this) {
       case EstadoComercio.borrador:
@@ -76,38 +76,33 @@ class Comercio {
     this.whatsapp,
     this.email,
     this.sitioWeb,
-    // Estado (solo en privado/admin)
     this.estado,
     this.motivoRechazo,
     this.destacado = false,
     this.verificadoEn,
     this.verificadoPorId,
     this.activo = true,
-    // Delivery
     this.aceptaDelivery = false,
     this.aceptaRetiro = true,
     this.costoEnvioClp = 0,
     this.pedidoMinimoClp = 0,
     this.radioEntregaKm,
     this.tiempoPreparacionMin,
-    // Stats
     this.ratingPromedio = 0,
     this.totalResenas = 0,
-    // Metadata
     this.propietarioId,
     this.createdAt,
     this.updatedAt,
-    // Horarios (solo en detalle/privado)
     this.horarios = const [],
   });
 
-  final String id; // UUID
+  final String id;
   final String slug;
   final String nombre;
   final String? descripcionCorta;
   final String? descripcionLarga;
   final Categoria? categoria;
-  final String? categoriaId; // solo viene en respuestas admin
+  final String? categoriaId;
   final String direccion;
   final String ciudad;
   final String region;
@@ -121,7 +116,6 @@ class Comercio {
   final String? email;
   final String? sitioWeb;
 
-  // Estado
   final EstadoComercio? estado;
   final String? motivoRechazo;
   final bool destacado;
@@ -129,7 +123,6 @@ class Comercio {
   final String? verificadoPorId;
   final bool activo;
 
-  // Delivery
   final bool aceptaDelivery;
   final bool aceptaRetiro;
   final int costoEnvioClp;
@@ -137,96 +130,176 @@ class Comercio {
   final double? radioEntregaKm;
   final int? tiempoPreparacionMin;
 
-  // Stats
   final double ratingPromedio;
   final int totalResenas;
 
-  // Metadata
   final String? propietarioId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  // Horarios
   final List<Horario> horarios;
 
   // =========================================================
   // Helpers
   // =========================================================
 
-  /// Nombre corto para mostrar (nombre + categoría).
   String get nombreConCategoria {
     if (categoria == null) return nombre;
     return '$nombre · ${categoria!.nombre}';
   }
 
-  /// Rango de precio legible.
   String get costoEnvioLegible {
     if (!aceptaDelivery) return 'Sin delivery';
     if (costoEnvioClp == 0) return 'Envío gratis';
     return 'Envío \$${costoEnvioClp.toString()}';
   }
 
-  /// Rating con 1 decimal.
   String get ratingLegible => ratingPromedio.toStringAsFixed(1);
 
-  /// ¿Está verificado públicamente?
   bool get esPublico => estado == EstadoComercio.verificado && activo;
 
+  // =========================================================
+  // fromJson — DEFENSIVO
+  // =========================================================
   factory Comercio.fromJson(Map<String, dynamic> json) {
-    return Comercio(
-      id: json['id'] as String,
-      slug: json['slug'] as String,
-      nombre: json['nombre'] as String,
-      descripcionCorta: json['descripcion_corta'] as String?,
-      descripcionLarga: json['descripcion_larga'] as String?,
-      categoria: json['categoria'] != null
-          ? Categoria.fromJson(json['categoria'] as Map<String, dynamic>)
-          : null,
-      categoriaId: json['categoria_id'] as String?,
-      direccion: json['direccion'] as String,
-      ciudad: json['ciudad'] as String? ?? 'Puerto Natales',
-      region: json['region'] as String? ?? 'Magallanes',
-      latitud: _toDouble(json['latitud']),
-      longitud: _toDouble(json['longitud']),
-      referencia: json['referencia'] as String?,
-      logoUrl: json['logo_url'] as String?,
-      portadaUrl: json['portada_url'] as String?,
-      telefono: json['telefono'] as String?,
-      whatsapp: json['whatsapp'] as String?,
-      email: json['email'] as String?,
-      sitioWeb: json['sitio_web'] as String?,
-      estado: json['estado'] != null
-          ? EstadoComercio.fromString(json['estado'] as String?)
-          : null,
-      motivoRechazo: json['motivo_rechazo'] as String?,
-      destacado: json['destacado'] as bool? ?? false,
-      verificadoEn: json['verificado_en'] != null
-          ? DateTime.parse(json['verificado_en'] as String)
-          : null,
-      verificadoPorId: json['verificado_por_id'] as String?,
-      activo: json['activo'] as bool? ?? true,
-      aceptaDelivery: json['acepta_delivery'] as bool? ?? false,
-      aceptaRetiro: json['acepta_retiro'] as bool? ?? true,
-      costoEnvioClp: (json['costo_envio_clp'] as num?)?.toInt() ?? 0,
-      pedidoMinimoClp: (json['pedido_minimo_clp'] as num?)?.toInt() ?? 0,
-      radioEntregaKm: _toDouble(json['radio_entrega_km']),
-      tiempoPreparacionMin: (json['tiempo_preparacion_min'] as num?)?.toInt(),
-      ratingPromedio: _toDouble(json['rating_promedio']) ?? 0,
-      totalResenas: (json['total_resenas'] as num?)?.toInt() ?? 0,
-      propietarioId: json['propietario_id'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
-      horarios: (json['horarios'] as List<dynamic>?)
-              ?.map((h) => Horario.fromJson(h as Map<String, dynamic>))
-              .toList() ??
-          const [],
-    );
+    try {
+      return Comercio(
+        id: _str(json, 'id'),
+        slug: _str(json, 'slug'),
+        nombre: _str(json, 'nombre'),
+        descripcionCorta: _strOrNull(json, 'descripcion_corta'),
+        descripcionLarga: _strOrNull(json, 'descripcion_larga'),
+        categoria: _categoriaFromJson(json['categoria']),
+        categoriaId: _strOrNull(json, 'categoria_id'),
+        direccion: _str(json, 'direccion'),
+        ciudad: _strOr(json, 'ciudad', 'Puerto Natales'),
+        region: _strOr(json, 'region', 'Magallanes'),
+        latitud: _toDouble(json['latitud']),
+        longitud: _toDouble(json['longitud']),
+        referencia: _strOrNull(json, 'referencia'),
+        logoUrl: _strOrNull(json, 'logo_url'),
+        portadaUrl: _strOrNull(json, 'portada_url'),
+        telefono: _strOrNull(json, 'telefono'),
+        whatsapp: _strOrNull(json, 'whatsapp'),
+        email: _strOrNull(json, 'email'),
+        sitioWeb: _strOrNull(json, 'sitio_web'),
+        estado: json['estado'] != null
+            ? EstadoComercio.fromString(json['estado'].toString())
+            : null,
+        motivoRechazo: _strOrNull(json, 'motivo_rechazo'),
+        destacado: (json['destacado'] as bool?) ?? false,
+        verificadoEn: _dateOrNull(json['verificado_en']),
+        verificadoPorId: _strOrNull(json, 'verificado_por_id'),
+        activo: (json['activo'] as bool?) ?? true,
+        aceptaDelivery: (json['acepta_delivery'] as bool?) ?? false,
+        aceptaRetiro: (json['acepta_retiro'] as bool?) ?? true,
+        costoEnvioClp: _toInt(json['costo_envio_clp']) ?? 0,
+        pedidoMinimoClp: _toInt(json['pedido_minimo_clp']) ?? 0,
+        radioEntregaKm: _toDouble(json['radio_entrega_km']),
+        tiempoPreparacionMin: _toInt(json['tiempo_preparacion_min']),
+        ratingPromedio: _toDouble(json['rating_promedio']) ?? 0,
+        totalResenas: _toInt(json['total_resenas']) ?? 0,
+        propietarioId: _strOrNull(json, 'propietario_id'),
+        createdAt: _dateOrNull(json['created_at']),
+        updatedAt: _dateOrNull(json['updated_at']),
+        horarios: _horariosFromJson(json['horarios']),
+      );
+    } catch (e, st) {
+      // Log detallado del fallo para debug
+      debugPrint('[Comercio.fromJson] ❌ Parse error: $e');
+      debugPrint('[Comercio.fromJson] Stack: $st');
+      debugPrint('[Comercio.fromJson] JSON crudo: $json');
+      rethrow;
+    }
   }
 
+  // ---------------------------------------------------------
+  // Helpers de parseo defensivo
+  // ---------------------------------------------------------
+  static String _str(Map<String, dynamic> json, String key) {
+    final v = json[key];
+    if (v is String && v.isNotEmpty) return v;
+    if (v == null) {
+      debugPrint('[Comercio] Campo requerido "$key" es null');
+      return '';
+    }
+    return v.toString();
+  }
+
+  static String _strOr(Map<String, dynamic> json, String key, String fallback) {
+    final v = json[key];
+    if (v is String && v.isNotEmpty) return v;
+    return fallback;
+  }
+
+  static String? _strOrNull(Map<String, dynamic> json, String key) {
+    final v = json[key];
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    return v.toString();
+  }
+
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  static DateTime? _dateOrNull(dynamic v) {
+    if (v == null) return null;
+    if (v is String && v.isNotEmpty) {
+      try {
+        return DateTime.parse(v);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  static Categoria? _categoriaFromJson(dynamic v) {
+    if (v == null) return null;
+    if (v is Map<String, dynamic>) {
+      try {
+        return Categoria.fromJson(v);
+      } catch (e) {
+        debugPrint('[Comercio] Error parseando categoria: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  static List<Horario> _horariosFromJson(dynamic v) {
+    if (v == null) return const [];
+    if (v is List) {
+      final result = <Horario>[];
+      for (final item in v) {
+        try {
+          if (item is Map<String, dynamic>) {
+            result.add(Horario.fromJson(item));
+          }
+        } catch (e) {
+          debugPrint('[Comercio] Error parseando horario: $e');
+        }
+      }
+      return result;
+    }
+    return const [];
+  }
+
+  // =========================================================
+  // toJson
+  // =========================================================
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -267,14 +340,6 @@ class Comercio {
       'updated_at': updatedAt?.toIso8601String(),
       'horarios': horarios.map((h) => h.toJson()).toList(),
     };
-  }
-
-  /// Convierte num/string/null a double?.
-  static double? _toDouble(dynamic v) {
-    if (v == null) return null;
-    if (v is num) return v.toDouble();
-    if (v is String) return double.tryParse(v);
-    return null;
   }
 
   @override
