@@ -1,19 +1,35 @@
 # Baqueano Natales — Contexto Completo del Proyecto
 
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-08
 > **Propósito:** Documento maestro que resume el estado completo del proyecto para retomar el trabajo en cualquier momento sin perder contexto.
+
+---
+
+## 📋 Changelog reciente
+
+### 2026-10-08 — Fix login con Google (end-to-end)
+- ✅ **Login con Google funcional end-to-end** (Google → Firebase → Backend → JWT → Home)
+- ✅ **Persistencia de sesión funcional** (sobrevive al cierre de la app)
+- 🔧 Migración de `google_sign_in` **v7 → v6** (v7 tenía bug conocido con Credential Manager)
+- 🔧 Agregado `serverClientId` al constructor de `GoogleSignIn` (obligatorio para `idToken` en Android)
+- 🔧 Deshabilitado Credential Manager vía `meta-data` en AndroidManifest
+- 🔧 Agregado `network_security_config.xml` para permitir HTTP en dev
+- 🔧 Cambio de `https://` a `http://` en `AppConfig.dev` (server no tiene SSL aún)
+- ⚠️ **SHA-1 de debug cambió** (ver sección Firebase)
 
 ---
 
 ## 📌 Resumen ejecutivo
 
-**Baqueano Natales** es una superapp regional para Puerto Natales, Chile (movilidad, delivery, comercio local). Actualmente en desarrollo activo con backend desplegado y app Flutter con login funcional.
+**Baqueano Natales** es una superapp regional para Puerto Natales, Chile (movilidad, delivery, comercio local). Actualmente en desarrollo activo con backend desplegado y app Flutter con login funcional completo.
 
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
 - ✅ Login con Google funcional **end-to-end**
+- ✅ Persistencia de sesión funcional
+- ⏳ Pendiente: probar app admin con login
 - ⏳ Pendiente: features core (mapa, delivery, carta QR, recompensas)
 
 ---
@@ -33,6 +49,10 @@
 | **Usuario** | `deploy` (sudo configurado) |
 
 **Puertos abiertos (UFW):** 22 (SSH), 80 (HTTP), 443 (HTTPS).
+
+**Estado actual del server:**
+- ✅ HTTP (puerto 80) responde OK: `curl http://104.129.59.151/health` → `{"status":"ok"}`
+- ❌ HTTPS (puerto 443) **no configurado** (Let's Encrypt es Fase 6)
 
 **Servicios corriendo (Docker):**
 - `baqueano_backend` — FastAPI en `127.0.0.1:8000`
@@ -255,10 +275,14 @@ flutter/
 │           └── app_router.dart      # GoRouter + auto-redirect
 ├── android/
 │   ├── app/
-│   │   ├── build.gradle.kts         # Flavors client + admin
+│   │   ├── build.gradle.kts         # Flavors client + admin + deps Credential Manager
 │   │   ├── google-services.json     # Firebase (SÍ va al repo)
-│   │   └── src/main/kotlin/cl/baqueanonatales/
-│   │       └── MainActivity.kt
+│   │   └── src/main/
+│   │       ├── AndroidManifest.xml  # Con meta-data + networkSecurityConfig
+│   │       ├── kotlin/cl/baqueanonatales/
+│   │       │   └── MainActivity.kt
+│   │       └── res/xml/
+│   │           └── network_security_config.xml  # Permite HTTP solo a 104.129.59.151
 │   └── gradle.properties
 ├── ios/
 ├── pubspec.yaml
@@ -272,7 +296,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.2.0    # v6 (v7 tiene bug con Credential Manager)
   dio: ^5.7.0
   flutter_secure_storage: ^9.2.2
   go_router: ^14.6.2
@@ -286,9 +310,47 @@ dev_dependencies:
 **Notas sobre versiones resueltas:**
 - `firebase_core: 3.15.2` (resolvió más nueva)
 - `firebase_auth: 5.7.0` (resolvió más nueva)
-- `google_sign_in: 7.2.0` (API v7, nueva)
+- `google_sign_in: 6.3.0` (API v6, estable)
 - `dio: 5.11.1`
 - `flutter_riverpod: 2.6.1`
+
+### ⚠️ Configuración nativa Android (CRÍTICA para login con Google)
+
+**1. `android/app/build.gradle.kts` — bloque `dependencies` obligatorio:**
+```kotlin
+dependencies {
+    // Credential Manager (requerido por google_sign_in v7)
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+}
+```
+> Nota: aunque usamos v6, estas deps se dejaron por si se migra a v7 en el futuro. No molestan.
+
+**2. `AndroidManifest.xml` — dos elementos obligatorios:**
+```xml
+<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+    <!-- Deshabilitar Credential Manager para forzar el flujo clásico -->
+    <meta-data
+        android:name="com.google.android.gms.credentials.API_ENABLED"
+        android:value="false" />
+</application>
+```
+
+**3. `res/xml/network_security_config.xml`:**
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permitir HTTP sin cifrar SOLO para el server de desarrollo -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">104.129.59.151</domain>
+    </domain-config>
+</network-security-config>
+```
+
+**Razón:** Android 9+ bloquea HTTP en claro por defecto. Esta config permite HTTP **solo** al server de dev, manteniendo HTTPS como requerido para todo el resto.
 
 ### Arquitectura Flutter
 
@@ -302,7 +364,16 @@ dev_dependencies:
 
 **Storage:** `flutter_secure_storage` con `encryptedSharedPreferences: true` (Android Keystore).
 
-**Config central:** `AppConfig` con `AppType` (client/admin) y `Environment` (dev/prod). URLs según entorno.
+**Config central:** `AppConfig` con `AppType` (client/admin) y `Environment` (dev/prod).
+
+**API en dev:** `http://104.129.59.151` (HTTP, sin SSL — el server aún no tiene cert).
+**API en prod:** `https://api.baqueanonatales.com` (cuando se haga el cutover DNS).
+
+**AuthRepository — Google Sign-In v6:**
+- `GoogleSignIn(scopes: [...], serverClientId: AppConfig.googleServerClientId)`
+- `signIn()` → `GoogleSignInAccount`
+- `googleUser.authentication` → `idToken` + `accessToken`
+- **`serverClientId` es OBLIGATORIO** para obtener `idToken` en Android.
 
 ---
 
@@ -316,25 +387,37 @@ dev_dependencies:
 | **Plan** | Spark (gratuito) |
 
 ### Apps Android registradas
-| Package | Rol | Client ID |
+| Package | Rol | Client ID (Android) |
 |---|---|---|
-| `cl.baqueanonatales` | Cliente | `1072830106109-rb18p4oksc8607kr9c80i6mv92112kf5` (Android) |
-| `cl.baqueanonatales.admin` | Admin | `1072830106109-0dao16e11pjkg0pnrnejpn3abumenfhv` (Android) |
+| `cl.baqueanonatales` | Cliente | `1072830106109-rb18p4oksc8607kr9c80i6mv92112kf5` (SHA-1 viejo) |
+| `cl.baqueanonatales` | Cliente | `1072830106109-eh5i191lkg7d6185fr45c1difjvsqj66` (SHA-1 nuevo) |
+| `cl.baqueanonatales.admin` | Admin | `1072830106109-0dao16e11pjkg0pnrnejpn3abumenfhv` (SHA-1 viejo) |
 
 **Web Client ID (para serverClientId):**
 ```
 1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com
 ```
 
-**SHA-1 de debug:**
+### ⚠️ Huellas SHA (CAMBIARON el 2026-10-08)
+
+**SHA-1 de debug (ACTUAL):**
+```
+6E:0B:71:E0:63:01:E8:F7:CF:0E:3D:BC:1F:29:77:C8:D6:BE:63:3D
+```
+
+**SHA-256 de debug (ACTUAL):**
+```
+B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97:82:B2:20:7C:BE
+```
+
+**SHA-1 viejo (ya no válido, pero registrado en Firebase):**
 ```
 5C:1E:05:A3:10:92:65:4B:C7:7C:85:60:D7:F2:FB:6B:33:E0:B9:F5
 ```
 
-**SHA-256 de debug:**
-```
-04:0B:E2:3A:F2:A1:2F:B4:D2:CB:30:33:CB:3F:4D:11:07:50:40:62:01:25:91:EE:88:08:E2:C0:2A:EB:F9:A7
-```
+**⚠️ Acción pendiente:** La app **`cl.baqueanonatales.admin`** aún **NO** tiene registrado el SHA-1 nuevo. Hay que agregarlo cuando se pruebe el login de admin.
+
+**Nota:** El `debug.keystore` cambió (probablemente por reinstalación de Android Studio o cambio de PC). El SHA-1 viejo está en el doc antiguo y **ya no aplica**.
 
 ### Firebase Console
 - URL: `https://console.firebase.google.com/project/baqueano-natales-prod`
@@ -401,20 +484,30 @@ dev_dependencies:
 - Script de seed
 - Fix crítico: `values_callable` en ENUM RolUsuario
 
-### ✅ Fase 3.3 — Flutter base + login con Google (completada)
+### ✅ Fase 3.3 — Flutter base + login con Google (COMPLETADA 2026-10-08)
 - Proyecto Flutter con estructura feature-first
 - Flavors `client` (verde) + `admin` (morado)
 - Router GoRouter con auto-redirect
 - Splash + Login + Home
-- Login con Google funcional **end-to-end**
+- **Login con Google funcional end-to-end** (Google → Firebase → Backend → JWT → Home)
+- **Persistencia de sesión funcional** (sobrevive al cierre de la app)
 - JWT guardado en secure storage
-- Sesión persistente
+- Migración `google_sign_in` v7 → v6
+- Configuración nativa Android completa (Credential Manager off, network security config)
+- HTTP en dev (SSL pendiente para Fase 6)
 
-### ⏳ Fase 3.4 — Commit del código Flutter (en curso)
-- **Verificar** que todo el código Flutter está commiteado
-- **Push** al repo `baqueano-natales`
+### ✅ Fase 3.4 — Commit del código Flutter (COMPLETADA 2026-10-08)
+- Todo el código Flutter commiteado y pusheado
+- `CONTEXTO_PROYECTO.md` commiteado
+- Fix del login commiteado
 
-### ⏳ Fase 3.5 — Features core (pendiente)
+### ⏳ Fase 3.5 — Probar app admin con login (pendiente)
+- Agregar SHA-1 nuevo a `cl.baqueanonatales.admin` en Firebase Console
+- Descargar `google-services.json` actualizado
+- Correr `flutter run --flavor admin -t lib/main_admin.dart`
+- Verificar login + Home + persistencia
+
+### ⏳ Fase 3.6 — Features core (pendiente)
 - Mapa en vivo (Google Maps + WebSocket)
 - Delivery (flujo de pedidos)
 - Carta QR (menús interactivos)
@@ -431,10 +524,11 @@ dev_dependencies:
 - Subir AAB a Play Console
 - Completar metadata
 
-### ⏳ Fase 6 — Cutover DNS (pendiente)
+### ⏳ Fase 6 — Cutover DNS + SSL (pendiente)
 - Bajar TTL en Cloudflare
 - Cambiar A record de `api.baqueanonatales.com` a `104.129.59.151`
-- Emitir certificado Let's Encrypt en el server nuevo
+- **Emitir certificado Let's Encrypt en el server nuevo**
+- **Cambiar `AppConfig.dev` de `http://` a `https://`** (o dejar que prod lo use)
 - Verificar HTTPS
 
 ### ⏳ Fase 7 — Decommission server viejo (pendiente)
@@ -516,13 +610,32 @@ MAX_AVATAR_SIZE_BYTES=5242880
 ### Correr app Flutter (client)
 ```powershell
 cd D:\dev\baqueano-natales\flutter
-flutter run --flavor client -t lib/main_client.dart
+flutter run --flavor client -t lib/main_client.dart -d emulator-5554
 ```
 
 ### Correr app Flutter (admin)
 ```powershell
 cd D:\dev\baqueano-natales\flutter
-flutter run --flavor admin -t lib/main_admin.dart
+flutter run --flavor admin -t lib/main_admin.dart -d emulator-5554
+```
+
+### Rebuild limpio (cuando hay cambios nativos)
+```powershell
+cd D:\dev\baqueano-natales\flutter
+flutter clean
+flutter pub get
+flutter run --flavor client -t lib/main_client.dart -d emulator-5554
+```
+
+### Matar procesos Flutter bloqueados
+```powershell
+Get-Process | Where-Object { $_.ProcessName -match "flutter|dart" } | Stop-Process -Force -ErrorAction SilentlyContinue
+```
+
+### Ver SHA-1 debug actual (¡cambió!)
+```powershell
+cd D:\dev\baqueano-natales\flutter\android
+./gradlew signingReport
 ```
 
 ### Emulador — cold boot si se cuelga
@@ -546,9 +659,9 @@ ssh deploy@104.129.59.151 "cd baqueano-natales && docker compose build backend &
 ssh deploy@104.129.59.151 "cd baqueano-natales && docker compose exec -T db psql -U baqueano_user -d baqueano_natales -c 'SELECT id, email, rol FROM usuarios;'"
 ```
 
-### Verificar salud del backend
+### Verificar salud del backend (HTTP dev)
 ```bash
-curl -s http://104.129.59.151/health
+curl http://104.129.59.151/health
 ```
 
 ---
@@ -571,26 +684,27 @@ curl -s http://104.129.59.151/health
 ## 🎯 Estado exacto al retomar
 
 **Lo que está funcionando:**
-- Server nuevo con backend corriendo en `104.129.59.151`
+- Server nuevo con backend corriendo en `104.129.59.151` (HTTP)
 - Postgres 16 con tabla `usuarios`
 - 14 endpoints activos
 - 3 módulos backend completos
-- App Flutter client con login funcional
-- App Flutter admin (compila y corre, sin login probado)
-- Flujo end-to-end: Google Sign-In → Firebase → backend → JWT → Home
+- App Flutter client con **login funcional end-to-end**
+- App Flutter client con **persistencia de sesión funcional**
+- Home con datos reales (nombre, email, rol ADMIN)
+- Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
 
 **Lo que queda pendiente inmediato:**
-1. Commit del código Flutter (probablemente sin commitear)
-2. Probar app admin con login
-3. Probar persistencia de sesión (cerrar y reabrir app)
-4. Commit del `CONTEXTO_PROYECTO.md`
+1. **Probar app admin con login** (Fase 3.5)
+   - Antes: agregar nuevo SHA-1 a `cl.baqueanonatales.admin` en Firebase Console
+   - Descargar `google-services.json` actualizado
+2. Actualizar `google-services.json` de la app admin con el SHA-1 nuevo
 
 **Lo que falta por construir:**
-- Features core (mapa, delivery, carta QR, recompensas)
-- CI/CD (GitHub Actions)
-- Play Store setup
-- DNS cutover
-- Decommission server viejo
+- Features core (mapa, delivery, carta QR, recompensas) — Fase 3.6
+- CI/CD (GitHub Actions) — Fase 4
+- Play Store setup — Fase 5
+- DNS cutover + SSL — Fase 6
+- Decommission server viejo — Fase 7
 
 ---
 
@@ -609,11 +723,12 @@ Luego, los primeros comandos a correr son:
 
 2. **Verificar server:**
    ```bash
-   ssh deploy@104.129.59.151 "cd baqueano-natales && docker compose ps && curl -s localhost/health"
+   curl http://104.129.59.151/health
    ```
 
 3. **Verificar emulador (si aplica):**
    ```powershell
+   cd D:\dev\baqueano-natales\flutter
    flutter devices
    ```
 
