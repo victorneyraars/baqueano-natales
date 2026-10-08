@@ -1,7 +1,4 @@
 /// Pantalla Home.
-///
-/// Muestra el usuario logueado, su info, un botón de logout y
-/// accesos directos a las features disponibles.
 library;
 
 import 'package:flutter/material.dart';
@@ -44,7 +41,6 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     if (user == null) {
-      // No debería pasar (el router redirige), pero por las dudas.
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -132,7 +128,25 @@ class HomeScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // --- Features disponibles ---
+            // --- Mi actividad ---
+            Text(
+              'Mi actividad',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _FeatureCard(
+              icon: Icons.storefront,
+              title: 'Mis comercios',
+              subtitle: 'Gestioná tus locales y servicios',
+              onTap: () => context.push('/mis-comercios'),
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- Descubrí ---
             Text(
               'Descubrí',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -142,7 +156,7 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
 
             _FeatureCard(
-              icon: Icons.storefront,
+              icon: Icons.explore,
               title: 'Comercios',
               subtitle: 'Explorá locales y servicios de Puerto Natales',
               onTap: () => context.push('/comercios'),

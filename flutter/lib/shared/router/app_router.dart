@@ -1,11 +1,4 @@
 /// Router central de la aplicación.
-///
-/// Usa GoRouter con un `refreshListenable` que escucha el estado de
-/// autenticación. Cuando el estado cambia, el router reevalúa la ruta
-/// y redirige según corresponda:
-/// - AuthStatus.unknown         → /splash (cargando)
-/// - AuthStatus.unauthenticated → /login
-/// - AuthStatus.authenticated   → cualquier ruta autenticada permitida
 library;
 
 import 'package:flutter/material.dart';
@@ -16,10 +9,12 @@ import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_comercio_screen.dart';
+import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_mi_comercio_screen.dart';
+import 'package:baqueano_natales/features/comercios/presentation/screens/formulario_comercio_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/lista_comercios_screen.dart';
+import 'package:baqueano_natales/features/comercios/presentation/screens/mis_comercios_screen.dart';
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
 
-/// Escucha cambios en el provider de auth y notifica al router.
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
     ref.listen<AuthState>(authNotifierProvider, (previous, next) {
@@ -30,7 +25,6 @@ class _AuthChangeNotifier extends ChangeNotifier {
   }
 }
 
-/// Provider del router.
 final routerProvider = Provider<GoRouter>((ref) {
   final authChangeNotifier = _AuthChangeNotifier(ref);
 
@@ -45,20 +39,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       switch (authState.status) {
         case AuthStatus.unknown:
         case AuthStatus.loading:
-          // Cargando sesión u operación en curso: siempre splash.
           return location == '/splash' ? null : '/splash';
 
         case AuthStatus.unauthenticated:
-          // Sin sesión: solo login o splash.
           if (location == '/login') return null;
           return '/login';
 
         case AuthStatus.authenticated:
-          // Con sesión: no permitir volver a splash/login.
           if (location == '/splash' || location == '/login') {
             return '/home';
           }
-          // Permitir cualquier otra ruta autenticada.
           return null;
       }
     },
@@ -78,6 +68,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'home',
         builder: (context, state) => const HomeScreen(),
       ),
+
+      // =========================================================
+      // Comercios — público
+      // =========================================================
       GoRoute(
         path: '/comercios',
         name: 'comercios',
@@ -89,6 +83,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final slug = state.pathParameters['slug']!;
           return DetalleComercioScreen(slug: slug);
+        },
+      ),
+
+      // =========================================================
+      // Comercios — dueño (mis comercios)
+      // =========================================================
+      GoRoute(
+        path: '/mis-comercios',
+        name: 'mis-comercios',
+        builder: (context, state) => const MisComerciosScreen(),
+      ),
+      GoRoute(
+        path: '/mis-comercios/nuevo',
+        name: 'mis-comercios-nuevo',
+        builder: (context, state) => const FormularioComercioScreen(),
+      ),
+      GoRoute(
+        path: '/mis-comercios/:id',
+        name: 'mi-comercio-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleMiComercioScreen(id: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-comercios/:id/editar',
+        name: 'mi-comercio-editar',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FormularioComercioScreen(comercioId: id);
         },
       ),
     ],
