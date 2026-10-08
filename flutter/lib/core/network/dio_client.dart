@@ -40,8 +40,10 @@ class DioClient {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        // No lanzar excepción en códigos 4xx/5xx; los maneja el interceptor
-        validateStatus: (status) => status != null && status < 500,
+        // Solo 2xx son respuestas exitosas. Los 4xx/5xx se manejan
+        // como errores en el interceptor (mapea a ApiException).
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 300,
       ),
     );
 
