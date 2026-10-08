@@ -1,12 +1,12 @@
 /// Pantalla Home.
 ///
-/// Provisional: muestra el usuario logueado, su info y un botón de logout.
-/// Se reemplazará con la funcionalidad real (mapa, pedidos, etc.) en
-/// fases posteriores.
+/// Muestra el usuario logueado, su info, un botón de logout y
+/// accesos directos a las features disponibles.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 
@@ -132,7 +132,24 @@ class HomeScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // --- Placeholder de funcionalidad futura ---
+            // --- Features disponibles ---
+            Text(
+              'Descubrí',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _FeatureCard(
+              icon: Icons.storefront,
+              title: 'Comercios',
+              subtitle: 'Explorá locales y servicios de Puerto Natales',
+              onTap: () => context.push('/comercios'),
+            ),
+
+            const SizedBox(height: 24),
+
             Text(
               'Próximamente',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -141,22 +158,22 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            _FeatureCard(
+            const _FeatureCard(
               icon: Icons.map,
               title: 'Mapa en vivo',
               subtitle: 'Vehículos cercanos y pedidos',
             ),
-            _FeatureCard(
+            const _FeatureCard(
               icon: Icons.local_shipping,
               title: 'Delivery',
               subtitle: 'Pedidos a domicilio',
             ),
-            _FeatureCard(
+            const _FeatureCard(
               icon: Icons.qr_code,
               title: 'Carta QR',
               subtitle: 'Menús interactivos de comercios',
             ),
-            _FeatureCard(
+            const _FeatureCard(
               icon: Icons.redeem,
               title: 'Recompensas',
               subtitle: 'Acumulá puntos y canjeá beneficios',
@@ -173,30 +190,49 @@ class _FeatureCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final disponible = onTap != null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(icon, color: theme.colorScheme.primary),
+        leading: Icon(
+          icon,
+          color: disponible
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        ),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: disponible ? null : theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Próximamente')),
-          );
-        },
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 14,
+          color: disponible
+              ? null
+              : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        ),
+        onTap: onTap ??
+            () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Próximamente')),
+              );
+            },
       ),
     );
   }
