@@ -16,6 +16,12 @@
 - 🔧 Agregado `network_security_config.xml` para permitir HTTP en dev
 - 🔧 Cambio de `https://` a `http://` en `AppConfig.dev` (server no tiene SSL aún)
 - ⚠️ **SHA-1 de debug cambió** (ver sección Firebase)
+- ✅ **App admin verificada** (login + persistencia funcional en `flutter run --flavor admin`)
+
+### 2026-10-08 (cont.) — App admin verificada
+- ✅ Login con Google funcional en flavor admin
+- ✅ Home admin con tema morado + badge ADMIN
+- ✅ SHA-1 nuevo registrado en Firebase para `cl.baqueanonatales.admin`
 
 ---
 
@@ -415,7 +421,7 @@ B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97
 5C:1E:05:A3:10:92:65:4B:C7:7C:85:60:D7:F2:FB:6B:33:E0:B9:F5
 ```
 
-**⚠️ Acción pendiente:** La app **`cl.baqueanonatales.admin`** aún **NO** tiene registrado el SHA-1 nuevo. Hay que agregarlo cuando se pruebe el login de admin.
+**✅ Actualización 2026-10-08:** La app **`cl.baqueanonatales.admin`** ya tiene el SHA-1 nuevo registrado en Firebase. Se generó un client_id nuevo (`1072830106109-nv8q2jjt7kateq7cmqesg383entpu2sb`) que ya está en el `google-services.json` del repo.
 
 **Nota:** El `debug.keystore` cambió (probablemente por reinstalación de Android Studio o cambio de PC). El SHA-1 viejo está en el doc antiguo y **ya no aplica**.
 
@@ -501,11 +507,12 @@ B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97
 - `CONTEXTO_PROYECTO.md` commiteado
 - Fix del login commiteado
 
-### ⏳ Fase 3.5 — Probar app admin con login (pendiente)
-- Agregar SHA-1 nuevo a `cl.baqueanonatales.admin` en Firebase Console
-- Descargar `google-services.json` actualizado
-- Correr `flutter run --flavor admin -t lib/main_admin.dart`
-- Verificar login + Home + persistencia
+### ✅ Fase 3.5 — App admin con login (COMPLETADA 2026-10-08)
+- ✅ SHA-1 nuevo registrado en `cl.baqueanonatales.admin` en Firebase Console
+- ✅ `google-services.json` actualizado y commiteado
+- ✅ Login con Google funcional end-to-end en flavor admin
+- ✅ Home admin con tema morado + badge ADMIN
+- ✅ Misma arquitectura que client (comparte `home_screen.dart` por ahora)
 
 ### ⏳ Fase 3.6 — Features core (pendiente)
 - Mapa en vivo (Google Maps + WebSocket)
@@ -694,10 +701,10 @@ curl http://104.129.59.151/health
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
 
 **Lo que queda pendiente inmediato:**
-1. **Probar app admin con login** (Fase 3.5)
-   - Antes: agregar nuevo SHA-1 a `cl.baqueanonatales.admin` en Firebase Console
-   - Descargar `google-services.json` actualizado
-2. Actualizar `google-services.json` de la app admin con el SHA-1 nuevo
+1. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
+   - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
+2. **Features core** (Fase 3.6): mapa, delivery, carta QR, recompensas
+3. **Diferenciar Home admin** del Home client (ahora comparten `home_screen.dart`)
 
 **Lo que falta por construir:**
 - Features core (mapa, delivery, carta QR, recompensas) — Fase 3.6
