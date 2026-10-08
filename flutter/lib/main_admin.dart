@@ -1,50 +1,54 @@
-import 'package:flutter/material.dart';
+/// Entry point de la app Admin (Baqueano Admin).
+///
+/// Este main:
+/// 1. Configura el tipo de app (admin) y entorno (dev).
+/// 2. Inicializa Firebase.
+/// 3. Arranca la app con ProviderScope (Riverpod).
+library;
 
-void main() {
-  runApp(const BaqueanoAdminApp());
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:baqueano_natales/core/config/app_config.dart';
+import 'package:baqueano_natales/core/theme/app_theme.dart';
+import 'package:baqueano_natales/shared/router/app_router.dart';
+
+Future<void> main() async {
+  // 1. Configuración ANTES que nada
+  AppConfig.init(
+    type: AppType.admin,
+    env: Environment.dev, // TODO: cambiar a prod cuando hagamos cutover
+  );
+
+  // 2. Inicializar Flutter bindings (necesario para Firebase)
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 3. Inicializar Firebase
+  await Firebase.initializeApp();
+
+  // 4. Arrancar la app
+  runApp(
+    const ProviderScope(
+      child: BaqueanoAdminApp(),
+    ),
+  );
 }
 
-class BaqueanoAdminApp extends StatelessWidget {
+class BaqueanoAdminApp extends ConsumerWidget {
   const BaqueanoAdminApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Baqueano Admin',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const AdminHomePage(),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
 
-class AdminHomePage extends StatelessWidget {
-  const AdminHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Baqueano Admin'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.admin_panel_settings, size: 80),
-            SizedBox(height: 16),
-            Text(
-              'Panel Admin',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('Baqueano Natales - Flavor: admin'),
-          ],
-        ),
-      ),
+    return MaterialApp.router(
+      title: AppConfig.appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+      routerConfig: router,
     );
   }
 }
