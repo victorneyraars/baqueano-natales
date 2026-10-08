@@ -7,6 +7,13 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-08 (cont.) — Documentación fundacional
+- ✅ **`docs/VISION.md`** creado: visión de superapp multi-vertical, principios de arquitectura
+- ✅ **`docs/ARCHITECTURE.md`** reescrito: monolito modular, transversal vs vertical, cómo agregar un módulo
+- ✅ **`docs/LEGACY_ANALYSIS.md`** creado: análisis del sistema anterior (4 actores, 4 ejes de verificación, zonas por cuadrícula, sistema tarifario)
+- 🎯 **Pivote estratégico**: empezamos por **Oficios (mecánica de autos)**, después Movilidad, después el resto
+- 📌 Decisión: **monolito modular** ahora, microservicios solo cuando haga falta
+
 ### 2026-10-08 — Fix login con Google (end-to-end)
 - ✅ **Login con Google funcional end-to-end** (Google → Firebase → Backend → JWT → Home)
 - ✅ **Persistencia de sesión funcional** (sobrevive al cierre de la app)
@@ -714,7 +721,9 @@ curl http://104.129.59.151/health
 | Archivo | Contenido |
 |---|---|
 | `README.md` | Intro + estructura + stack |
-| `docs/ARCHITECTURE.md` | Arquitectura detallada |
+| `docs/VISION.md` | 🎯 Visión de superapp multi-vertical + cómo crece |
+| `docs/ARCHITECTURE.md` | Arquitectura técnica + modular estricta |
+| `docs/LEGACY_ANALYSIS.md` | 📚 Análisis del sistema anterior (4 actores, verificación, zonas) |
 | `docs/DEPLOYMENT.md` | Guía de deploy paso a paso |
 | `docs/DEVELOPMENT.md` | Convenciones + setup dev |
 | `docs/DECISIONS/0001-docker-compose.md` | ADR inicial |
