@@ -26,6 +26,14 @@
 - ✅ Endpoint público `/api/v1/comercios/categorias` funcionando
 - ⏳ Pendiente: frontend Flutter del módulo
 
+### 2026-10-08 (cont.) — Fixes críticos y migración de emulador
+- ✅ **Fix `DioClient.validateStatus`**: 4xx ahora se mapean a `ApiException` (antes intentaban parsear el body como modelo)
+- ✅ **`Comercio.fromJson` defensivo**: parseo robusto con logging de campos null
+- ✅ **Migración de emulador Android 17 → Android 14** (`Pixel6_API34`)
+  - Motivo: Android 17 (API 37) tiene bugs sin resolver de IME (teclado virtual no se despliega) y OpenGL (crash con `swiftshader_indirect`)
+  - Android 14 funciona perfecto: teclado físico Y virtual OK
+- 📌 Tip de emulador: usar `-gpu swiftshader_indirect` en el launch
+
 ### 2026-10-08 (cont.) — Frontend comercios (cliente)
 - ✅ Modelos Dart: `Categoria`, `Horario`, `Comercio` (+ enum `EstadoComercio`)
 - ✅ Repositorio `ComercioRepository` con 20+ métodos (público, dueño, admin)
@@ -248,7 +256,8 @@ ultimo_login (timestamp tz, nullable)
 | **NDK** | 28.2.13676358 |
 | **JDK** | 25 (bundled con Android Studio) |
 | **VS Code** | 1.140.0 + extensión Flutter |
-| **Emulador** | `Pixel6_API37` (en `D:\Android\AVD`) |
+| **Emulador** | `Pixel6_API34` (Android 14 — RECOMENDADO) |
+| **Emulador viejo** | `Pixel6_API37` (Android 17 — deprecado, tiene bugs de IME/GPU) |
 | **PUB_CACHE** | `D:\DartCache` |
 
 ### Configuración crítica del PC
@@ -668,7 +677,9 @@ cd D:\dev\baqueano-natales\flutter\android
 ./gradlew signingReport
 ```
 
-### Emulador — cold boot si se cuelga
+### Emulador Android 14 (recomendado)
+```powershell
+& "D:\Android\Sdk\emulator\emulator.exe" -avd Pixel6_API34 -no-snapshot-load -gpu swiftshader_indirect
 ```powershell
 Get-Process | Where-Object { $_.ProcessName -match "emulator|qemu|adb" } | Stop-Process -Force -ErrorAction SilentlyContinue
 & "D:\Android\Sdk\emulator\emulator.exe" -avd Pixel6_API37 -no-snapshot-load -wipe-data -gpu swiftshader_indirect
