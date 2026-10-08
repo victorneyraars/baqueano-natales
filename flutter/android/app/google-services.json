@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1072830106109-eh5i191lkg7d6185fr45c1difjvsqj66.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales",
+            "certificate_hash": "6e0b71e06301e8f7cf0e3dbc1f2977c8d6be633d"
+          }
+        },
+        {
           "client_id": "1072830106109-rb18p4oksc8607kr9c80i6mv92112kf5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

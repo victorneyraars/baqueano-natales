@@ -4,15 +4,16 @@
 /// usuario actual, logout). No maneja estado, solo hace las llamadas
 /// y devuelve los datos o lanza ApiException.
 ///
-/// Usa google_sign_in 7.x con la nueva API:
-/// - GoogleSignIn.instance (singleton)
-/// - initialize() obligatorio antes de authenticate()
-/// - authenticate() para identidad
-/// - authorizationClient.authorizeScopes() para accessToken
+/// Usa google_sign_in 6.x con la API clásica:
+/// - GoogleSignIn() (no singleton)
+/// - signIn() directo (sin initialize)
+/// - authentication → idToken + accessToken
+/// - serverClientId OBLIGATORIO para obtener idToken en Android
 library;
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
@@ -26,73 +27,61 @@ class AuthRepository {
     Dio? dio,
     fb.FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-    String? serverClientId,
   })  : _dio = dio ?? DioClient.instance,
         _firebaseAuth = firebaseAuth ?? fb.FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
-        _serverClientId =
-            serverClientId ?? AppConfig.googleServerClientId;
+        _googleSignIn = googleSignIn ??
+            GoogleSignIn(
+              scopes: ['email', 'profile'],
+              serverClientId: AppConfig.googleServerClientId,
+            );
 
   final Dio _dio;
   final fb.FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
-  final String _serverClientId;
-
-  bool _initialized = false;
-
-  /// Inicializa el plugin de Google Sign-In.
-  ///
-  /// Debe llamarse UNA SOLA VEZ antes de authenticate().
-  /// La v7 requiere inicialización explícita con serverClientId.
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    await _googleSignIn.initialize(
-      serverClientId: _serverClientId,
-    );
-    _initialized = true;
-  }
 
   /// Inicia sesión con Google.
   ///
-  /// Flujo (google_sign_in 7.x):
-  /// 1. Asegurar inicialización de GoogleSignIn.
-  /// 2. authenticate() → identidad del usuario (idToken).
-  /// 3. authorizeScopes() → accessToken con permisos.
-  /// 4. Crear credencial de Firebase con idToken + accessToken.
-  /// 5. Firebase Auth → idToken de Firebase.
-  /// 6. Enviar al backend (/api/v1/auth/google).
-  /// 7. Guardar JWT en storage seguro.
-  ///
-  /// Devuelve el User autenticado.
-  ///
-  /// Lanza ApiException si algo falla.
+  /// Flujo (google_sign_in 6.x):
+  /// 1. signIn() → GoogleSignInAccount
+  /// 2. authentication → idToken + accessToken
+  /// 3. Crear credencial de Firebase.
+  /// 4. Firebase Auth → idToken de Firebase.
+  /// 5. Enviar al backend (/api/v1/auth/google).
+  /// 6. Guardar JWT en storage seguro.
   Future<User> loginWithGoogle() async {
     try {
-      // 1. Inicialización
-      await _ensureInitialized();
+      debugPrint('[AuthRepo] Paso 1: signIn()');
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      debugPrint('[AuthRepo] signIn() → $googleUser');
 
-      // 2. Autenticación (identidad)
-      final GoogleSignInAccount googleUser =
-          await _googleSignIn.authenticate();
+      if (googleUser == null) {
+        throw const UnknownException('Login cancelado por el usuario.');
+      }
 
-      // 3. Autorización (permisos + accessToken)
-      final clientAuth =
-          await googleUser.authorizationClient.authorizeScopes([
-        'email',
-        'profile',
-      ]);
+      debugPrint('[AuthRepo] Paso 2: authentication');
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      debugPrint('[AuthRepo] idToken null? ${googleAuth.idToken == null}');
+      debugPrint(
+          '[AuthRepo] accessToken null? ${googleAuth.accessToken == null}');
 
-      // 4. Credencial de Firebase
+      if (googleAuth.idToken == null) {
+        throw const UnknownException(
+          'No se pudo obtener el idToken de Google.',
+        );
+      }
+
+      debugPrint('[AuthRepo] Paso 3: credencial Firebase');
       final credential = fb.GoogleAuthProvider.credential(
-        idToken: googleUser.authentication.idToken,
-        accessToken: clientAuth.accessToken,
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
       );
 
-      // 5. Login en Firebase
+      debugPrint('[AuthRepo] Paso 4: signInWithCredential');
       final userCredential =
           await _firebaseAuth.signInWithCredential(credential);
 
-      // 6. Obtener idToken de Firebase
+      debugPrint('[AuthRepo] Paso 5: getIdToken Firebase');
       final firebaseIdToken = await userCredential.user?.getIdToken();
       if (firebaseIdToken == null) {
         throw const UnknownException(
@@ -100,16 +89,15 @@ class AuthRepository {
         );
       }
 
-      // 7. Enviar al backend
+      debugPrint('[AuthRepo] Paso 6: POST backend');
       final response = await _dio.post(
         '/api/v1/auth/google',
         data: {'id_token': firebaseIdToken},
       );
+      debugPrint('[AuthRepo] Backend respondió ${response.statusCode}');
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          'Error del backend: ${response.statusCode}',
-        );
+        throw ServerException('Error del backend: ${response.statusCode}');
       }
 
       final data = response.data as Map<String, dynamic>;
@@ -117,25 +105,11 @@ class AuthRepository {
       final userJson = data['user'] as Map<String, dynamic>;
       final user = User.fromJson(userJson);
 
-      // 8. Guardar en storage seguro
       await SecureStorageService.saveAccessToken(accessTokenJwt);
       await SecureStorageService.saveUserId(user.id);
       await SecureStorageService.saveUserRole(user.role);
 
       return user;
-    } on GoogleSignInException catch (e) {
-      // Manejo específico de errores de Google Sign-In v7
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw const UnknownException('Login cancelado por el usuario.');
-      }
-      if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {
-        throw const UnknownException(
-          'Error de configuración. Contactá al soporte.',
-        );
-      }
-      throw UnknownException(
-        'Error de Google Sign-In: ${e.description ?? e.code.name}',
-      );
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
@@ -144,6 +118,7 @@ class AuthRepository {
       }
       throw const UnknownException();
     } catch (e) {
+      debugPrint('[AuthRepo] ERROR: $e');
       throw UnknownException('Error inesperado: $e');
     }
   }
@@ -156,9 +131,7 @@ class AuthRepository {
       final response = await _dio.get('/api/v1/auth/me');
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          'Error del backend: ${response.statusCode}',
-        );
+        throw ServerException('Error del backend: ${response.statusCode}');
       }
 
       final userJson = response.data as Map<String, dynamic>;
