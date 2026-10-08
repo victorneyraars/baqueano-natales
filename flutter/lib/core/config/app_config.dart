@@ -21,17 +21,20 @@ class AppConfig {
 
   /// URL base del backend.
   ///
-  /// - dev:  apunta al server nuevo (104.129.59.151) con cert autofirmado.
-  /// - prod: apunta a api.baqueanonatales.com (cuando se haga el cutover DNS).
+  /// - dev:  apunta al server nuevo (104.129.59.151) por HTTP.
+  ///         El server no tiene SSL todavía (Fase 6 pendiente).
+  /// - prod: apunta a api.baqueanonatales.com por HTTPS (cuando se
+  ///         haga el cutover DNS).
   static String get apiBaseUrl {
     switch (environment) {
       case Environment.dev:
-        return 'https://104.129.59.151';
+        return 'http://104.129.59.151';
       case Environment.prod:
         return 'https://api.baqueanonatales.com';
     }
   }
-  /// Web Client ID de Firebase (necesario para Google Sign-In v7).
+
+  /// Web Client ID de Firebase (necesario para Google Sign-In).
   /// Se obtiene de google-services.json (bloque con client_type: 3).
   static const String googleServerClientId =
       '1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com';
