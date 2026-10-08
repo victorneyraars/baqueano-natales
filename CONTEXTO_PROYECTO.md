@@ -26,6 +26,19 @@
 - ✅ Endpoint público `/api/v1/comercios/categorias` funcionando
 - ⏳ Pendiente: frontend Flutter del módulo
 
+### 2026-10-08 (cont.) — Frontend comercios (cliente)
+- ✅ Modelos Dart: `Categoria`, `Horario`, `Comercio` (+ enum `EstadoComercio`)
+- ✅ Repositorio `ComercioRepository` con 20+ métodos (público, dueño, admin)
+- ✅ Providers Riverpod (categorías, listado con filtros, detalle, admin)
+- ✅ Widget `ComercioCard` reutilizable
+- ✅ Pantalla lista de comercios (búsqueda + chips categorías + filtros destacados/delivery)
+- ✅ Pantalla detalle (portada, logo, contacto, ubicación, horarios multi-franja)
+- ✅ Router corregido (permite rutas autenticadas fuera de `/home`)
+- ✅ Home linkeado a Comercios
+- ✅ **Flujo end-to-end verificado en emulador** con comercio de prueba
+- ⏳ Pendiente: pantallas dueño (mis comercios, crear/editar, horarios)
+- ⏳ Pendiente: pantallas admin (verificar/rechazar, CRUD categorías)
+
 ### 2026-10-08 (cont.) — App admin verificada
 - ✅ Login con Google funcional en flavor admin
 - ✅ Home admin con tema morado + badge ADMIN
@@ -711,12 +724,11 @@ curl http://104.129.59.151/health
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
 
 **Lo que queda pendiente inmediato:**
-1. **Frontend Flutter del módulo comercios** (Fase 3.6.0)
-   - Modelo `Categoria` + `Comercio` en Dart
-   - Repositorio con Dio
-   - Pantallas cliente: lista, detalle, filtros
-   - Pantallas dueño: mis comercios, crear/editar, horarios
-   - Pantallas admin: verificar/rechazar, CRUD categorías
+1. **Frontend Flutter del módulo comercios — parte 2** (Fase 3.6.0.c+d)
+   - Pantallas dueño: mis comercios, crear/editar, horarios, enviar a revisión
+   - Pantallas admin: verificar/rechazar/suspender, CRUD categorías
+   - Diferenciar Home admin del Home client
+   - (La parte cliente — lista + detalle + filtros — ya está ✅)
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
