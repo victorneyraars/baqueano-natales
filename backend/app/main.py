@@ -14,6 +14,18 @@ from app.core.logging import setup_logging
 from app.modules.auth.routes import router as auth_router
 from app.modules.usuarios.routes import router as usuarios_router
 from app.modules.admin.routes import router as admin_router
+from app.modules.comercios.routes import (
+    router_admin_categorias as comercios_admin_categorias_router,
+)
+from app.modules.comercios.routes import (
+    router_admin_comercios as comercios_admin_comercios_router,
+)
+from app.modules.comercios.routes import (
+    router_propietario as comercios_propietario_router,
+)
+from app.modules.comercios.routes import (
+    router_publico as comercios_publico_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +76,12 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(usuarios_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+
+# Comercios
+app.include_router(comercios_publico_router, prefix="/api/v1")
+app.include_router(comercios_propietario_router, prefix="/api/v1")
+app.include_router(comercios_admin_categorias_router, prefix="/api/v1")
+app.include_router(comercios_admin_comercios_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
