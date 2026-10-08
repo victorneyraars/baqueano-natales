@@ -18,6 +18,14 @@
 - ⚠️ **SHA-1 de debug cambió** (ver sección Firebase)
 - ✅ **App admin verificada** (login + persistencia funcional en `flutter run --flavor admin`)
 
+### 2026-10-08 (cont.) — Módulo comercios (backend)
+- ✅ **Nuevo módulo `comercios`** con 3 tablas (categorias_comercio, comercios, horarios_comercio)
+- ✅ Migración Alembic aplicada en producción (`d6654af1dbf2`)
+- ✅ 20 endpoints nuevos (público, propietario, admin)
+- ✅ 9 categorías base seedeadas en la DB
+- ✅ Endpoint público `/api/v1/comercios/categorias` funcionando
+- ⏳ Pendiente: frontend Flutter del módulo
+
 ### 2026-10-08 (cont.) — App admin verificada
 - ✅ Login con Google funcional en flavor admin
 - ✅ Home admin con tema morado + badge ADMIN
@@ -35,8 +43,10 @@
 - ✅ App Flutter con flavors (client + admin)
 - ✅ Login con Google funcional **end-to-end**
 - ✅ Persistencia de sesión funcional
-- ⏳ Pendiente: probar app admin con login
-- ⏳ Pendiente: features core (mapa, delivery, carta QR, recompensas)
+- ✅ App admin verificada (login + Home con badge ADMIN)
+- ✅ **Backend módulo comercios** (modelos, migración, endpoints, seed)
+- ⏳ Pendiente: frontend Flutter del módulo comercios
+- ⏳ Pendiente: features core restantes (mapa, delivery, carta QR, recompensas)
 
 ---
 
@@ -701,10 +711,17 @@ curl http://104.129.59.151/health
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
 
 **Lo que queda pendiente inmediato:**
-1. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
+1. **Frontend Flutter del módulo comercios** (Fase 3.6.0)
+   - Modelo `Categoria` + `Comercio` en Dart
+   - Repositorio con Dio
+   - Pantallas cliente: lista, detalle, filtros
+   - Pantallas dueño: mis comercios, crear/editar, horarios
+   - Pantallas admin: verificar/rechazar, CRUD categorías
+2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
-2. **Features core** (Fase 3.6): mapa, delivery, carta QR, recompensas
-3. **Diferenciar Home admin** del Home client (ahora comparten `home_screen.dart`)
+   - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
+3. **Features core restantes**: mapa, delivery, carta QR, recompensas
+4. **Diferenciar Home admin** del Home client (ahora comparten `home_screen.dart`)
 
 **Lo que falta por construir:**
 - Features core (mapa, delivery, carta QR, recompensas) — Fase 3.6
