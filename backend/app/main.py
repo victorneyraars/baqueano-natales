@@ -26,6 +26,18 @@ from app.modules.comercios.routes import (
 from app.modules.comercios.routes import (
     router_publico as comercios_publico_router,
 )
+from app.modules.prestadores.routes import (
+    router_admin_categorias as prestadores_admin_categorias_router,
+)
+from app.modules.prestadores.routes import (
+    router_admin_prestadores as prestadores_admin_router,
+)
+from app.modules.prestadores.routes import (
+    router_propietario as prestadores_propietario_router,
+)
+from app.modules.prestadores.routes import (
+    router_publico as prestadores_publico_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +85,7 @@ app.add_middleware(
 # ---------------------------------------------------------
 # Routers
 # ---------------------------------------------------------
+# Auth / usuarios / admin (base)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(usuarios_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
@@ -82,6 +95,12 @@ app.include_router(comercios_publico_router, prefix="/api/v1")
 app.include_router(comercios_propietario_router, prefix="/api/v1")
 app.include_router(comercios_admin_categorias_router, prefix="/api/v1")
 app.include_router(comercios_admin_comercios_router, prefix="/api/v1")
+
+# Prestadores (oficios)
+app.include_router(prestadores_publico_router, prefix="/api/v1")
+app.include_router(prestadores_propietario_router, prefix="/api/v1")
+app.include_router(prestadores_admin_categorias_router, prefix="/api/v1")
+app.include_router(prestadores_admin_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
