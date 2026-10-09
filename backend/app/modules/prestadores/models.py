@@ -1,0 +1,406 @@
+"""
+Modelos de base de datos del módulo prestadores.
+
+Un prestador es un profesional de un oficio (mecánico, gasfiter,
+electricista, etc.). A diferencia de un socio (movilidad, en el mapa),
+el prestador se encuentra por CATEGORÍA y se contacta por chat o
+WhatsApp — no hay matching en tiempo real.
+
+Modelo:
+- CategoriaOficio: categoría admin-managed (editable sin release).
+- Prestador: perfil del oficio (uno o varios por usuario).
+- FotoTrabajo: galería de trabajos (tabla relacional, no JSON).
+
+Reusa:
+- app.core.mixins.TimestampMixin + SoftDeleteMixin
+- EstadoPrestador (enum propio del módulo)
+"""
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from uuid import UUID, uuid4
+
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum as SQLEnum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.db import Base
+from app.core.mixins import SoftDeleteMixin, TimestampMixin
+
+
+# =========================================================
+# Enums
+# =========================================================
+class EstadoPrestador(str, Enum):
+    """
+    Ciclo de vida de un prestador.
+
+    Flujo típico (igual que comercios):
+        borrador → pendiente → verificado
+                       ↓
+                   rechazado → (edita) → pendiente
+        verificado → suspendido (por admin) → verificado
+    """
+
+    BORRADOR = "borrador"
+    PENDIENTE = "pendiente"
+    VERIFICADO = "verificado"
+    RECHAZADO = "rechazado"
+    SUSPENDIDO = "suspendido"
+
+
+# =========================================================
+# Categoría de oficio (admin-managed)
+# =========================================================
+class CategoriaOficio(TimestampMixin, SoftDeleteMixin, Base):
+    """
+    Categoría de oficio (mecánica, gasfitería, electricidad...).
+
+    Se desactivan (`activo=False`) en lugar de borrarse para preservar
+    la integridad referencial y el historial.
+    """
+
+    __tablename__ = "categorias_oficio"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    nombre: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+    )
+    slug: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Visual (editable desde admin)
+    icono: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Nombre del ícono Material (ej: 'build')",
+    )
+    color_hex: Mapped[str | None] = mapped_column(
+        String(7),
+        nullable=True,
+        comment="Color en formato #RRGGBB",
+    )
+
+    # Orden de aparición en listados públicos
+    orden: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CategoriaOficio(id={self.id}, slug={self.slug}, "
+            f"activo={self.activo})>"
+        )
+
+
+# =========================================================
+# Prestador (perfil del oficio)
+# =========================================================
+class Prestador(TimestampMixin, SoftDeleteMixin, Base):
+    """
+    Prestador de servicios / oficios.
+
+    Puede tener varios prestadores un mismo usuario (ej: una persona
+    con perfil de mecánico Y gasfiter). El campo `usuario_id` apunta
+    al dueño de la cuenta que administra el perfil.
+
+    Los `especialidades` y `datos_extra` son JSONB nativo:
+    - `especialidades`: lista de strings específicos del oficio
+      (ej: para mecánica: ["frenos", "motor", "chapa", "electricidad_auto"])
+    - `datos_extra`: campos variables por categoría
+      (ej: para mecánica: {"acepta_auxilio_ruta": true, "marcas": ["Toyota", "Ford"]})
+    """
+
+    __tablename__ = "prestadores"
+
+    # -----------------------------------------------------
+    # Identificadores
+    # -----------------------------------------------------
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    usuario_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    categoria_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("categorias_oficio.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    # -----------------------------------------------------
+    # Identidad
+    # -----------------------------------------------------
+    nombre: Mapped[str] = mapped_column(
+        String(150),
+        nullable=False,
+        comment="Nombre o razón social",
+    )
+    slug: Mapped[str] = mapped_column(
+        String(180),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    descripcion: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Qué hace, experiencia, especialidades generales",
+    )
+
+    # -----------------------------------------------------
+    # Contacto
+    # -----------------------------------------------------
+    telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    whatsapp: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sitio_web: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # -----------------------------------------------------
+    # Ubicación
+    # -----------------------------------------------------
+    comuna: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Puerto Natales",
+        server_default="Puerto Natales",
+    )
+    region: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Magallanes",
+        server_default="Magallanes",
+    )
+    direccion: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Dirección del local (opcional si solo atiende a domicilio)",
+    )
+    latitud: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 7),
+        nullable=True,
+    )
+    longitud: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 7),
+        nullable=True,
+    )
+    radio_cobertura_km: Mapped[Decimal | None] = mapped_column(
+        Numeric(4, 2),
+        nullable=True,
+        comment="Hasta dónde presta servicio a domicilio",
+    )
+
+    # -----------------------------------------------------
+    # Modalidad de atención
+    # -----------------------------------------------------
+    atiende_domicilio: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Va al domicilio del cliente",
+    )
+    atiende_local: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+        comment="Cliente puede ir a su local/taller",
+    )
+    atiende_emergencias: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="24/7, urgencias, auxilio en ruta",
+    )
+    horario_descripcion: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Texto libre: 'Lun-Vie 9-18h, Sáb 9-13h'",
+    )
+
+    # -----------------------------------------------------
+    # Media
+    # -----------------------------------------------------
+    foto_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Foto de perfil / logo",
+    )
+
+    # -----------------------------------------------------
+    # Estado y verificación
+    # -----------------------------------------------------
+    estado: Mapped[EstadoPrestador] = mapped_column(
+        SQLEnum(
+            EstadoPrestador,
+            name="estado_prestador",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=EstadoPrestador.BORRADOR,
+        server_default=EstadoPrestador.BORRADOR.value,
+        index=True,
+    )
+    motivo_rechazo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    destacado: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    # -----------------------------------------------------
+    # Verificación de identidad (KYC Didit)
+    # -----------------------------------------------------
+    verificado: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Identidad verificada vía KYC (sello de confianza)",
+    )
+    verificado_en: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    verificado_por_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # -----------------------------------------------------
+    # Especialidades y datos variables (JSONB nativo)
+    # -----------------------------------------------------
+    especialidades: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Lista de especialidades dentro de la categoría",
+    )
+    datos_extra: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Campos específicos por categoría",
+    )
+
+    # -----------------------------------------------------
+    # Stats (denormalizadas, se actualizan con reviews)
+    # -----------------------------------------------------
+    calificacion_promedio: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default="0.00",
+    )
+    total_resenas: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    # -----------------------------------------------------
+    # Relaciones
+    # -----------------------------------------------------
+    categoria: Mapped["CategoriaOficio"] = relationship(lazy="selectin")
+    fotos_trabajos: Mapped[list["FotoTrabajo"]] = relationship(
+        back_populates="prestador",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="FotoTrabajo.orden",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Prestador(id={self.id}, slug={self.slug}, "
+            f"estado={self.estado.value}, activo={self.activo})>"
+        )
+
+
+# =========================================================
+# Fotos de trabajos
+# =========================================================
+class FotoTrabajo(TimestampMixin, Base):
+    """
+    Foto de un trabajo anterior. Parte de la galería del prestador.
+
+    A diferencia del legacy (JSON string), esto es tabla relacional:
+    - Se puede ordenar, filtrar, paginar
+    - Se pueden agregar campos (descripción, fecha del trabajo, etc.)
+    - Se puede relacionar con `solicitudes_servicio` a futuro
+    """
+
+    __tablename__ = "fotos_trabajo"
+    __table_args__ = (
+        UniqueConstraint(
+            "prestador_id",
+            "orden",
+            name="uq_foto_trabajo_prestador_orden",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    descripcion: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    orden: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    # Relaciones
+    prestador: Mapped[Prestador] = relationship(back_populates="fotos_trabajos")
+
+    def __repr__(self) -> str:
+        return (
+            f"<FotoTrabajo(prestador_id={self.prestador_id}, orden={self.orden})>"
+        )
