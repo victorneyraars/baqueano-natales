@@ -9,11 +9,11 @@ WhatsApp — no hay matching en tiempo real.
 Modelo:
 - CategoriaOficio: categoría admin-managed (editable sin release).
 - Prestador: perfil del oficio (uno o varios por usuario).
+- PrestadorServicio: catálogo de servicios con precios orientativos.
 - FotoTrabajo: galería de trabajos (tabla relacional, no JSON).
 
 Reusa:
 - app.core.mixins.TimestampMixin + SoftDeleteMixin
-- EstadoPrestador (enum propio del módulo)
 """
 from datetime import datetime
 from decimal import Decimal
@@ -130,11 +130,13 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
     con perfil de mecánico Y gasfiter). El campo `usuario_id` apunta
     al dueño de la cuenta que administra el perfil.
 
-    Los `especialidades` y `datos_extra` son JSONB nativo:
+    Los `especialidades`, `datos_extra` y `redes_sociales` son JSONB nativo:
     - `especialidades`: lista de strings específicos del oficio
       (ej: para mecánica: ["frenos", "motor", "chapa", "electricidad_auto"])
     - `datos_extra`: campos variables por categoría
       (ej: para mecánica: {"acepta_auxilio_ruta": true, "marcas": ["Toyota", "Ford"]})
+    - `redes_sociales`: links a redes
+      (ej: {"instagram": "https://...", "facebook": "https://..."})
     """
 
     __tablename__ = "prestadores"
@@ -179,12 +181,22 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         nullable=True,
         comment="Qué hace, experiencia, especialidades generales",
     )
+    anios_experiencia: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Años de experiencia en el oficio",
+    )
 
     # -----------------------------------------------------
     # Contacto
     # -----------------------------------------------------
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
     whatsapp: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    whatsapp_mensaje: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Mensaje pre-armado para el botón WhatsApp",
+    )
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sitio_web: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
@@ -259,6 +271,20 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         String(500),
         nullable=True,
         comment="Foto de perfil / logo",
+    )
+    foto_portada_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Banner / portada del perfil",
+    )
+
+    # -----------------------------------------------------
+    # Redes sociales (JSONB)
+    # -----------------------------------------------------
+    redes_sociales: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Links: {instagram, facebook, tiktok, youtube, ...}",
     )
 
     # -----------------------------------------------------
@@ -337,6 +363,12 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
     # Relaciones
     # -----------------------------------------------------
     categoria: Mapped["CategoriaOficio"] = relationship(lazy="selectin")
+    servicios: Mapped[list["PrestadorServicio"]] = relationship(
+        back_populates="prestador",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="PrestadorServicio.orden, PrestadorServicio.nombre",
+    )
     fotos_trabajos: Mapped[list["FotoTrabajo"]] = relationship(
         back_populates="prestador",
         cascade="all, delete-orphan",
@@ -349,6 +381,104 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
             f"<Prestador(id={self.id}, slug={self.slug}, "
             f"estado={self.estado.value}, activo={self.activo})>"
         )
+
+
+# =========================================================
+# Servicios del prestador (catálogo con precios)
+# =========================================================
+class PrestadorServicio(TimestampMixin, Base):
+    """
+    Servicio ofrecido por un prestador, con precio orientativo.
+
+    Inspirado en Thumbtack / YourMechanic / Fixd:
+    - `nombre`: acción corta y clara (ej: "Cambio de aceite y filtro")
+    - `categoria_servicio`: para agrupar visualmente en la UI
+      (ej: "Mantenimiento", "Frenos", "Motor", "Suspensión")
+    - `precio_desde_clp` / `precio_hasta_clp`: rango orientativo.
+      Si ambos son null → "Consultar precio"
+    - `duracion_estimada_min`: cuánto tarda (transparencia)
+    - `garantia_dias`: sello de confianza (diferenciador industrial)
+    - `destacado`: el servicio estrella del prestador (ej: cambio de aceite
+      es el "hook" para captar clientes que después vuelven por más)
+
+    Se replican para TODOS los oficios (gasfitería, electricidad, etc.).
+    """
+
+    __tablename__ = "prestador_servicios"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    nombre: Mapped[str] = mapped_column(
+        String(150),
+        nullable=False,
+        comment="Ej: 'Cambio de aceite y filtro'",
+    )
+    descripcion: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Qué incluye, detalles",
+    )
+    categoria_servicio: Mapped[str | None] = mapped_column(
+        String(80),
+        nullable=True,
+        comment="Ej: 'Mantenimiento', 'Frenos', 'Motor'",
+    )
+
+    # Precios orientativos (en CLP). Null = "Consultar"
+    precio_desde_clp: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    precio_hasta_clp: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    duracion_estimada_min: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Duración estimada en minutos",
+    )
+    garantia_dias: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Días de garantía del trabajo",
+    )
+
+    destacado: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Servicio estrella / hook comercial",
+    )
+    activo: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+    orden: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    # Relaciones
+    prestador: Mapped[Prestador] = relationship(back_populates="servicios")
+
+    def __repr__(self) -> str:
+        return f"<PrestadorServicio(nombre={self.nombre})>"
 
 
 # =========================================================
@@ -402,5 +532,6 @@ class FotoTrabajo(TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return (
-            f"<FotoTrabajo(prestador_id={self.prestador_id}, orden={self.orden})>"
+            f"<FotoTrabajo(prestador_id={self.prestador_id}, "
+            f"orden={self.orden})>"
         )
