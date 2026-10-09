@@ -14,6 +14,7 @@ import 'package:baqueano_natales/features/comercios/data/comercio_repository.dar
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
+import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
 
 /// Filtros para el listado público de prestadores.
 class PrestadoresFiltros {
@@ -160,18 +161,20 @@ class PrestadorRepository {
     required String nombre,
     required String categoriaId,
     String? descripcion,
+    int? aniosExperiencia,
     String? telefono,
     String? whatsapp,
+    String? whatsappMensaje,
     String? email,
     String? sitioWeb,
     String? direccion,
-    String? referencia,
     bool atiendeDomicilio = false,
     bool atiendeLocal = true,
     bool atiendeEmergencias = false,
     String? horarioDescripcion,
     List<String>? especialidades,
     Map<String, dynamic>? datosExtra,
+    Map<String, dynamic>? redesSociales,
   }) async {
     try {
       final res = await _dio.post(
@@ -180,8 +183,10 @@ class PrestadorRepository {
           'nombre': nombre,
           'categoria_id': categoriaId,
           'descripcion': descripcion,
+          'anios_experiencia': aniosExperiencia,
           'telefono': telefono,
           'whatsapp': whatsapp,
+          'whatsapp_mensaje': whatsappMensaje,
           'email': email,
           'sitio_web': sitioWeb,
           'direccion': direccion,
@@ -191,6 +196,7 @@ class PrestadorRepository {
           'horario_descripcion': horarioDescripcion,
           'especialidades': especialidades,
           'datos_extra': datosExtra,
+          'redes_sociales': redesSociales,
         },
       );
       return Prestador.fromJson(res.data as Map<String, dynamic>);
@@ -254,6 +260,118 @@ class PrestadorRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  // =========================================================
+  // Servicios del catálogo (dueño)
+  // =========================================================
+
+  /// Reemplaza TODOS los servicios del prestador.
+  Future<List<PrestadorServicio>> setearServicios({
+    required String prestadorId,
+    required List<Map<String, dynamic>> servicios,
+  }) async {
+    try {
+      final res = await _dio.put(
+        '/api/v1/mis-prestadores/$prestadorId/servicios',
+        data: {'servicios': servicios},
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((s) => PrestadorServicio.fromJson(s as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Agrega un servicio al catálogo.
+  Future<PrestadorServicio> agregarServicio({
+    required String prestadorId,
+    required String nombre,
+    String? descripcion,
+    String? categoriaServicio,
+    int? precioDesdeClp,
+    int? precioHastaClp,
+    int? duracionEstimadaMin,
+    int? garantiaDias,
+    bool destacado = false,
+    int orden = 0,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/servicios',
+        data: {
+          'nombre': nombre,
+          'descripcion': descripcion,
+          'categoria_servicio': categoriaServicio,
+          'precio_desde_clp': precioDesdeClp,
+          'precio_hasta_clp': precioHastaClp,
+          'duracion_estimada_min': duracionEstimadaMin,
+          'garantia_dias': garantiaDias,
+          'destacado': destacado,
+          'orden': orden,
+        },
+      );
+      return PrestadorServicio.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Edita un servicio del catálogo (parcial).
+  Future<PrestadorServicio> editarServicio({
+    required String prestadorId,
+    required String servicioId,
+    Map<String, dynamic> cambios = const {},
+  }) async {
+    try {
+      final res = await _dio.patch(
+        '/api/v1/mis-prestadores/$prestadorId/servicios/$servicioId',
+        data: cambios,
+      );
+      return PrestadorServicio.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina un servicio del catálogo.
+  Future<void> eliminarServicio({
+    required String prestadorId,
+    required String servicioId,
+  }) async {
+    try {
+      await _dio.delete(
+        '/api/v1/mis-prestadores/$prestadorId/servicios/$servicioId',
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // Fotos (dueño)
+  // =========================================================
 
   /// Reemplaza TODA la galería de fotos.
   Future<List<FotoTrabajo>> setearFotos({
