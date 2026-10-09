@@ -7,6 +7,14 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-08 (cont.) — Módulo prestadores: modelos + migración
+- ✅ **Capa reutilizable**: `core/mixins.py` (Timestamp + SoftDelete) + `shared/utils/slug.py` (slug único genérico)
+- ✅ **Modelos `prestadores`**: `CategoriaOficio`, `Prestador`, `FotoTrabajo`
+- ✅ **Migración aplicada** en producción (`ca0aef61fba0`)
+- ✅ **3 tablas nuevas** en la DB (`categorias_oficio`, `prestadores`, `fotos_trabajo`)
+- 🎯 **Pivote estratégico**: empezamos por **Oficios (mecánica primero)**, después Movilidad
+- 📌 Decisiones arquitectónicas documentadas en `docs/VISION.md` y `docs/ARCHITECTURE.md`
+
 ### 2026-10-08 (cont.) — Documentación fundacional
 - ✅ **`docs/VISION.md`** creado: visión de superapp multi-vertical, principios de arquitectura
 - ✅ **`docs/ARCHITECTURE.md`** reescrito: monolito modular, transversal vs vertical, cómo agregar un módulo
@@ -821,6 +829,25 @@ Luego, los primeros comandos a correr son:
 - `secrets/` → NUNCA al repo
 - `*.jks`, `*.keystore` → NUNCA al repo
 - `google-services.json` → **SÍ va al repo** (es config pública)
+
+---
+
+## 🔨 Módulo `prestadores` — estado actual
+
+| Componente | Estado |
+|---|---|
+| Capa reutilizable (`mixins` + `slug`) | ✅ |
+| Modelos SQLAlchemy | ✅ |
+| Migración aplicada en producción | ✅ |
+| Schemas Pydantic | ⏳ Próxima sesión |
+| Services | ⏳ |
+| Routers | ⏳ |
+| Deps | ⏳ |
+| Seed de categorías base | ⏳ |
+| Frontend (cliente + dueño + admin) | ⏳ |
+
+**Ruta del módulo:** `backend/app/modules/prestadores/`
+**Tablas:** `categorias_oficio`, `prestadores`, `fotos_trabajo`
 
 ---
 
