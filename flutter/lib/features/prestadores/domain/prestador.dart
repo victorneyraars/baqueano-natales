@@ -2,7 +2,7 @@
 ///
 /// Unifica las 3 variantes del backend:
 /// - PrestadorPublicoResponse (listado público)
-/// - PrestadorDetalleResponse (detalle público con galería)
+/// - PrestadorDetalleResponse (detalle público con galería + servicios)
 /// - PrestadorPrivadoResponse (dueño/admin, con estado y metadata)
 ///
 /// Los campos exclusivos del privado (usuario_id, estado, activo)
@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
+import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
 
 /// Estado del prestador en el flujo de verificación.
 enum EstadoPrestador {
@@ -61,10 +62,12 @@ class Prestador {
     required this.slug,
     required this.nombre,
     this.descripcion,
+    this.aniosExperiencia,
     required this.categoria,
     this.categoriaId,
     this.telefono,
     this.whatsapp,
+    this.whatsappMensaje,
     this.email,
     this.sitioWeb,
     required this.comuna,
@@ -78,6 +81,7 @@ class Prestador {
     this.atiendeEmergencias = false,
     this.horarioDescripcion,
     this.fotoUrl,
+    this.fotoPortadaUrl,
     // Estado (solo en privado/admin)
     this.usuarioId,
     this.estado,
@@ -90,13 +94,15 @@ class Prestador {
     // JSONB
     this.especialidades,
     this.datosExtra,
+    this.redesSociales,
     // Stats
     this.calificacionPromedio = 0,
     this.totalResenas = 0,
     // Metadata
     this.createdAt,
     this.updatedAt,
-    // Galería (solo en detalle/privado)
+    // Relaciones
+    this.servicios = const [],
     this.fotosTrabajos = const [],
   });
 
@@ -104,10 +110,12 @@ class Prestador {
   final String slug;
   final String nombre;
   final String? descripcion;
+  final int? aniosExperiencia;
   final CategoriaOficio categoria;
   final String? categoriaId;
   final String? telefono;
   final String? whatsapp;
+  final String? whatsappMensaje;
   final String? email;
   final String? sitioWeb;
   final String comuna;
@@ -122,6 +130,7 @@ class Prestador {
   final bool atiendeEmergencias;
   final String? horarioDescripcion;
   final String? fotoUrl;
+  final String? fotoPortadaUrl;
 
   final String? usuarioId;
   final EstadoPrestador? estado;
@@ -134,6 +143,7 @@ class Prestador {
 
   final List<String>? especialidades;
   final Map<String, dynamic>? datosExtra;
+  final Map<String, dynamic>? redesSociales;
 
   final double calificacionPromedio;
   final int totalResenas;
@@ -141,19 +151,18 @@ class Prestador {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  final List<PrestadorServicio> servicios;
   final List<FotoTrabajo> fotosTrabajos;
 
   // =========================================================
   // Helpers
   // =========================================================
 
-  /// Rating con 1 decimal.
   String get ratingLegible => calificacionPromedio.toStringAsFixed(1);
 
-  /// ¿Es público (verificado y activo)?
   bool get esPublico => estado == EstadoPrestador.verificado && activo;
 
-  /// Modalidades en formato legible.
+  /// Modalidades legibles.
   List<String> get modalidades {
     final r = <String>[];
     if (atiendeDomicilio) r.add('A domicilio');
@@ -162,7 +171,15 @@ class Prestador {
     return r;
   }
 
-  /// Primera letra(s) para avatar por defecto.
+  /// Años de experiencia legibles.
+  String? get aniosExperienciaLegible {
+    final a = aniosExperiencia;
+    if (a == null || a <= 0) return null;
+    if (a == 1) return '1 año de experiencia';
+    return '$a años de experiencia';
+  }
+
+  /// Iniciales para avatar (fallback).
   String get iniciales {
     final partes = nombre.trim().split(RegExp(r'\s+'));
     if (partes.isEmpty) return '?';
@@ -172,6 +189,31 @@ class Prestador {
     final a = partes[0].isNotEmpty ? partes[0][0] : '';
     final b = partes[1].isNotEmpty ? partes[1][0] : '';
     return '$a$b'.toUpperCase();
+  }
+
+  /// Link de Instagram si existe.
+  String? get instagram => redesSociales?['instagram'] as String?;
+  String? get facebook => redesSociales?['facebook'] as String?;
+  String? get tiktok => redesSociales?['tiktok'] as String?;
+  String? get youtube => redesSociales?['youtube'] as String?;
+
+  /// Servicios agrupados por categoría de servicio (para UI).
+  /// Mantiene el orden de aparición de cada categoría.
+  Map<String, List<PrestadorServicio>> get serviciosPorCategoria {
+    final out = <String, List<PrestadorServicio>>{};
+    for (final s in servicios) {
+      final k = (s.categoriaServicio ?? 'Otros').trim();
+      out.putIfAbsent(k, () => []).add(s);
+    }
+    return out;
+  }
+
+  /// Servicio estrella (si hay alguno marcado como destacado).
+  PrestadorServicio? get servicioDestacado {
+    for (final s in servicios) {
+      if (s.destacado) return s;
+    }
+    return null;
   }
 
   // =========================================================
@@ -184,11 +226,13 @@ class Prestador {
         slug: _str(json, 'slug'),
         nombre: _str(json, 'nombre'),
         descripcion: _strOrNull(json, 'descripcion'),
+        aniosExperiencia: _toInt(json['anios_experiencia']),
         categoria: _categoriaFromJson(json['categoria']) ??
             _categoriaFallback(),
         categoriaId: _strOrNull(json, 'categoria_id'),
         telefono: _strOrNull(json, 'telefono'),
         whatsapp: _strOrNull(json, 'whatsapp'),
+        whatsappMensaje: _strOrNull(json, 'whatsapp_mensaje'),
         email: _strOrNull(json, 'email'),
         sitioWeb: _strOrNull(json, 'sitio_web'),
         comuna: _strOr(json, 'comuna', 'Puerto Natales'),
@@ -203,6 +247,7 @@ class Prestador {
             (json['atiende_emergencias'] as bool?) ?? false,
         horarioDescripcion: _strOrNull(json, 'horario_descripcion'),
         fotoUrl: _strOrNull(json, 'foto_url'),
+        fotoPortadaUrl: _strOrNull(json, 'foto_portada_url'),
         usuarioId: _strOrNull(json, 'usuario_id'),
         estado: json['estado'] != null
             ? EstadoPrestador.fromString(json['estado'].toString())
@@ -215,10 +260,12 @@ class Prestador {
         activo: (json['activo'] as bool?) ?? true,
         especialidades: _listString(json['especialidades']),
         datosExtra: _mapOrNull(json['datos_extra']),
+        redesSociales: _mapOrNull(json['redes_sociales']),
         calificacionPromedio: _toDouble(json['calificacion_promedio']) ?? 0,
         totalResenas: _toInt(json['total_resenas']) ?? 0,
         createdAt: _dateOrNull(json['created_at']),
         updatedAt: _dateOrNull(json['updated_at']),
+        servicios: _serviciosFromJson(json['servicios']),
         fotosTrabajos: _fotosFromJson(json['fotos_trabajos']),
       );
     } catch (e, st) {
@@ -328,6 +375,24 @@ class Prestador {
     );
   }
 
+  static List<PrestadorServicio> _serviciosFromJson(dynamic v) {
+    if (v == null) return const [];
+    if (v is List) {
+      final result = <PrestadorServicio>[];
+      for (final item in v) {
+        try {
+          if (item is Map<String, dynamic>) {
+            result.add(PrestadorServicio.fromJson(item));
+          }
+        } catch (e) {
+          debugPrint('[Prestador] Error parseando servicio: $e');
+        }
+      }
+      return result;
+    }
+    return const [];
+  }
+
   static List<FotoTrabajo> _fotosFromJson(dynamic v) {
     if (v == null) return const [];
     if (v is List) {
@@ -355,10 +420,12 @@ class Prestador {
       'slug': slug,
       'nombre': nombre,
       'descripcion': descripcion,
+      'anios_experiencia': aniosExperiencia,
       'categoria': categoria.toJson(),
       'categoria_id': categoriaId,
       'telefono': telefono,
       'whatsapp': whatsapp,
+      'whatsapp_mensaje': whatsappMensaje,
       'email': email,
       'sitio_web': sitioWeb,
       'comuna': comuna,
@@ -372,6 +439,7 @@ class Prestador {
       'atiende_emergencias': atiendeEmergencias,
       'horario_descripcion': horarioDescripcion,
       'foto_url': fotoUrl,
+      'foto_portada_url': fotoPortadaUrl,
       'usuario_id': usuarioId,
       'estado': estado?.name,
       'motivo_rechazo': motivoRechazo,
@@ -382,10 +450,12 @@ class Prestador {
       'activo': activo,
       'especialidades': especialidades,
       'datos_extra': datosExtra,
+      'redes_sociales': redesSociales,
       'calificacion_promedio': calificacionPromedio,
       'total_resenas': totalResenas,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'servicios': servicios.map((s) => s.toJson()).toList(),
       'fotos_trabajos': fotosTrabajos.map((f) => f.toJson()).toList(),
     };
   }
