@@ -14,6 +14,8 @@ import 'package:baqueano_natales/features/comercios/presentation/screens/formula
 import 'package:baqueano_natales/features/comercios/presentation/screens/lista_comercios_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/mis_comercios_screen.dart';
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
 
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
@@ -115,6 +117,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           return FormularioComercioScreen(comercioId: id);
         },
       ),
+
+      // =========================================================
+      // Prestadores — público
+      // =========================================================
+      GoRoute(
+        path: '/prestadores',
+        name: 'prestadores',
+        builder: (context, state) => const ListaPrestadoresScreen(),
+      ),
+      GoRoute(
+        path: '/prestadores/:slug',
+        name: 'prestador-detalle',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          return DetallePrestadorScreen(slug: slug);
+        },
+      ),
+
+      // =========================================================
+      // Prestadores — dueño (mis prestadores) — próximamente
+      // =========================================================
     ],
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('Error')),

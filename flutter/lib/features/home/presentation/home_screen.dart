@@ -161,6 +161,12 @@ class HomeScreen extends ConsumerWidget {
               subtitle: 'Explorá locales y servicios de Puerto Natales',
               onTap: () => context.push('/comercios'),
             ),
+            _FeatureCard(
+              icon: Icons.handyman,
+              title: 'Oficios y servicios',
+              subtitle: 'Mecánicos, gasfiteres, electricistas y más',
+              onTap: () => context.push('/prestadores'),
+            ),
 
             const SizedBox(height: 24),
 
