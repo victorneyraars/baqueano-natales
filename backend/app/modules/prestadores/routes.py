@@ -34,6 +34,10 @@ from app.modules.prestadores.schemas import (
     PrestadorPrivadoResponse,
     PrestadorPublicoResponse,
     PrestadorRechazarRequest,
+    PrestadorServicioCreate,
+    PrestadorServicioResponse,
+    PrestadorServicioUpdate,
+    PrestadorServiciosBulkUpdate,
     PrestadorUpdate,
     PrestadorVerificarRequest,
 )
@@ -110,7 +114,10 @@ async def listar_prestadores_publicos(
     "/{slug}",
     response_model=PrestadorDetalleResponse,
     summary="Detalle público de un prestador",
-    description="Detalle completo con galería de un prestador verificado.",
+    description=(
+        "Detalle completo con contacto, servicios y galería "
+        "de un prestador verificado."
+    ),
 )
 async def obtener_prestador(
     slug: str,
@@ -204,6 +211,100 @@ async def eliminar_mi_prestador(
     await services.eliminar_prestador(db, prestador)
 
 
+@router_propietario.post(
+    "/{prestador_id}/enviar-revision",
+    response_model=PrestadorPrivadoResponse,
+    summary="Enviar a revisión",
+    description="Cambia el estado de borrador/rechazado a 'pendiente'.",
+)
+async def enviar_a_revision(
+    prestador: PrestadorPropietario,
+    db: DbSession,
+) -> PrestadorPrivadoResponse:
+    prestador = await services.enviar_a_revision(db, prestador)
+    return PrestadorPrivadoResponse.model_validate(prestador)
+
+
+# ---------------------------------------------------------
+# Servicios del catálogo (dueño)
+# ---------------------------------------------------------
+@router_propietario.put(
+    "/{prestador_id}/servicios",
+    response_model=list[PrestadorServicioResponse],
+    summary="Reemplazar catálogo de servicios",
+    description="Reemplaza TODOS los servicios del prestador (bulk).",
+)
+async def setear_servicios_mi_prestador(
+    prestador: PrestadorPropietario,
+    data: PrestadorServiciosBulkUpdate,
+    db: DbSession,
+) -> list[PrestadorServicioResponse]:
+    nuevos = await services.setear_servicios(db, prestador, data.servicios)
+    return [PrestadorServicioResponse.model_validate(s) for s in nuevos]
+
+
+@router_propietario.post(
+    "/{prestador_id}/servicios",
+    response_model=PrestadorServicioResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Agregar servicio al catálogo",
+)
+async def agregar_servicio_mi_prestador(
+    prestador: PrestadorPropietario,
+    data: PrestadorServicioCreate,
+    db: DbSession,
+) -> PrestadorServicioResponse:
+    srv = await services.agregar_servicio(db, prestador, data)
+    return PrestadorServicioResponse.model_validate(srv)
+
+
+@router_propietario.patch(
+    "/{prestador_id}/servicios/{servicio_id}",
+    response_model=PrestadorServicioResponse,
+    summary="Editar servicio del catálogo",
+)
+async def editar_servicio_mi_prestador(
+    prestador: PrestadorPropietario,
+    servicio_id: UUID,
+    data: PrestadorServicioUpdate,
+    db: DbSession,
+) -> PrestadorServicioResponse:
+    srv = await services.obtener_servicio(db, servicio_id)
+    if srv.prestador_id != prestador.id:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio no encontrado para este prestador",
+        )
+    srv = await services.editar_servicio(db, srv, data)
+    return PrestadorServicioResponse.model_validate(srv)
+
+
+@router_propietario.delete(
+    "/{prestador_id}/servicios/{servicio_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar servicio del catálogo",
+)
+async def eliminar_servicio_mi_prestador(
+    prestador: PrestadorPropietario,
+    servicio_id: UUID,
+    db: DbSession,
+) -> None:
+    from fastapi import HTTPException
+
+    srv = await services.obtener_servicio(db, servicio_id)
+    if srv.prestador_id != prestador.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio no encontrado para este prestador",
+        )
+    await services.eliminar_servicio(db, srv)
+
+
+# ---------------------------------------------------------
+# Fotos de trabajos (dueño)
+# ---------------------------------------------------------
 @router_propietario.put(
     "/{prestador_id}/fotos",
     response_model=list[FotoTrabajoResponse],
@@ -217,20 +318,6 @@ async def setear_fotos_mi_prestador(
 ) -> list[FotoTrabajoResponse]:
     nuevas = await services.setear_fotos_trabajo(db, prestador, data.fotos)
     return [FotoTrabajoResponse.model_validate(f) for f in nuevas]
-
-
-@router_propietario.post(
-    "/{prestador_id}/enviar-revision",
-    response_model=PrestadorPrivadoResponse,
-    summary="Enviar a revisión",
-    description="Cambia el estado de borrador/rechazado a 'pendiente'.",
-)
-async def enviar_a_revision(
-    prestador: PrestadorPropietario,
-    db: DbSession,
-) -> PrestadorPrivadoResponse:
-    prestador = await services.enviar_a_revision(db, prestador)
-    return PrestadorPrivadoResponse.model_validate(prestador)
 
 
 # =========================================================
