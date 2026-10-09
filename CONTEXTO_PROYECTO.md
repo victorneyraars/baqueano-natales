@@ -7,6 +7,22 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-09 — Módulo prestadores v2 (servicios + perfil industrial)
+- ✅ **Backend v2 completo**:
+  - Tabla nueva `prestador_servicios` (catálogo con precios/duración/garantía)
+  - 4 columnas nuevas en `prestadores`: `anios_experiencia`, `whatsapp_mensaje`, `foto_portada_url`, `redes_sociales` (JSONB)
+  - 4 endpoints nuevos: `PUT/POST/PATCH/DELETE /mis-prestadores/{id}/servicios`
+  - 64 rutas totales en la API
+- ✅ **Prestador modelo cargado en producción**: "Taller Mecánico del Sur"
+  - 15 años experiencia, 12 servicios, 7 especialidades, 3 redes sociales
+- ✅ **Frontend v2 completo**:
+  - Modelo `PrestadorServicio` (Dart)
+  - Modelo `Prestador` extendido con campos v2
+  - `PrestadorRepository` con métodos de catálogo
+  - **`DetallePrestadorScreen` industrial**: banner + avatar overlap, servicios agrupados con precios, redes sociales clickeables, FAB de WhatsApp
+  - Deep links seguros con `canLaunchUrl` + fallback SnackBar (evita crashes)
+- ✅ `url_launcher ^6.3.1` agregado
+
 ### 2026-10-09 — Módulo prestadores: backend completo
 - ✅ **Backend completo** del módulo `prestadores` (schemas, services, deps, routers, seed)
 - ✅ **4 routers registrados**: público, dueño, admin categorías, admin prestadores
@@ -840,7 +856,25 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## 🔨 Módulo `prestadores` — estado actual
+## 🔨 Módulo `prestadores` — estado actual (v2 completo)
+
+| Componente | Estado |
+|---|---|
+| Backend (modelos + migración) | ✅ |
+| Backend (schemas + services + routes) | ✅ |
+| Backend (seed + prestador modelo) | ✅ |
+| Frontend (modelos + repo + providers) | ✅ |
+| Frontend (lista cliente + detalle industrial) | ✅ |
+| Fix deep links (WhatsApp, redes) | ✅ |
+| Prestador modelo cargado | ✅ "Taller Mecánico del Sur" |
+| Pantallas dueño (crear/editar mis prestadores) | ⏳ |
+| Pantallas admin (verificar/rechazar + CRUD catálogo) | ⏳ |
+| Editor de servicios en frontend (dueño) | ⏳ |
+| Upload de portada + galería | ⏳ |
+
+**Ruta del módulo:** `backend/app/modules/prestadores/` y `flutter/lib/features/prestadores/`
+**Tablas:** `categorias_oficio`, `prestadores`, `prestador_servicios`, `fotos_trabajo`
+**Prestador modelo:** `taller-mecanico-del-sur` (accesible en `GET /api/v1/prestadores/taller-mecanico-del-sur`)
 
 | Componente | Estado |
 |---|---|
