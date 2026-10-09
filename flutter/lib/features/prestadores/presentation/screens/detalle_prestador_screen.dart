@@ -143,28 +143,46 @@ class _Contenido extends StatelessWidget {
                       icon: Icons.phone_outlined,
                       label: 'Teléfono',
                       value: prestador.telefono!,
-                      onTap: () => _launch('tel:${prestador.telefono}'),
+                      onTap: () => _launch(
+                        context,
+                        'tel:${prestador.telefono}',
+                        fallbackMessage:
+                            'No se puede llamar desde este dispositivo. '
+                            'Número: ${prestador.telefono}',
+                      ),
                     ),
                   if (prestador.whatsapp != null)
                     _ContactRow(
                       icon: Icons.chat_outlined,
                       label: 'WhatsApp',
                       value: prestador.whatsapp!,
-                      onTap: () => _launchWhatsApp(prestador),
+                      onTap: () => _launchWhatsApp(context, prestador),
                     ),
                   if (prestador.email != null)
                     _ContactRow(
                       icon: Icons.email_outlined,
                       label: 'Email',
                       value: prestador.email!,
-                      onTap: () => _launch('mailto:${prestador.email}'),
+                      onTap: () => _launch(
+                        context,
+                        'mailto:${prestador.email}',
+                        fallbackMessage:
+                            'No se puede abrir el correo. '
+                            'Email: ${prestador.email}',
+                      ),
                     ),
                   if (prestador.sitioWeb != null)
                     _ContactRow(
                       icon: Icons.language_outlined,
                       label: 'Sitio web',
                       value: prestador.sitioWeb!,
-                      onTap: () => _launch(prestador.sitioWeb!),
+                      onTap: () => _launch(
+                        context,
+                        prestador.sitioWeb!,
+                        fallbackMessage:
+                            'No se puede abrir el navegador. '
+                            'URL: ${prestador.sitioWeb}',
+                      ),
                     ),
 
                   // --- Redes sociales ---
@@ -181,28 +199,48 @@ class _Contenido extends StatelessWidget {
                             label: 'Instagram',
                             icon: Icons.camera_alt_outlined,
                             color: const Color(0xFFE1306C),
-                            onTap: () => _launch(prestador.instagram!),
+                            onTap: () => _launch(
+                              context,
+                              prestador.instagram!,
+                              fallbackMessage:
+                                  'No se puede abrir el navegador.',
+                            ),
                           ),
                         if (prestador.facebook != null)
                           _RedSocialChip(
                             label: 'Facebook',
                             icon: Icons.facebook,
                             color: const Color(0xFF1877F2),
-                            onTap: () => _launch(prestador.facebook!),
+                            onTap: () => _launch(
+                              context,
+                              prestador.facebook!,
+                              fallbackMessage:
+                                  'No se puede abrir el navegador.',
+                            ),
                           ),
                         if (prestador.tiktok != null)
                           _RedSocialChip(
                             label: 'TikTok',
                             icon: Icons.music_note,
                             color: const Color(0xFF000000),
-                            onTap: () => _launch(prestador.tiktok!),
+                            onTap: () => _launch(
+                              context,
+                              prestador.tiktok!,
+                              fallbackMessage:
+                                  'No se puede abrir el navegador.',
+                            ),
                           ),
                         if (prestador.youtube != null)
                           _RedSocialChip(
                             label: 'YouTube',
                             icon: Icons.play_circle_outline,
                             color: const Color(0xFFFF0000),
-                            onTap: () => _launch(prestador.youtube!),
+                            onTap: () => _launch(
+                              context,
+                              prestador.youtube!,
+                              fallbackMessage:
+                                  'No se puede abrir el navegador.',
+                            ),
                           ),
                       ],
                     ),
@@ -249,7 +287,7 @@ class _Contenido extends StatelessWidget {
       // --- FAB de WhatsApp ---
       floatingActionButton: prestador.whatsapp != null
           ? FloatingActionButton.extended(
-              onPressed: () => _launchWhatsApp(prestador),
+              onPressed: () => _launchWhatsApp(context, prestador),
               icon: const Icon(Icons.chat),
               label: const Text('Contactar'),
               backgroundColor: const Color(0xFF25D366),
@@ -263,11 +301,7 @@ class _Contenido extends StatelessWidget {
   static String _humanizar(String slug) {
     if (slug.isEmpty) return slug;
     final conEspacios = slug.replaceAll('_', ' ');
-    return conReposicionamiento(conEspacios);
-  }
-
-  static String conReposicionamiento(String texto) {
-    return texto[0].toUpperCase() + texto.substring(1);
+    return conEspacios[0].toUpperCase() + conEspacios.substring(1);
   }
 
   Widget _chip(
@@ -368,7 +402,6 @@ class _BannerHeader extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Banner
           Positioned(
             top: 0,
             left: 0,
@@ -382,8 +415,6 @@ class _BannerHeader extends StatelessWidget {
                   )
                 : _bannerPlaceholder(theme),
           ),
-
-          // Gradiente sobre el banner
           Positioned(
             top: 0,
             left: 0,
@@ -403,8 +434,6 @@ class _BannerHeader extends StatelessWidget {
               ),
             ),
           ),
-
-          // Botón back
           Positioned(
             top: topPadding + 8,
             left: 8,
@@ -417,8 +446,6 @@ class _BannerHeader extends StatelessWidget {
               ),
             ),
           ),
-
-          // Avatar
           Positioned(
             top: bannerHeight - avatarSize / 2,
             left: 16,
@@ -437,8 +464,6 @@ class _BannerHeader extends StatelessWidget {
               child: _avatar(theme, avatarSize),
             ),
           ),
-
-          // Info (nombre, categoría, rating)
           Positioned(
             top: bannerHeight + avatarSize / 2 + 8,
             left: 16,
@@ -552,7 +577,6 @@ class _BannerHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // Stats row
         Row(
           children: [
             if (prestador.totalResenas > 0) ...[
@@ -623,7 +647,6 @@ class _CatalogoServicios extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Título de categoría
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
@@ -635,7 +658,6 @@ class _CatalogoServicios extends StatelessWidget {
                   ),
                 ),
               ),
-              // Servicios
               ...servicios.map(
                 (srv) => _ServicioCard(servicio: srv),
               ),
@@ -708,7 +730,6 @@ class _ServicioCard extends StatelessWidget {
                 ),
               ),
             ],
-            // Chips de duración y garantía
             if (servicio.duracionLegible != null ||
                 servicio.garantiaLegible != null) ...[
               const SizedBox(height: 8),
@@ -904,23 +925,85 @@ class _Galeria extends StatelessWidget {
 }
 
 // =========================================================
-// Launchers (deep links)
+// Launchers (deep links) — con verificación previa
 // =========================================================
-Future<void> _launch(String url) async {
+
+/// Intenta abrir una URL externa. Si no hay app que la maneje,
+/// muestra un SnackBar informativo (no crashea).
+Future<void> _launch(
+  BuildContext context,
+  String url, {
+  String? fallbackMessage,
+}) async {
   final uri = Uri.tryParse(url);
   if (uri == null) return;
+
   try {
+    final puede = await canLaunchUrl(uri);
+    if (!puede) {
+      if (context.mounted) {
+        _showNoAppSnack(context, fallbackMessage ?? url);
+      }
+      return;
+    }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (_) {
-    // Silencioso: si no se puede abrir (ej: sin app de teléfono en emulador)
+    if (context.mounted) {
+      _showNoAppSnack(context, fallbackMessage ?? url);
+    }
   }
 }
 
-Future<void> _launchWhatsApp(Prestador prestador) async {
+/// Abre WhatsApp con mensaje pre-armado. Fallback a https://wa.me.
+Future<void> _launchWhatsApp(
+  BuildContext context,
+  Prestador prestador,
+) async {
   final phone = (prestador.whatsapp ?? '').replaceAll(RegExp(r'[^\d]'), '');
-  final mensaje = prestador.whatsappMensaje ?? 'Hola, te contacto desde Baqueano Natales.';
-  final url = 'https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}';
-  await _launch(url);
+  if (phone.isEmpty) return;
+
+  final mensaje = prestador.whatsappMensaje ??
+      'Hola, te contacto desde Baqueano Natales.';
+
+  final nativeUri = Uri.parse(
+    'whatsapp://send?phone=$phone&text=${Uri.encodeComponent(mensaje)}',
+  );
+  final webUri = Uri.https('wa.me', '/$phone', {'text': mensaje});
+
+  try {
+    if (await canLaunchUrl(nativeUri)) {
+      await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (context.mounted) {
+      _showNoAppSnack(
+        context,
+        'WhatsApp no está instalado. Número: ${prestador.whatsapp}',
+      );
+    }
+  } catch (_) {
+    if (context.mounted) {
+      _showNoAppSnack(
+        context,
+        'WhatsApp no está instalado. Número: ${prestador.whatsapp}',
+      );
+    }
+  }
+}
+
+/// SnackBar consistente para "no hay app que maneje esto".
+void _showNoAppSnack(BuildContext context, String mensaje) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(mensaje),
+      duration: const Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 // =========================================================
