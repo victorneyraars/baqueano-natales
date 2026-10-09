@@ -7,6 +7,14 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-09 — Módulo prestadores: backend completo
+- ✅ **Backend completo** del módulo `prestadores` (schemas, services, deps, routers, seed)
+- ✅ **4 routers registrados**: público, dueño, admin categorías, admin prestadores
+- ✅ **11 categorías base** seedeadas en producción (mecánica, electricidad, gasfitería, etc.)
+- ✅ **20 endpoints nuevos** respondiendo (`/prestadores`, `/mis-prestadores`, `/admin/categorias-oficio`, `/admin/prestadores`)
+- ✅ Verificado end-to-end con `curl` en producción
+- ⏳ Pendiente: frontend Flutter del módulo prestadores
+
 ### 2026-10-08 (cont.) — Módulo prestadores: modelos + migración
 - ✅ **Capa reutilizable**: `core/mixins.py` (Timestamp + SoftDelete) + `shared/utils/slug.py` (slug único genérico)
 - ✅ **Modelos `prestadores`**: `CategoriaOficio`, `Prestador`, `FotoTrabajo`
@@ -839,15 +847,23 @@ Luego, los primeros comandos a correr son:
 | Capa reutilizable (`mixins` + `slug`) | ✅ |
 | Modelos SQLAlchemy | ✅ |
 | Migración aplicada en producción | ✅ |
-| Schemas Pydantic | ⏳ Próxima sesión |
-| Services | ⏳ |
-| Routers | ⏳ |
-| Deps | ⏳ |
-| Seed de categorías base | ⏳ |
-| Frontend (cliente + dueño + admin) | ⏳ |
+| Schemas Pydantic | ✅ |
+| Services | ✅ |
+| Deps | ✅ |
+| Routers | ✅ |
+| Seed de categorías base | ✅ |
+| Integración `main.py` | ✅ |
+| Deploy + verificación en producción | ✅ |
+| Frontend Flutter (cliente + dueño + admin) | ⏳ Próxima sesión |
 
 **Ruta del módulo:** `backend/app/modules/prestadores/`
 **Tablas:** `categorias_oficio`, `prestadores`, `fotos_trabajo`
+**Categorías base seedeadas:** 11 (Mecánica automotriz, Electricidad, Gasfitería, Carpintería, Albañilería, Pintura, Cerrajería, Jardinería, Limpieza, Fletes y mudanzas, Otros oficios)
+
+**Endpoints activos:**
+- Público: `GET /api/v1/prestadores`, `/prestadores/categorias`, `/prestadores/{slug}`
+- Dueño: `POST/GET/PATCH/DELETE /api/v1/mis-prestadores`, `/mis-prestadores/{id}/fotos`, `/mis-prestadores/{id}/enviar-revision`
+- Admin: `GET/POST/PATCH/DELETE /api/v1/admin/categorias-oficio`, `/admin/prestadores/{id}/verificar|rechazar|suspender|destacar`
 
 ---
 
