@@ -4,6 +4,7 @@ Schemas Pydantic del módulo prestadores.
 Divide en:
 - Categorías de oficio: admin CRUD + respuesta pública.
 - Prestadores: crear, editar, respuesta pública vs. privada.
+- PrestadorServicio: catálogo de servicios con precios.
 - Fotos de trabajos: galería ordenada.
 - Filtros y paginación.
 - Acciones admin (verificar, rechazar, suspender, destacar).
@@ -83,6 +84,77 @@ class CategoriaOficioResponse(CategoriaOficioBase):
 
 
 # =========================================================
+# Servicios del prestador
+# =========================================================
+class PrestadorServicioBase(BaseModel):
+    nombre: str = Field(min_length=3, max_length=150)
+    descripcion: str | None = None
+    categoria_servicio: str | None = Field(default=None, max_length=80)
+    precio_desde_clp: int | None = Field(default=None, ge=0, le=99_999_999)
+    precio_hasta_clp: int | None = Field(default=None, ge=0, le=99_999_999)
+    duracion_estimada_min: int | None = Field(
+        default=None, ge=0, le=10_080
+    )
+    garantia_dias: int | None = Field(default=None, ge=0, le=3650)
+    destacado: bool = False
+    orden: int = Field(default=0, ge=0)
+
+    @field_validator("precio_hasta_clp")
+    @classmethod
+    def _validate_rango_precio(
+        cls, v: int | None, info
+    ) -> int | None:
+        """Si hay ambos precios, el hasta debe ser >= desde."""
+        desde = info.data.get("precio_desde_clp") if hasattr(info, "data") else None
+        if v is not None and desde is not None and v < desde:
+            raise ValueError(
+                "El precio 'hasta' debe ser mayor o igual al 'desde'"
+            )
+        return v
+
+
+class PrestadorServicioCreate(PrestadorServicioBase):
+    """Payload para agregar un servicio al catálogo."""
+
+
+class PrestadorServicioUpdate(BaseModel):
+    """Payload para editar un servicio (parcial)."""
+
+    nombre: str | None = Field(default=None, min_length=3, max_length=150)
+    descripcion: str | None = None
+    categoria_servicio: str | None = Field(default=None, max_length=80)
+    precio_desde_clp: int | None = Field(default=None, ge=0, le=99_999_999)
+    precio_hasta_clp: int | None = Field(default=None, ge=0, le=99_999_999)
+    duracion_estimada_min: int | None = Field(
+        default=None, ge=0, le=10_080
+    )
+    garantia_dias: int | None = Field(default=None, ge=0, le=3650)
+    destacado: bool | None = None
+    activo: bool | None = None
+    orden: int | None = Field(default=None, ge=0)
+
+
+class PrestadorServicioResponse(PrestadorServicioBase):
+    """Respuesta de un servicio del catálogo."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    prestador_id: UUID
+    activo: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class PrestadorServiciosBulkUpdate(BaseModel):
+    """Payload para reemplazar TODOS los servicios del prestador."""
+
+    servicios: list[PrestadorServicioCreate] = Field(
+        min_length=0, max_length=100
+    )
+
+
+# =========================================================
 # Fotos de trabajos
 # =========================================================
 class FotoTrabajoBase(BaseModel):
@@ -118,8 +190,12 @@ class FotosTrabajoBulkUpdate(BaseModel):
 class PrestadorBase(BaseModel):
     nombre: str = Field(min_length=3, max_length=150)
     descripcion: str | None = None
+    anios_experiencia: int | None = Field(default=None, ge=0, le=100)
+
+    # Contacto
     telefono: str | None = Field(default=None, max_length=20)
     whatsapp: str | None = Field(default=None, max_length=20)
+    whatsapp_mensaje: str | None = Field(default=None, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     sitio_web: str | None = Field(default=None, max_length=255)
 
@@ -146,6 +222,10 @@ class PrestadorBase(BaseModel):
     datos_extra: dict | None = Field(
         default=None,
         description="Campos específicos por categoría",
+    )
+    redes_sociales: dict | None = Field(
+        default=None,
+        description="Links: {instagram, facebook, tiktok, youtube, ...}",
     )
 
     @field_validator("email")
@@ -174,7 +254,6 @@ class PrestadorBase(BaseModel):
     ) -> list[str] | None:
         if v is None:
             return None
-        # Normalizar: sin vacíos, minúsculas, sin duplicados (preservando orden)
         cleaned: list[str] = []
         seen: set[str] = set()
         for item in v:
@@ -198,8 +277,11 @@ class PrestadorUpdate(BaseModel):
     categoria_id: UUID | None = None
     nombre: str | None = Field(default=None, min_length=3, max_length=150)
     descripcion: str | None = None
+    anios_experiencia: int | None = Field(default=None, ge=0, le=100)
+
     telefono: str | None = Field(default=None, max_length=20)
     whatsapp: str | None = Field(default=None, max_length=20)
+    whatsapp_mensaje: str | None = Field(default=None, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     sitio_web: str | None = Field(default=None, max_length=255)
 
@@ -217,6 +299,7 @@ class PrestadorUpdate(BaseModel):
 
     especialidades: list[str] | None = Field(default=None, max_length=30)
     datos_extra: dict | None = None
+    redes_sociales: dict | None = None
 
 
 # =========================================================
@@ -231,10 +314,12 @@ class PrestadorPublicoResponse(BaseModel):
     slug: str
     nombre: str
     descripcion: str | None
+    anios_experiencia: int | None
     categoria: CategoriaOficioResponse
     comuna: str
     region: str
     foto_url: str | None
+    foto_portada_url: str | None
     atiende_domicilio: bool
     atiende_local: bool
     atiende_emergencias: bool
@@ -247,10 +332,11 @@ class PrestadorPublicoResponse(BaseModel):
 
 
 class PrestadorDetalleResponse(PrestadorPublicoResponse):
-    """Detalle público completo con contacto y galería."""
+    """Detalle público completo con contacto, galería y servicios."""
 
     telefono: str | None
     whatsapp: str | None
+    whatsapp_mensaje: str | None
     email: str | None
     sitio_web: str | None
     direccion: str | None
@@ -258,6 +344,8 @@ class PrestadorDetalleResponse(PrestadorPublicoResponse):
     longitud: Decimal | None
     radio_cobertura_km: Decimal | None
     datos_extra: dict | None
+    redes_sociales: dict | None
+    servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list[FotoTrabajoResponse] = []
 
 
@@ -272,8 +360,10 @@ class PrestadorPrivadoResponse(BaseModel):
     slug: str
     nombre: str
     descripcion: str | None
+    anios_experiencia: int | None
     telefono: str | None
     whatsapp: str | None
+    whatsapp_mensaje: str | None
     email: str | None
     sitio_web: str | None
     comuna: str
@@ -287,6 +377,7 @@ class PrestadorPrivadoResponse(BaseModel):
     atiende_emergencias: bool
     horario_descripcion: str | None
     foto_url: str | None
+    foto_portada_url: str | None
     estado: EstadoPrestador
     motivo_rechazo: str | None
     destacado: bool
@@ -295,11 +386,13 @@ class PrestadorPrivadoResponse(BaseModel):
     verificado_por_id: UUID | None
     especialidades: list[str] | None
     datos_extra: dict | None
+    redes_sociales: dict | None
     calificacion_promedio: Decimal
     total_resenas: int
     activo: bool
     created_at: datetime
     updated_at: datetime
+    servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list[FotoTrabajoResponse] = []
 
 
