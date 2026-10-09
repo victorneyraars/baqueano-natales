@@ -14,8 +14,12 @@ import 'package:baqueano_natales/features/comercios/presentation/screens/formula
 import 'package:baqueano_natales/features/comercios/presentation/screens/lista_comercios_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/mis_comercios_screen.dart';
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_mi_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/formulario_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/mis_prestadores_screen.dart';
 
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
@@ -136,8 +140,42 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Prestadores — dueño (mis prestadores) — próximamente
+      // Prestadores — dueño (mis prestadores)
       // =========================================================
+      GoRoute(
+        path: '/mis-prestadores',
+        name: 'mis-prestadores',
+        builder: (context, state) => const MisPrestadoresScreen(),
+      ),
+      GoRoute(
+        path: '/mis-prestadores/nuevo',
+        name: 'mis-prestadores-nuevo',
+        builder: (context, state) => const FormularioPrestadorScreen(),
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id',
+        name: 'mi-prestador-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleMiPrestadorScreen(id: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/editar',
+        name: 'mi-prestador-editar',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FormularioPrestadorScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/servicios',
+        name: 'mi-prestador-servicios',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return EditorServiciosScreen(prestadorId: id);
+        },
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('Error')),

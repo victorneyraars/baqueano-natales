@@ -143,6 +143,12 @@ class HomeScreen extends ConsumerWidget {
               subtitle: 'Gestioná tus locales y servicios',
               onTap: () => context.push('/mis-comercios'),
             ),
+            _FeatureCard(
+              icon: Icons.handyman,
+              title: 'Mis oficios',
+              subtitle: 'Gestioná tus perfiles de prestador',
+              onTap: () => context.push('/mis-prestadores'),
+            ),
 
             const SizedBox(height: 24),
 
@@ -162,7 +168,7 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/comercios'),
             ),
             _FeatureCard(
-              icon: Icons.handyman,
+              icon: Icons.build_circle_outlined,
               title: 'Oficios y servicios',
               subtitle: 'Mecánicos, gasfiteres, electricistas y más',
               onTap: () => context.push('/prestadores'),
