@@ -7,6 +7,21 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-09 (cont.) — Prestadores: pantallas dueño + entorno dev optimizado
+- ✅ **Pantallas dueño de prestadores**:
+  - `MisPrestadoresScreen` (listado con estados + rechazo visible)
+  - `DetalleMiPrestadorScreen` (con acciones: enviar a revisión, editar, gestionar servicios, eliminar)
+  - `FormularioPrestadorScreen` (placeholder — próxima iteración)
+  - `EditorServiciosScreen` (placeholder — próxima iteración)
+- ✅ 5 rutas nuevas integradas en `app_router.dart`
+- ✅ Home actualizado con card **"Mis oficios"** en sección "Mi actividad"
+- ✅ **Entorno de desarrollo optimizado**:
+  - Emulador migrado de Android 17 → **Android 14** (estable)
+  - GPU cambiada de `swiftshader_indirect` → **`host`** (1.200x más rápido)
+  - RAM del AVD subida de 2 GB → **4 GB**
+  - Frame time promedio: de **36.000 ms** a **28 ms**
+- ✅ **Deep links seguros**: `canLaunchUrl` + fallback SnackBar (ya no crashea sin WhatsApp)
+
 ### 2026-10-09 — Módulo prestadores v2 (servicios + perfil industrial)
 - ✅ **Backend v2 completo**:
   - Tabla nueva `prestador_servicios` (catálogo con precios/duración/garantía)
@@ -856,7 +871,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## 🔨 Módulo `prestadores` — estado actual (v2 completo)
+## 🔨 Módulo `prestadores` — estado actual (v2 + pantallas dueño)
 
 | Componente | Estado |
 |---|---|
@@ -871,6 +886,9 @@ Luego, los primeros comandos a correr son:
 | Pantallas admin (verificar/rechazar + CRUD catálogo) | ⏳ |
 | Editor de servicios en frontend (dueño) | ⏳ |
 | Upload de portada + galería | ⏳ |
+| **Pantallas dueño (listar + detalle)** | ✅ |
+| **Formulario crear/editar** | ⏳ placeholder |
+| **Editor de servicios** | ⏳ placeholder |
 
 **Ruta del módulo:** `backend/app/modules/prestadores/` y `flutter/lib/features/prestadores/`
 **Tablas:** `categorias_oficio`, `prestadores`, `prestador_servicios`, `fotos_trabajo`
