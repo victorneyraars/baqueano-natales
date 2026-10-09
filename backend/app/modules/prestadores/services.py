@@ -5,8 +5,9 @@ Reglas clave:
 - Solo los prestadores VERIFICADOS son visibles públicamente.
 - El estado sigue el flujo: borrador → pendiente → verificado/rechazado.
 - Un prestador solo puede ser editado por su propietario o un admin.
-- Los prestadores pueden tener VARIAS fotos de trabajos (galería ordenada).
-- `especialidades` y `datos_extra` se guardan como JSONB nativo.
+- Los prestadores pueden tener VARIOS servicios con precios orientativos
+  y VARIAS fotos de trabajos (galerías ordenadas).
+- `especialidades`, `datos_extra` y `redes_sociales` se guardan como JSONB.
 
 Reusa:
 - app.shared.utils.slug.generar_slug_unico
@@ -25,15 +26,30 @@ from app.modules.prestadores.models import (
     EstadoPrestador,
     FotoTrabajo,
     Prestador,
+    PrestadorServicio,
 )
 from app.modules.prestadores.schemas import (
     CategoriaOficioCreate,
     CategoriaOficioUpdate,
     FotoTrabajoCreate,
     PrestadorCreate,
+    PrestadorServicioCreate,
+    PrestadorServicioUpdate,
     PrestadorUpdate,
 )
 from app.shared.utils.slug import generar_slug_unico
+
+
+# =========================================================
+# Helpers internos
+# =========================================================
+def _prestador_select_full():
+    """Select base con eager loading de relaciones."""
+    return select(Prestador).options(
+        selectinload(Prestador.categoria),
+        selectinload(Prestador.servicios),
+        selectinload(Prestador.fotos_trabajos),
+    )
 
 
 # =========================================================
@@ -163,7 +179,6 @@ async def crear_prestador(
     data: PrestadorCreate,
 ) -> Prestador:
     """Crea un prestador en estado BORRADOR."""
-    # Validar que la categoría exista y esté activa
     cat = await obtener_categoria(db, data.categoria_id)
     if not cat.activo:
         raise HTTPException(
@@ -179,8 +194,10 @@ async def crear_prestador(
         nombre=data.nombre,
         slug=slug,
         descripcion=data.descripcion,
+        anios_experiencia=data.anios_experiencia,
         telefono=data.telefono,
         whatsapp=data.whatsapp,
+        whatsapp_mensaje=data.whatsapp_mensaje,
         email=data.email,
         sitio_web=data.sitio_web,
         comuna=data.comuna,
@@ -195,11 +212,15 @@ async def crear_prestador(
         horario_descripcion=data.horario_descripcion,
         especialidades=data.especialidades,
         datos_extra=data.datos_extra,
+        redes_sociales=data.redes_sociales,
         estado=EstadoPrestador.BORRADOR,
     )
     db.add(prestador)
     await db.flush()
-    await db.refresh(prestador, attribute_names=["categoria", "fotos_trabajos"])
+    await db.refresh(
+        prestador,
+        attribute_names=["categoria", "servicios", "fotos_trabajos"],
+    )
     return prestador
 
 
@@ -208,16 +229,9 @@ async def obtener_prestador_por_id(
     prestador_id: UUID,
 ) -> Prestador:
     """Obtiene un prestador activo por ID (cualquier estado)."""
-    stmt = (
-        select(Prestador)
-        .where(
-            Prestador.id == prestador_id,
-            Prestador.activo.is_(True),
-        )
-        .options(
-            selectinload(Prestador.categoria),
-            selectinload(Prestador.fotos_trabajos),
-        )
+    stmt = _prestador_select_full().where(
+        Prestador.id == prestador_id,
+        Prestador.activo.is_(True),
     )
     prestador = (await db.execute(stmt)).scalar_one_or_none()
     if prestador is None:
@@ -233,17 +247,10 @@ async def obtener_prestador_por_slug(
     slug: str,
 ) -> Prestador:
     """Obtiene un prestador verificado por slug (uso público)."""
-    stmt = (
-        select(Prestador)
-        .where(
-            Prestador.slug == slug,
-            Prestador.estado == EstadoPrestador.VERIFICADO,
-            Prestador.activo.is_(True),
-        )
-        .options(
-            selectinload(Prestador.categoria),
-            selectinload(Prestador.fotos_trabajos),
-        )
+    stmt = _prestador_select_full().where(
+        Prestador.slug == slug,
+        Prestador.estado == EstadoPrestador.VERIFICADO,
+        Prestador.activo.is_(True),
     )
     prestador = (await db.execute(stmt)).scalar_one_or_none()
     if prestador is None:
@@ -260,14 +267,10 @@ async def listar_prestadores_mios(
 ) -> list[Prestador]:
     """Lista todos los prestadores del usuario (cualquier estado)."""
     stmt = (
-        select(Prestador)
+        _prestador_select_full()
         .where(
             Prestador.usuario_id == propietario.id,
             Prestador.activo.is_(True),
-        )
-        .options(
-            selectinload(Prestador.categoria),
-            selectinload(Prestador.fotos_trabajos),
         )
         .order_by(Prestador.created_at.desc())
     )
@@ -282,7 +285,6 @@ async def editar_prestador(
     """Edita parcialmente un prestador. Si estaba rechazado, vuelve a borrador."""
     updates = data.model_dump(exclude_unset=True)
 
-    # Si cambia la categoría, validar que exista y esté activa
     if "categoria_id" in updates and updates["categoria_id"] is not None:
         cat = await obtener_categoria(db, updates["categoria_id"])
         if not cat.activo:
@@ -294,13 +296,15 @@ async def editar_prestador(
     for campo, valor in updates.items():
         setattr(prestador, campo, valor)
 
-    # Si estaba rechazado y se edita, vuelve a borrador
     if prestador.estado == EstadoPrestador.RECHAZADO:
         prestador.estado = EstadoPrestador.BORRADOR
         prestador.motivo_rechazo = None
 
     await db.flush()
-    await db.refresh(prestador, attribute_names=["categoria", "fotos_trabajos"])
+    await db.refresh(
+        prestador,
+        attribute_names=["categoria", "servicios", "fotos_trabajos"],
+    )
     return prestador
 
 
@@ -424,6 +428,105 @@ async def destacar_prestador(
 
 
 # =========================================================
+# Servicios del prestador (catálogo)
+# =========================================================
+async def setear_servicios(
+    db: AsyncSession,
+    prestador: Prestador,
+    servicios_data: list[PrestadorServicioCreate],
+) -> list[PrestadorServicio]:
+    """
+    Reemplaza TODOS los servicios del prestador.
+    Elimina los existentes y crea los nuevos en una transacción.
+    """
+    for srv in list(prestador.servicios):
+        await db.delete(srv)
+    await db.flush()
+
+    nuevos: list[PrestadorServicio] = []
+    for idx, sdata in enumerate(servicios_data):
+        srv = PrestadorServicio(
+            prestador_id=prestador.id,
+            nombre=sdata.nombre,
+            descripcion=sdata.descripcion,
+            categoria_servicio=sdata.categoria_servicio,
+            precio_desde_clp=sdata.precio_desde_clp,
+            precio_hasta_clp=sdata.precio_hasta_clp,
+            duracion_estimada_min=sdata.duracion_estimada_min,
+            garantia_dias=sdata.garantia_dias,
+            destacado=sdata.destacado,
+            orden=sdata.orden if sdata.orden > 0 else idx,
+        )
+        db.add(srv)
+        nuevos.append(srv)
+    await db.flush()
+    return nuevos
+
+
+async def agregar_servicio(
+    db: AsyncSession,
+    prestador: Prestador,
+    data: PrestadorServicioCreate,
+) -> PrestadorServicio:
+    """Agrega un servicio al catálogo del prestador."""
+    # Si no se especifica orden, va al final
+    orden = data.orden
+    if orden == 0 and prestador.servicios:
+        orden = max((s.orden for s in prestador.servicios), default=0) + 1
+
+    srv = PrestadorServicio(
+        prestador_id=prestador.id,
+        nombre=data.nombre,
+        descripcion=data.descripcion,
+        categoria_servicio=data.categoria_servicio,
+        precio_desde_clp=data.precio_desde_clp,
+        precio_hasta_clp=data.precio_hasta_clp,
+        duracion_estimada_min=data.duracion_estimada_min,
+        garantia_dias=data.garantia_dias,
+        destacado=data.destacado,
+        orden=orden,
+    )
+    db.add(srv)
+    await db.flush()
+    await db.refresh(srv)
+    return srv
+
+
+async def obtener_servicio(
+    db: AsyncSession,
+    servicio_id: UUID,
+) -> PrestadorServicio:
+    srv = await db.get(PrestadorServicio, servicio_id)
+    if srv is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio no encontrado",
+        )
+    return srv
+
+
+async def editar_servicio(
+    db: AsyncSession,
+    servicio: PrestadorServicio,
+    data: PrestadorServicioUpdate,
+) -> PrestadorServicio:
+    updates = data.model_dump(exclude_unset=True)
+    for campo, valor in updates.items():
+        setattr(servicio, campo, valor)
+    await db.flush()
+    await db.refresh(servicio)
+    return servicio
+
+
+async def eliminar_servicio(
+    db: AsyncSession,
+    servicio: PrestadorServicio,
+) -> None:
+    await db.delete(servicio)
+    await db.flush()
+
+
+# =========================================================
 # Fotos de trabajos
 # =========================================================
 async def setear_fotos_trabajo(
@@ -434,15 +537,11 @@ async def setear_fotos_trabajo(
     """
     Reemplaza TODA la galería del prestador.
     Elimina las existentes y crea las nuevas en una transacción.
-
-    El orden se asigna automáticamente si no se envía (0, 1, 2...).
     """
-    # Eliminar existentes
     for foto in list(prestador.fotos_trabajos):
         await db.delete(foto)
     await db.flush()
 
-    # Crear nuevas
     nuevas: list[FotoTrabajo] = []
     for idx, fdata in enumerate(fotos_data):
         foto = FotoTrabajo(
@@ -513,7 +612,10 @@ async def listar_prestadores_publicos(
             Prestador.calificacion_promedio.desc(),
             Prestador.nombre,
         )
-        .options(selectinload(Prestador.categoria))
+        .options(
+            selectinload(Prestador.categoria),
+            selectinload(Prestador.servicios),
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -552,6 +654,7 @@ async def listar_prestadores_admin(
         stmt.order_by(Prestador.created_at.desc())
         .options(
             selectinload(Prestador.categoria),
+            selectinload(Prestador.servicios),
             selectinload(Prestador.fotos_trabajos),
         )
         .offset((page - 1) * page_size)
@@ -571,6 +674,17 @@ async def actualizar_foto_perfil(
     foto_url: str,
 ) -> Prestador:
     prestador.foto_url = foto_url
+    await db.flush()
+    await db.refresh(prestador)
+    return prestador
+
+
+async def actualizar_foto_portada(
+    db: AsyncSession,
+    prestador: Prestador,
+    foto_portada_url: str,
+) -> Prestador:
+    prestador.foto_portada_url = foto_portada_url
     await db.flush()
     await db.refresh(prestador)
     return prestador
