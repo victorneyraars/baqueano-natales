@@ -1,11 +1,41 @@
 # Baqueano Natales — Contexto Completo del Proyecto
 
-> **Última actualización:** 2026-10-08
+> **Última actualización:** 2026-10-10
 > **Propósito:** Documento maestro que resume el estado completo del proyecto para retomar el trabajo en cualquier momento sin perder contexto.
 
 ---
 
 ## 📋 Changelog reciente
+
+### 2026-10-10 (cont. 2) — Módulo social Etapa 1 (esqueleto) + Infra de tests
+- ✅ **Módulo `social/` completo (Etapa 1: esqueleto)** — base para publicar en Facebook, Instagram y Google Business desde el admin:
+  - **4 tablas**: `cuentas_sociales`, `tokens_sociales`, `publicaciones_sociales`, `config_social`
+  - **4 enums de Postgres**: `red_social`, `propietario_tipo_social`, `destino_publicacion`, `estado_publicacion`
+  - **Multi-tenant** vía `(propietario_tipo, propietario_id)`: cuenta central (Baqueano), por prestador, o por comercio
+  - **Índice único parcial** con `NULLS NOT DISTINCT` para garantizar UNA sola config global
+  - **Tokens cifrados** con Fernet (`app/core/crypto.py` + `TOKEN_ENCRYPTION_KEY` en `.env`)
+- ✅ **Backend del módulo** (arquitectura modular, alineada con `prestadores/`):
+  - `models.py` — 4 tablas + 4 enums + `TimestampMixin` / `SoftDeleteMixin`
+  - `schemas.py` — 11 clases Pydantic
+  - `deps.py` — `AdminUser`, `CurrentUser`, `CuentaDelPropietario`
+  - `services.py` — 14 funciones async (CRUD de cuentas, tokens, config, publicaciones)
+  - `routes.py` — router admin con 10 endpoints
+  - `README.md` — doc del módulo + roadmap de 9 etapas
+- ✅ **Crypto transversal** (`app/core/crypto.py`):
+  - Fernet (AES-128 + HMAC-SHA256)
+  - Fallback a texto plano en dev, **aborta en producción** si falta la clave
+  - `TOKEN_ENCRYPTION_KEY` agregada a `Settings` + `.env` del server
+- ✅ **Infraestructura de tests** (primera vez en el proyecto):
+  - `backend/pytest.ini` + `backend/tests/conftest.py`
+  - Tests con DB corren contra `baqueano_test` (DB separada, no toca producción)
+  - **65 tests** en total (29 unit + 36 con DB)
+  - `drop_all + create_all` al inicio de cada sesión para que el schema de test siempre refleje el código
+- 🐛 **Fixes de infraestructura Docker**:
+  - Montar `alembic/` + `alembic.ini` en el container (los archivos se quedaban "atrapados" dentro de la imagen)
+  - Montar `tests/` + `pytest.ini` en el container
+  - Estos fixes son **estructurales**: a partir de ahora las migraciones y tests nuevos se ven sin rebuild
+- 🐛 **Fix alembic autogenerate**: detecta `server_default` falsos en `usuarios.*` en cada `--autogenerate`. Hay que removerlos a mano de cada migración (documentado en los docstrings de las migraciones del módulo social).
+- 🐛 **Fix índice único**: en Postgres, `UNIQUE(a, b)` **no** bloquea duplicados cuando uno es NULL. Se agregó `NULLS NOT DISTINCT` (Postgres 15+) al índice parcial de config global.
 
 ### 2026-10-10 (cont.) — Editor de horarios de comercios
 - ✅ **`EditorHorariosScreen`** para dueños:
@@ -177,6 +207,9 @@
 
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
+- ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
+- ✅ **Módulo social (Etapa 1)** — 4 tablas, crypto, 10 endpoints admin, 65 tests
+- ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
 - ✅ Login con Google funcional **end-to-end**
@@ -718,6 +751,50 @@ B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97
 
 ---
 
+## 🧪 Infraestructura de tests
+
+**Primera vez que el proyecto tiene tests automatizados.**
+
+### Estructura
+```nbackend/
+├── pytest.ini
+└── tests/
+    ├── conftest.py        # fixtures: test_engine, db
+    └── modules/
+        └── social/
+            ├── test_crypto.py      # 13 tests (unit)
+            ├── test_schemas.py     # 16 tests (unit)
+            ├── test_models.py      # 12 tests (con DB)
+            └── test_services.py    # 24 tests (con DB)
+```
+
+### Cómo correr los tests
+
+**Local (solo unit, sin DB):**
+``powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest tests/modules/social/ -q
+``
+→ 29 passed, 36 skipped (los con DB se saltan sin `POSTGRES_PASSWORD` local)
+
+**Server (con DB de test):**
+``powershell
+ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backend pytest tests/ -q"
+``
+→ 65 passed
+
+### DB de test
+
+- Nombre: `baqueano_test` (en el Postgres del server)
+- **NO toca producción** (`baqueano_natales`)
+- El `conftest.py` hace `drop_all + create_all` al inicio de cada sesión
+- TRUNCATE de las tablas del módulo antes de cada test
+
+### Warning cosmético conocido
+
+`PytestCacheWarning: could not create cache path /app/.pytest_cache` —
+el container corre como `appuser` y `/app` es de `root`. No afecta los tests.
+
 ## 🗂️ Configuración crítica del server nuevo
 
 ### `docker-compose.yml`
@@ -824,6 +901,41 @@ curl http://104.129.59.151/health
 
 ---
 
+### Recargar cambios del `.env` en el backend
+
+⚠️ **`docker compose restart backend` NO recarga el `.env`.** Recrear el container:
+
+``bash
+ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose up -d backend"
+``
+
+(Palabra clave en el output: **"Recreated"**, no "Started".)
+
+### Correr tests local (unit, sin DB)
+
+``powershell
+cd D:\dev\baqueano-natales\backend
+.\.venv\Scripts\python.exe -m pytest tests/modules/social/ -q
+``
+
+### Correr tests completos (server, con DB)
+
+``powershell
+ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backend pytest tests/ -q"
+``
+
+### Aplicar migraciones en el server
+
+``powershell
+ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backend alembic upgrade head"
+``
+
+### Ver migraciones aplicadas
+
+``powershell
+ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backend alembic current"
+``
+
 ## 📚 Documentación existente
 
 **En el repo `baqueano-natales`:**
@@ -837,6 +949,7 @@ curl http://104.129.59.151/health
 | `docs/DEPLOYMENT.md` | Guía de deploy paso a paso |
 | `docs/DEVELOPMENT.md` | Convenciones + setup dev |
 | `docs/DECISIONS/0001-docker-compose.md` | ADR inicial |
+| `backend/app/modules/social/README.md` | Doc del módulo social + roadmap de 9 etapas |
 | `CONTEXTO_PROYECTO.md` | Este archivo |
 
 ---
@@ -845,20 +958,17 @@ curl http://104.129.59.151/health
 
 **Lo que está funcionando:**
 - Server nuevo con backend corriendo en `104.129.59.151` (HTTP)
-- Postgres 16 con tabla `usuarios`
-- 14 endpoints activos
-- 3 módulos backend completos
+- Postgres 16 con 13 tablas (usuarios, comercios, prestadores, social)
+- 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores) + social (Etapa 1)
 - App Flutter client con **login funcional end-to-end**
 - App Flutter client con **persistencia de sesión funcional**
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
+- **65 tests automatizados** (29 unit + 36 con DB) — todos verdes
+- **Módulo social (Etapa 1)** desplegado: 4 tablas, crypto, 10 endpoints admin
 
 **Lo que queda pendiente inmediato:**
-1. **Frontend Flutter del módulo comercios — parte 2** (Fase 3.6.0.c+d)
-   - Pantallas dueño: mis comercios, crear/editar, horarios, enviar a revisión
-   - Pantallas admin: verificar/rechazar/suspender, CRUD categorías
-   - Diferenciar Home admin del Home client
-   - (La parte cliente — lista + detalle + filtros — ya está ✅)
+1. **Módulo social Etapa 2** — OAuth Facebook (admin + propietario) + publicación básica
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
@@ -979,6 +1089,55 @@ Luego, los primeros comandos a correr son:
 - Público: `GET /api/v1/prestadores`, `/prestadores/categorias`, `/prestadores/{slug}`
 - Dueño: `POST/GET/PATCH/DELETE /api/v1/mis-prestadores`, `/mis-prestadores/{id}/fotos`, `/mis-prestadores/{id}/enviar-revision`
 - Admin: `GET/POST/PATCH/DELETE /api/v1/admin/categorias-oficio`, `/admin/prestadores/{id}/verificar|rechazar|suspender|destacar`
+
+---
+
+---
+
+## 🔨 Módulo `social` — estado actual (Etapa 1 completa)
+
+Publicación en redes sociales (Facebook, Instagram, Google Business) con
+multi-tenant por recurso y tokens cifrados.
+
+| Componente | Estado |
+|---|---|
+| Backend (modelos + migración) | ✅ |
+| Backend (crypto Fernet) | ✅ |
+| Backend (schemas + services + deps) | ✅ |
+| Backend (router admin + 10 endpoints) | ✅ |
+| Backend (README del módulo) | ✅ |
+| Tests (65: 29 unit + 36 con DB) | ✅ |
+| Deploy en producción | ✅ |
+| **Etapa 2 (OAuth Facebook)** | ⏳ próxima sesión |
+| Etapa 3 (publicación FB con worker) | ⏳ |
+| Etapa 4 (Instagram vía FB) | ⏳ |
+| Etapa 5 (integración con prestadores) | ⏳ |
+| Etapa 6-7 (frontend admin + propietario) | ⏳ |
+| Etapa 8 (Google Business Profile — pendiente aprobación API) | ⏳ |
+| Etapa 9 (módulo promocion/ — plantillas + afiche) | ⏳ |
+
+**Ruta:** `backend/app/modules/social/` y `backend/app/core/crypto.py`
+
+**Tablas:** `cuentas_sociales`, `tokens_sociales`, `publicaciones_sociales`, `config_social`
+
+**Enums de Postgres:** `red_social`, `propietario_tipo_social`, `destino_publicacion`, `estado_publicacion`
+
+**Endpoints (admin, 10 total):**
+```nGET/POST         /api/v1/admin/social/cuentas
+GET/PATCH/DELETE /api/v1/admin/social/cuentas/{id}
+GET/PATCH        /api/v1/admin/social/config
+GET/POST         /api/v1/admin/social/publicaciones
+GET              /api/v1/admin/social/publicaciones/{id}
+```
+
+**Migraciones aplicadas:**
+- `3a833c2fff44` — tablas del módulo social
+- `d16ad0e2b9dc` — índice único parcial de config global
+- `3baba5a761b4` — recrear índice con `NULLS NOT DISTINCT`
+
+**Variable crítica:** `TOKEN_ENCRYPTION_KEY` (clave Fernet, 44 caracteres)
+en `~/baqueano-natales/.env` del server. Sin ella el backend **no arranca
+en producción**.
 
 ---
 
