@@ -7,6 +7,26 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-09 (cont.) — Panel admin operativo (flavor admin)
+- ✅ **Panel de administración** en flavor `admin` con Home diferenciado:
+  - Sección **Gestión**: Prestadores (con badge de pendientes), Comercios (próx.), Usuarios (próx.)
+  - Sección **Configuración**: Categorías de oficio (CRUD), Categorías de comercio (próx.)
+  - Sección **Análisis**: Estadísticas globales (próx.)
+- ✅ **Gestión de prestadores** (admin):
+  - Listado con filtros por estado (Pendientes/Verificados/Rechazados/Suspendidos/Borradores)
+  - Detalle con acciones: Verificar / Rechazar / Suspender / Destacar
+  - Diálogos con motivo para rechazo/suspensión
+- ✅ **CRUD de categorías de oficio** (admin):
+  - Listar todas (activas + inactivas) con toggle activa/inactiva
+  - Crear/editar con modal bottom sheet (nombre, slug auto, descripción, ícono, color, orden)
+  - Vista previa en vivo
+- ✅ **Router detecta `AppConfig.appType`**:
+  - Flavor `admin` → arranca en `/admin/home` (panel morado)
+  - Flavor `client` → arranca en `/home` (Home normal)
+- ✅ **Verificado end-to-end** en emulador:
+  - Login con Google en flavor admin → 200
+  - `GET /admin/prestadores?estado=pendiente` → 200
+
 ### 2026-10-09 (cont.) — Prestadores: formulario + editor de servicios
 - ✅ **Formulario real de crear/editar prestador** (dueño):
   - Información básica: nombre, categoría (dropdown con 11 categorías), descripción, años experiencia
