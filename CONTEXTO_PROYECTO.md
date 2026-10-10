@@ -7,6 +7,21 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-10 (cont.) — Editor de horarios de comercios
+- ✅ **`EditorHorariosScreen`** para dueños:
+  - Configuración de los 7 días con **multi-franja** (horario partido: 12-15 + 19-23)
+  - Time picker nativo por franja
+  - Toggle "Abierto/Cerrado" por día
+  - Botón "Agregar franja" (para horario partido)
+  - Botón "Copiar a todos los días" (útil para configurar rápido)
+  - Validación: si está abierto, requiere abre y cierra
+- ✅ **Integración en el detalle del comercio**:
+  - Link "Gestionar" junto al título "Horarios"
+  - Botón "Gestionar horarios" en la zona de acciones
+- ✅ **Ruta** `/mis-comercios/:id/horarios` en el router
+- ✅ **Verificado end-to-end** en emulador: `PUT /mis-comercios/{id}/horarios → 200`
+- 🎉 **Módulo comercios 100% cerrado** (cliente + dueño + admin)
+
 ### 2026-10-10 — Admin de Comercios + Fix crítico del diálogo
 - ✅ **Admin de comercios completo** (paralelo al de prestadores):
   - `AdminComerciosScreen`: listado con filtros por estado (Pendientes/Verificados/Rechazados/Suspendidos/Borradores)
