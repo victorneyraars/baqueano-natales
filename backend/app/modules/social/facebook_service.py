@@ -228,3 +228,70 @@ def buscar_pagina(
     paginas: list[PaginaFacebook], page_id: str,
 ) -> Optional[PaginaFacebook]:
     return next((p for p in paginas if p.id == page_id), None)
+
+# ---------------------------------------------------------------- publicacion
+
+async def publicar_post_en_pagina(
+    page_id: str,
+    page_token: str,
+    mensaje: str,
+    image_url: str | None = None,
+    link: str | None = None,
+) -> tuple[str | None, FacebookError | None]:
+    """Publica un post en una pagina de Facebook.
+
+    - Si `image_url` esta seteado: POST a /{page_id}/photos (Meta descarga
+      la imagen desde la URL, que debe ser publicamente accesible).
+    - Si no: POST a /{page_id}/feed (solo texto, opcionalmente con link).
+
+    Devuelve `(external_post_id, error)`.
+    `external_post_id` es el ID del post en Facebook (formato
+    "{page_id}_{post_id}"), util para correlacionar.
+    """
+    if not page_id or not page_token:
+        return None, FacebookError(message="Faltan page_id o page_token")
+
+    if not mensaje and not image_url:
+        return None, FacebookError(message="El post no tiene contenido")
+
+    # Construir payload segun tipo
+    if image_url:
+        path = f"{page_id}/photos"
+        payload: dict = {
+            "url": image_url,
+            "access_token": page_token,
+        }
+        if mensaje:
+            payload["caption"] = mensaje
+        if link:
+            payload["link"] = link
+    else:
+        path = f"{page_id}/feed"
+        payload = {
+            "message": mensaje,
+            "access_token": page_token,
+        }
+        if link:
+            payload["link"] = link
+
+    # POST a Graph API
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(_graph_url(path), data=payload)
+        except httpx.HTTPError as e:
+            return None, FacebookError(message=f"Error de red: {e}")
+
+    if resp.status_code not in (200, 201):
+        return None, _parse_error(resp)
+
+    data = resp.json()
+    # /photos devuelve {"id": "<photo_id>", "post_id": "<page>_<post>"}
+    # /feed devuelve {"id": "<page>_<post>"}
+    post_id = data.get("post_id") or data.get("id")
+    if not post_id:
+        return None, FacebookError(
+            message=f"Respuesta sin id: {data!r}"[:200]
+        )
+
+    return post_id, None
+

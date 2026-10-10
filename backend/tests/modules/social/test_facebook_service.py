@@ -200,3 +200,79 @@ def test_pagina_to_public_dict_no_expone_token():
     d = p.to_public_dict()
     assert "access_token" not in d
     assert "EAAB_secreto" not in str(d)
+
+# ------------------------------------------------------------ publicar_post
+
+@respx.mock
+async def test_publicar_post_solo_texto_ok():
+    respx.post("https://graph.facebook.com/v26.0/PAGE_TEST/feed").mock(
+        return_value=httpx.Response(200, json={"id": "PAGE_TEST_12345"})
+    )
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="PAGE_TEST", page_token="TOKEN", mensaje="Hola"
+    )
+    assert err is None
+    assert post_id == "PAGE_TEST_12345"
+
+
+@respx.mock
+async def test_publicar_post_con_imagen_ok():
+    respx.post("https://graph.facebook.com/v26.0/PAGE_TEST/photos").mock(
+        return_value=httpx.Response(200, json={
+            "id": "PHOTO_ID", "post_id": "PAGE_TEST_12345",
+        })
+    )
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="PAGE_TEST", page_token="TOKEN",
+        mensaje="Con foto", image_url="https://example.com/img.jpg",
+    )
+    assert err is None
+    assert post_id == "PAGE_TEST_12345"
+
+
+async def test_publicar_post_sin_contenido_falla():
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="PAGE_TEST", page_token="TOKEN", mensaje=""
+    )
+    assert post_id is None
+    assert err is not None
+    assert "contenido" in err.message.lower()
+
+
+async def test_publicar_post_sin_page_id_falla():
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="", page_token="TOKEN", mensaje="test"
+    )
+    assert post_id is None
+    assert err is not None
+    assert "Faltan" in err.message
+
+
+@respx.mock
+async def test_publicar_post_error_meta():
+    respx.post("https://graph.facebook.com/v26.0/PAGE_TEST/feed").mock(
+        return_value=httpx.Response(400, json={
+            "error": {"message": "Invalid token", "code": 190}
+        })
+    )
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="PAGE_TEST", page_token="TOKEN", mensaje="test"
+    )
+    assert post_id is None
+    assert err is not None
+    assert err.code == 190
+    assert "Invalid token" in err.message
+
+
+@respx.mock
+async def test_publicar_post_error_de_red():
+    respx.post("https://graph.facebook.com/v26.0/PAGE_TEST/feed").mock(
+        side_effect=httpx.ConnectError("timeout")
+    )
+    post_id, err = await facebook_service.publicar_post_en_pagina(
+        page_id="PAGE_TEST", page_token="TOKEN", mensaje="test"
+    )
+    assert post_id is None
+    assert err is not None
+    assert "Error de red" in err.message
+

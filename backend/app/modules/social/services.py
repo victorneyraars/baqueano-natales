@@ -552,3 +552,121 @@ async def conectar_cuenta_facebook(
     await db.refresh(cuenta)
     return cuenta, nombre_final
 
+# =========================================================
+# Worker de publicaciones (Etapa 3)
+# =========================================================
+
+# Backoff exponencial: cuanto esperar despues de cada intento fallido.
+# Indice = intentos actuales (0-based). Si len < intentos, se agoto.
+_BACKOFF_SEGUNDOS = [
+    60,       # intento 1 falla -> esperar 1 min
+    300,      # intento 2 falla -> esperar 5 min
+    1800,     # intento 3 falla -> esperar 30 min
+    7200,     # intento 4 falla -> esperar 2 h
+]
+
+MAX_INTENTOS = len(_BACKOFF_SEGUNDOS) + 1  # 5 intentos totales
+
+
+async def obtener_publicaciones_pendientes(
+    db: AsyncSession, limit: int = 20
+) -> list[PublicacionSocial]:
+    """Trae las publicaciones listas para procesar.
+
+    Criterio:
+    - estado = PENDIENTE
+    - proximo_intento_en IS NULL o <= now()
+
+    Ordenadas por created_at ASC (FIFO).
+    """
+    ahora = datetime.now(timezone.utc)
+    stmt = (
+        select(PublicacionSocial)
+        .where(
+            PublicacionSocial.estado == EstadoPublicacion.PENDIENTE,
+            (
+                (PublicacionSocial.proximo_intento_en.is_(None))
+                | (PublicacionSocial.proximo_intento_en <= ahora)
+            ),
+        )
+        .order_by(PublicacionSocial.created_at.asc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def obtener_token_vigente_de_cuenta(
+    db: AsyncSession, cuenta_id: UUID
+) -> tuple[str | None, str | None]:
+    """Devuelve `(access_token_descifrado, error)`.
+
+    Busca el token mas reciente no expirado de la cuenta y lo descifra
+    con Fernet.
+    """
+    ahora = datetime.now(timezone.utc)
+    stmt = (
+        select(TokenSocial)
+        .where(
+            TokenSocial.cuenta_id == cuenta_id,
+            (TokenSocial.expires_at.is_(None)) | (TokenSocial.expires_at > ahora),
+        )
+        .order_by(TokenSocial.created_at.desc())
+        .limit(1)
+    )
+    token_obj = (await db.execute(stmt)).scalar_one_or_none()
+    if token_obj is None:
+        return None, "No hay token vigente para esta cuenta"
+
+    token_plano = crypto.descifrar(token_obj.access_token)
+    if not token_plano:
+        return None, "No se pudo descifrar el token (?clave Fernet rotada?)"
+
+    return token_plano, None
+
+
+async def marcar_publicacion_publicando(
+    db: AsyncSession, pub: PublicacionSocial
+) -> None:
+    """Marca la publicacion como PUBLICANDO (evita doble procesamiento)."""
+    pub.estado = EstadoPublicacion.PUBLICANDO
+    await db.commit()
+    await db.refresh(pub)
+
+
+async def marcar_publicacion_publicada(
+    db: AsyncSession, pub: PublicacionSocial, external_post_id: str
+) -> None:
+    """Marca la publicacion como PUBLICADO con el ID externo."""
+    pub.estado = EstadoPublicacion.PUBLICADO
+    pub.external_post_id = external_post_id
+    pub.error_ultimo = None
+    pub.proximo_intento_en = None
+    await db.commit()
+    await db.refresh(pub)
+
+
+async def marcar_publicacion_fallada(
+    db: AsyncSession, pub: PublicacionSocial, error: str
+) -> None:
+    """Registra el fallo. Aplica backoff exponencial o marca AGOTADO.
+
+    - Si `pub.intentos` alcanzo MAX_INTENTOS: estado=AGOTADO, no reintenta.
+    - Si no: estado=PENDIENTE, incrementa intentos, programa proximo_intento_en.
+    """
+    pub.intentos += 1
+    pub.error_ultimo = error[:1000] if error else "(sin detalle)"
+
+    if pub.intentos >= MAX_INTENTOS:
+        pub.estado = EstadoPublicacion.AGOTADO
+        pub.proximo_intento_en = None
+    else:
+        pub.estado = EstadoPublicacion.PENDIENTE
+        espera = _BACKOFF_SEGUNDOS[pub.intentos - 1]
+        pub.proximo_intento_en = datetime.now(timezone.utc) + timedelta(
+            seconds=espera
+        )
+
+    await db.commit()
+    await db.refresh(pub)
+

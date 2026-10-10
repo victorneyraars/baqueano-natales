@@ -41,6 +41,7 @@ from app.modules.prestadores.routes import (
 from app.modules.social.routes import (
     router_admin as social_admin_router,
 )
+from app.modules.social.worker import start_worker, stop_worker
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,15 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error inicializando Firebase: {e}")
         raise
 
+    # Arrancar el worker de publicaciones sociales (APScheduler)
+    # No-op si SOCIAL_WORKER_ENABLED=false
+    start_worker()
+
     yield
+
+    # Detener el worker
+    stop_worker()
+
     logger.info("Cerrando Baqueano Natales API")
 
 

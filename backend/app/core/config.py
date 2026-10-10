@@ -98,6 +98,15 @@ class Settings(BaseSettings):
         "pages_show_list,pages_read_engagement,pages_manage_posts"
     )
 
+    # --- Worker de publicaciones sociales (Etapa 3) ---
+    # Scheduler in-process (APScheduler) que procesa la cola
+    # publicaciones_sociales. Deshabilitar en tests o si corre un worker
+    # externo.
+    SOCIAL_WORKER_ENABLED: bool = True
+    # Intervalo entre ciclos del worker (segundos). Cada ciclo procesa
+    # las publicaciones con estado=PENDIENTE y proximo_intento_en <= now.
+    SOCIAL_WORKER_INTERVAL_SEC: int = 30
+
     @property
     def admin_emails_list(self) -> list[str]:
         """Lista de emails admin parseados."""

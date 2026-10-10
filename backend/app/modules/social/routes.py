@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 
 from app.core.db import DbSession
-from app.modules.social import services
+from app.modules.social import services, worker
 from app.modules.social.deps import AdminUser
 from app.modules.social.models import (
     EstadoPublicacion,
@@ -409,4 +409,20 @@ async def facebook_conectar(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         )
     return ConectarCuentaResponse(cuenta=cuenta, nombre_pagina=nombre)
+
+# =========================================================
+# Worker de publicaciones (Etapa 3)
+# =========================================================
+
+@router_admin.post(
+    "/publicaciones/procesar-ahora",
+    summary="Ejecutar un ciclo del worker de publicaciones ahora",
+    description=(
+        "Ejecuta un ciclo del worker (procesa publicaciones PENDIENTES "
+        "listas). Devuelve stats del ciclo. Util para smoke tests y "
+        "reintentos manuales tras un fix."
+    ),
+)
+async def procesar_cola_ahora(_admin: AdminUser) -> dict:
+    return await worker.ejecutar_ciclo_manual()
 
