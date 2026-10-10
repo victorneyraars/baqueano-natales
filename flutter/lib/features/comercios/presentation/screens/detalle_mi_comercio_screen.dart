@@ -4,7 +4,7 @@
 /// - Estado actual del comercio + motivo de rechazo (si aplica).
 /// - Todos los datos del comercio.
 /// - Horarios.
-/// - Acciones: editar, enviar a revisión, eliminar.
+/// - Acciones: editar, gestionar horarios, enviar a revisión, eliminar.
 library;
 
 import 'package:flutter/material.dart';
@@ -124,8 +124,19 @@ class _Contenido extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // --- Horarios ---
-        _Seccion(titulo: 'Horarios', theme: theme),
+        // --- Horarios (con botón Gestionar al lado) ---
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _Seccion(titulo: 'Horarios', theme: theme),
+            TextButton.icon(
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Gestionar'),
+              onPressed: () =>
+                  context.push('/mis-comercios/${comercio.id}/horarios'),
+            ),
+          ],
+        ),
         if (comercio.horarios.isEmpty)
           Text(
             'Sin horarios cargados',
@@ -154,6 +165,15 @@ class _Contenido extends StatelessWidget {
           label: const Text('Editar comercio'),
           onPressed: () =>
               context.push('/mis-comercios/${comercio.id}/editar'),
+        ),
+
+        const SizedBox(height: 8),
+
+        OutlinedButton.icon(
+          icon: const Icon(Icons.schedule_outlined),
+          label: const Text('Gestionar horarios'),
+          onPressed: () =>
+              context.push('/mis-comercios/${comercio.id}/horarios'),
         ),
 
         const SizedBox(height: 8),

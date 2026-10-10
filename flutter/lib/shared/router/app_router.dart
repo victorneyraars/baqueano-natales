@@ -24,6 +24,7 @@ import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_comercio_screen.dart';
+import 'package:baqueano_natales/features/comercios/presentation/screens/editor_horarios_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_mi_comercio_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/formulario_comercio_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/lista_comercios_screen.dart';
@@ -215,6 +216,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return FormularioComercioScreen(comercioId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-comercios/:id/horarios',
+        name: 'mi-comercio-horarios',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return EditorHorariosScreen(comercioId: id);
         },
       ),
 
