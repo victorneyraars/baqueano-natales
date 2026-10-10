@@ -12,8 +12,11 @@ Notas sobre pytest-asyncio 0.25:
   `create_async_engine` no es awaitable, así que no necesitan ser async,
   y evitamos el ScopeMismatch entre fixtures async session-scoped y el
   event loop function-scoped.
-- El CREATE TABLE inicial corre dentro de un `asyncio.run()` propio.
-- `db` es async function-scoped: cada test tiene su propia sesión y loop.
+- El schema (drop_all + create_all) se recrea al inicio de cada sesión
+  de tests para garantizar que la DB de test refleje SIEMPRE el estado
+  actual del código (índices, columnas, constraints). Es una DB de test:
+  no hay datos que preservar.
+- `db` es async function-scoped: cada test tiene su propia sesión.
 """
 import asyncio
 import os
@@ -83,28 +86,33 @@ def test_engine(test_url: str):
     """
     engine = create_async_engine(test_url, poolclass=NullPool)
     yield engine
-    # No se hace dispose: NullPool + suite corta. El GC lo maneja.
 
 
 @pytest.fixture(scope="session")
 def _init_schema(test_engine):
     """
-    Crea el esquema (todas las tablas) una sola vez por sesión de tests.
+    Recrea el esquema completo (drop_all + create_all) al inicio de la
+    sesión de tests.
 
     NO es autouse: solo se ejecuta cuando un test pide el fixture `db`.
-    Usa asyncio.run() para hacer el CREATE TABLE sin declarar un fixture
-    async session-scoped (que dispararía ScopeMismatch en 0.25).
+
+    Por qué drop_all: si la tabla existía de una corrida anterior sin
+    un índice nuevo (o con columnas viejas), `create_all(checkfirst=True)`
+    NO la modifica. Esa desincronización hace fallar tests que dependen
+    de constraints o índices recién agregados. Como es una DB de test,
+    empezamos siempre desde cero.
     """
-    async def _crear():
+    async def _recrear():
         from app.modules.auth import models as _auth  # noqa: F401
         from app.modules.comercios import models as _comercios  # noqa: F401
         from app.modules.prestadores import models as _prestadores  # noqa: F401
         from app.modules.social import models as _social  # noqa: F401
 
         async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
 
-    asyncio.run(_crear())
+    asyncio.run(_recrear())
     yield
 
 
