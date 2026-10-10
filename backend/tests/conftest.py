@@ -3,14 +3,19 @@ Configuración compartida de pytest.
 
 Estrategia:
 - Si `TEST_DATABASE_URL` está en el entorno, se usa esa.
-- Si no, se intenta construir a partir de las variables POSTGRES_*
-  (que están seteadas en el container). El nombre de la DB se
-  reemplaza por `baqueano_test` para no tocar producción.
+- Si no, se construye a partir de las variables POSTGRES_* (que están
+  seteadas en el container), apuntando a la DB de test `baqueano_test`.
 - Si no hay forma de armar la URL, los tests que piden `db` se saltan.
 
-`DATABASE_URL` se setea a un valor fake ANTES de importar `app.core.db`
-para que la app no falle al importar (el engine se crea al importar).
+Notas sobre pytest-asyncio 0.25:
+- `test_engine` y `_init_schema` son fixtures SÍNCRONOS (scope=session).
+  `create_async_engine` no es awaitable, así que no necesitan ser async,
+  y evitamos el ScopeMismatch entre fixtures async session-scoped y el
+  event loop function-scoped.
+- El CREATE TABLE inicial corre dentro de un `asyncio.run()` propio.
+- `db` es async function-scoped: cada test tiene su propia sesión y loop.
 """
+import asyncio
 import os
 
 # IMPORTANTE: antes de cualquier import de `app.core.db`
@@ -54,7 +59,7 @@ def _test_url() -> str | None:
 
 
 # =========================================================
-# Fixtures
+# Fixtures (sync session-scoped)
 # =========================================================
 @pytest.fixture(scope="session")
 def test_url() -> str:
@@ -67,34 +72,53 @@ def test_url() -> str:
     return url
 
 
-@pytest_asyncio.fixture(scope="session")
-async def test_engine(test_url: str):
-    """Engine async dedicado a los tests (NullPool, se crea una vez)."""
+@pytest.fixture(scope="session")
+def test_engine(test_url: str):
+    """
+    Engine async dedicado a los tests.
+
+    Fixture SÍNCRONO: `create_async_engine` no es awaitable, así que no
+    necesita un event loop. NullPool evita compartir conexiones entre
+    loops distintos de cada test.
+    """
     engine = create_async_engine(test_url, poolclass=NullPool)
     yield engine
-    await engine.dispose()
+    # No se hace dispose: NullPool + suite corta. El GC lo maneja.
 
 
-@pytest_asyncio.fixture(scope="session")
-async def _init_schema(test_engine):
+@pytest.fixture(scope="session")
+def _init_schema(test_engine):
     """
-    Crea todas las tablas al inicio de la sesión de tests.
+    Crea el esquema (todas las tablas) una sola vez por sesión de tests.
 
     NO es autouse: solo se ejecuta cuando un test pide el fixture `db`.
+    Usa asyncio.run() para hacer el CREATE TABLE sin declarar un fixture
+    async session-scoped (que dispararía ScopeMismatch en 0.25).
     """
-    from app.modules.auth import models as _auth  # noqa: F401
-    from app.modules.comercios import models as _comercios  # noqa: F401
-    from app.modules.prestadores import models as _prestadores  # noqa: F401
-    from app.modules.social import models as _social  # noqa: F401
+    async def _crear():
+        from app.modules.auth import models as _auth  # noqa: F401
+        from app.modules.comercios import models as _comercios  # noqa: F401
+        from app.modules.prestadores import models as _prestadores  # noqa: F401
+        from app.modules.social import models as _social  # noqa: F401
 
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_crear())
     yield
 
 
+# =========================================================
+# Sesión por test (async, function-scoped)
+# =========================================================
 @pytest_asyncio.fixture
 async def db(test_engine, _init_schema) -> AsyncSession:
-    """Sesión async limpia por test."""
+    """
+    Sesión async limpia por test.
+
+    TRUNCATE de las tablas del módulo social antes de cada test para
+    garantizar aislamiento. CASCADE por las FK entre las 4 tablas.
+    """
     session_maker = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
