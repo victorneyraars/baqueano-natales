@@ -7,6 +7,36 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-10 (cont. 3) - Modulo social Etapa 2: OAuth Facebook completo
+- Backend OAuth Facebook end-to-end funcionando en produccion:
+  - oauth_state.py - JWT firmados (state CSRF + token_ref stateless)
+  - facebook_service.py - cliente Graph API v26.0 con httpx async
+  - 4 endpoints admin: GET /facebook/oauth/url, GET /facebook/oauth/callback (sin auth, el state firmado prueba identidad), POST /facebook/pages, POST /facebook/conectar
+  - 5 vars en Settings: FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_OAUTH_REDIRECT_URI, FACEBOOK_GRAPH_API_VERSION, FACEBOOK_OAUTH_SCOPES
+  - 6 schemas Pydantic para OAuth
+  - 21 tests nuevos (7 oauth_state + 14 facebook_service) - 86 tests verdes en total
+  - respx==0.22.0 en requirements para mockear httpx
+- Infra HTTPS para OAuth (Facebook exige HTTPS en redirect URI):
+  - Subdominio dev-api.baqueanonatales.com proxied por Cloudflare
+  - SSL mode: full -> self-signed alcanza
+  - deploy/nginx/conf.d/dev-api.conf (server block nuevo)
+  - deploy/nginx/certs/ (self-signed 10 anos, fuera del repo via .gitignore)
+  - docker-compose.yml monta los certs en /etc/nginx/certs:ro
+- Smoke test end-to-end exitoso en produccion:
+  - Admin autorizo la app en Facebook (flujo OAuth real)
+  - Backend recibio callback HTTPS en dev-api.baqueanonatales.com
+  - Intercambio code -> short token -> long token (60 dias)
+  - Cifro el page token con Fernet
+  - Listo las 3 paginas del usuario
+  - Conecto "Baqueano Natales" (external_id=1319567627902106) como cuenta central
+  - Verificado en DB: cuentas_sociales + tokens_sociales con access_token = enc:gAAAAAB... (cifrado, nunca en claro)
+- Gotchas descubiertos (documentar en futuro docs/SERVER_CHEATSHEET.md):
+  - PowerShell -> SSH manda CRLF -> tail -20, head -c 300, wc -l fallan. Fix: replace + bash -s.
+  - Heredoc anidado dentro de SSH falla por CRLF en el marcador. Fix: Python via stdin directo.
+  - JWT del backend requiere claim iss: "baqueano-natales" - usar core.security.create_access_token() en vez de armar el payload a mano.
+  - pip install manual en el container falla con Permission denied -> usar docker compose exec -T -u root backend pip install ...
+  - El backend aborta en produccion si falta TOKEN_ENCRYPTION_KEY - comportamiento intencional del modulo crypto.
+
 ### 2026-10-10 (cont. 2) — Módulo social Etapa 1 (esqueleto) + Infra de tests
 - ✅ **Módulo `social/` completo (Etapa 1: esqueleto)** — base para publicar en Facebook, Instagram y Google Business desde el admin:
   - **4 tablas**: `cuentas_sociales`, `tokens_sociales`, `publicaciones_sociales`, `config_social`
@@ -208,7 +238,7 @@
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
-- ✅ **Módulo social (Etapa 1)** — 4 tablas, crypto, 10 endpoints admin, 65 tests
+- Modulo social (Etapas 1 + 2) - OAuth Facebook completo, 4 tablas, crypto, 14 endpoints admin, 86 tests
 - ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
@@ -236,6 +266,12 @@
 | **Usuario** | `deploy` (sudo configurado) |
 
 **Puertos abiertos (UFW):** 22 (SSH), 80 (HTTP), 443 (HTTPS).
+
+**Subdominios (Cloudflare, proxied):**
+| Subdominio | Apunta a | Uso |
+|---|---|---|
+| `api.baqueanonatales.com` | Server viejo (`161.118.240.229`) | Producci?n actual (a migrar en Fase 6) |
+| `dev-api.baqueanonatales.com` | **Server nuevo** (`104.129.59.151`) | Dev + OAuth Facebook (SSL mode: full) |
 
 **Estado actual del server:**
 - ✅ HTTP (puerto 80) responde OK: `curl http://104.129.59.151/health` → `{"status":"ok"}`
@@ -964,11 +1000,11 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - App Flutter client con **persistencia de sesión funcional**
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
-- **65 tests automatizados** (29 unit + 36 con DB) — todos verdes
-- **Módulo social (Etapa 1)** desplegado: 4 tablas, crypto, 10 endpoints admin
+- **86 tests automatizados** (50 unit + 36 con DB) - todos verdes
+- **Modulo social (Etapas 1 + 2)** desplegado: OAuth Facebook completo, 14 endpoints admin
 
 **Lo que queda pendiente inmediato:**
-1. **Módulo social Etapa 2** — OAuth Facebook (admin + propietario) + publicación básica
+1. **Modulo social Etapa 3** - worker de publicacion en Facebook (reintentos + backoff)
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
@@ -1094,7 +1130,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## 🔨 Módulo `social` — estado actual (Etapa 1 completa)
+## Modulo `social` - estado actual (Etapas 1 + 2 completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1104,11 +1140,11 @@ multi-tenant por recurso y tokens cifrados.
 | Backend (modelos + migración) | ✅ |
 | Backend (crypto Fernet) | ✅ |
 | Backend (schemas + services + deps) | ✅ |
-| Backend (router admin + 10 endpoints) | ✅ |
+| Backend (router admin + 14 endpoints) | OK |
 | Backend (README del módulo) | ✅ |
-| Tests (65: 29 unit + 36 con DB) | ✅ |
+| Tests (86: 50 unit + 36 con DB) | OK |
 | Deploy en producción | ✅ |
-| **Etapa 2 (OAuth Facebook)** | ⏳ próxima sesión |
+| **Etapa 2 (OAuth Facebook)** | backend + smoke test end-to-end OK |
 | Etapa 3 (publicación FB con worker) | ⏳ |
 | Etapa 4 (Instagram vía FB) | ⏳ |
 | Etapa 5 (integración con prestadores) | ⏳ |
