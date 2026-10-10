@@ -313,3 +313,43 @@ usar `core.security.create_access_token()`, no armar el payload a mano.
 
     # Git status
     ssh deploy@104.129.59.151 "cd ~/baqueano-natales && git status"
+11. **pip install manual se pierde al recrear el container** -> siempre va primero a requirements.txt y despues rebuild.
+
+
+---
+
+## Worker social (Etapa 3)
+
+Worker in-process con APScheduler que procesa la cola publicaciones_sociales
+cada 30s. Corre dentro del mismo proceso FastAPI (lifespan).
+
+### Configuracion (.env)
+
+    SOCIAL_WORKER_ENABLED=true
+    SOCIAL_WORKER_INTERVAL_SEC=30
+
+### Ver logs del worker
+
+    ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose logs --tail=50 backend | grep -i worker"
+
+Log esperado:
+    Worker social: iniciado (intervalo=30s)
+    Job "procesar_cola" executed successfully
+
+### Forzar un ciclo ahora (sin esperar 30s)
+
+Endpoint admin: POST /api/v1/admin/social/publicaciones/procesar-ahora
+Requiere JWT de admin (ver seccion Facebook/Meta para generarlo).
+
+### Backoff exponencial
+
+    1er fallo -> 1 min
+    2do fallo -> 5 min
+    3er fallo -> 30 min
+    4to fallo -> 2 h
+    5to fallo -> AGOTADO (no reintenta)
+
+### Deshabilitar temporalmente
+
+Editar .env: SOCIAL_WORKER_ENABLED=false
+Recrear: docker compose up -d backend
