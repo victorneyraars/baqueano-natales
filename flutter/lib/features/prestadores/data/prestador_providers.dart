@@ -7,7 +7,7 @@
 /// - Listado público con auto-refresh al cambiar filtros.
 /// - Detalle por slug.
 /// - Mis prestadores (dueño).
-/// - Listados admin.
+/// - Listados admin y detalle admin.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -216,4 +216,17 @@ final adminPrestadoresProvider =
     busqueda: params.busqueda,
     incluirInactivos: params.incluirInactivos,
   );
+});
+
+// =========================================================
+// Admin: detalle de prestador (por ID)
+// =========================================================
+
+/// Detalle de un prestador para admin (por ID).
+///
+/// Se usa en el panel admin para verificar/rechazar/suspender/destacar.
+final adminPrestadorDetalleProvider =
+    FutureProvider.family<Prestador, String>((ref, id) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return repo.adminObtenerPrestador(id);
 });

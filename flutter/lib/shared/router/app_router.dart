@@ -1,10 +1,22 @@
 /// Router central de la aplicación.
+///
+/// Detecta el flavor (client o admin) vía `AppConfig.appType`:
+/// - `client`: redirige `/home` → HomeScreen (client normal)
+/// - `admin`:  redirige `/home` → AdminHomeScreen (panel morado)
+///
+/// Las rutas de `/admin/*` solo son accesibles desde el flavor admin
+/// (o desde client si el usuario logueado tiene rol admin).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:baqueano_natales/core/config/app_config.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_categorias_oficio_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -31,6 +43,13 @@ class _AuthChangeNotifier extends ChangeNotifier {
   }
 }
 
+/// Path del Home según el flavor.
+/// - Admin: `/admin/home`
+/// - Client: `/home`
+String _homePathForFlavor() {
+  return AppConfig.appType == AppType.admin ? '/admin/home' : '/home';
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authChangeNotifier = _AuthChangeNotifier(ref);
 
@@ -41,6 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authNotifierProvider);
       final location = state.matchedLocation;
+      final homePath = _homePathForFlavor();
 
       switch (authState.status) {
         case AuthStatus.unknown:
@@ -52,13 +72,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/login';
 
         case AuthStatus.authenticated:
+          // Si está en splash o login, redirigir al home del flavor
           if (location == '/splash' || location == '/login') {
-            return '/home';
+            return homePath;
+          }
+          // Si en flavor admin está en /home (client), redirigir a /admin/home
+          if (AppConfig.appType == AppType.admin && location == '/home') {
+            return '/admin/home';
           }
           return null;
       }
     },
     routes: [
+      // =========================================================
+      // Rutas base
+      // =========================================================
       GoRoute(
         path: '/splash',
         name: 'splash',
@@ -69,10 +97,49 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
+
+      // =========================================================
+      // Home client (para flavor client)
+      // =========================================================
       GoRoute(
         path: '/home',
         name: 'home',
         builder: (context, state) => const HomeScreen(),
+      ),
+
+      // =========================================================
+      // Home admin (para flavor admin)
+      // =========================================================
+      GoRoute(
+        path: '/admin/home',
+        name: 'admin-home',
+        builder: (context, state) => const AdminHomeScreen(),
+      ),
+
+      // =========================================================
+      // Admin — Prestadores
+      // =========================================================
+      GoRoute(
+        path: '/admin/prestadores',
+        name: 'admin-prestadores',
+        builder: (context, state) => const AdminPrestadoresScreen(),
+      ),
+      GoRoute(
+        path: '/admin/prestadores/:id',
+        name: 'admin-prestador-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AdminDetallePrestadorScreen(id: id);
+        },
+      ),
+
+      // =========================================================
+      // Admin — Categorías de oficio
+      // =========================================================
+      GoRoute(
+        path: '/admin/categorias-oficio',
+        name: 'admin-categorias-oficio',
+        builder: (context, state) => const AdminCategoriasOficioScreen(),
       ),
 
       // =========================================================
