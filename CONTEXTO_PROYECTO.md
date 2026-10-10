@@ -7,6 +7,7 @@
 
 ## 📋 Changelog reciente
 
+1. **Modulo social Etapa 4** - Instagram via Facebook (reutiliza el token de la pagina FB)
 ### 2026-10-10 (cont. 3) - Modulo social Etapa 2: OAuth Facebook completo
 - Backend OAuth Facebook end-to-end funcionando en produccion:
   - oauth_state.py - JWT firmados (state CSRF + token_ref stateless)
@@ -238,7 +239,7 @@
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
-- Modulo social (Etapas 1 + 2) - OAuth Facebook completo, 4 tablas, crypto, 14 endpoints admin, 86 tests
+- Modulo social (Etapas 1 + 2 + 3) - OAuth Facebook + worker de publicacion, 4 tablas, crypto, 15 endpoints admin, 98 tests
 - ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
@@ -1000,8 +1001,8 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - App Flutter client con **persistencia de sesión funcional**
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
-- **86 tests automatizados** (50 unit + 36 con DB) - todos verdes
-- **Modulo social (Etapas 1 + 2)** desplegado: OAuth Facebook completo, 14 endpoints admin
+- **98 tests automatizados** (62 unit + 36 con DB) - todos verdes
+- **Modulo social (Etapas 1 + 2 + 3)** desplegado: OAuth Facebook + worker de publicacion
 
 **Lo que queda pendiente inmediato:**
 1. **Modulo social Etapa 3** - worker de publicacion en Facebook (reintentos + backoff)
@@ -1130,7 +1131,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1 + 2 completas)
+## Modulo `social` - estado actual (Etapas 1 + 2 + 3 completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1140,12 +1141,12 @@ multi-tenant por recurso y tokens cifrados.
 | Backend (modelos + migración) | ✅ |
 | Backend (crypto Fernet) | ✅ |
 | Backend (schemas + services + deps) | ✅ |
-| Backend (router admin + 14 endpoints) | OK |
+| Backend (router admin + 15 endpoints) | OK |
 | Backend (README del módulo) | ✅ |
-| Tests (86: 50 unit + 36 con DB) | OK |
+| Tests (98: 62 unit + 36 con DB) | OK |
 | Deploy en producción | ✅ |
 | **Etapa 2 (OAuth Facebook)** | backend + smoke test end-to-end OK |
-| Etapa 3 (publicación FB con worker) | ⏳ |
+| Etapa 3 (publicacion FB con worker) | worker in-process + smoke test real OK |
 | Etapa 4 (Instagram vía FB) | ⏳ |
 | Etapa 5 (integración con prestadores) | ⏳ |
 | Etapa 6-7 (frontend admin + propietario) | ⏳ |
