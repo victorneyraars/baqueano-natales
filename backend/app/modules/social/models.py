@@ -460,10 +460,17 @@ class ConfigSocial(TimestampMixin, Base):
             "propietario_id",
             name="uq_config_social_propietario",
         ),
-        # Índice único parcial: en Postgres, UNIQUE(a, b) NO bloquea
-        # duplicados cuando uno de los valores es NULL (NULL != NULL en
-        # SQL). Este índice garantiza que solo exista UNA fila con
-        # (propietario_tipo=NULL, propietario_id=NULL) — la config global.
+        # Índice único parcial, con NULLS NOT DISTINCT.
+        #
+        # Por qué parcial: solo aplica cuando ambos son NULL — o sea, a
+        # la fila global. Las filas por propietario usan el UniqueConstraint
+        # de arriba.
+        #
+        # Por qué NULLS NOT DISTINCT: en Postgres, por defecto el índice
+        # único trata los NULL como distintos entre sí (NULL != NULL),
+        # así que DOS filas con (NULL, NULL) NO violaban el UNIQUE. Esta
+        # opción (Postgres 15+) los trata como iguales y bloquea la
+        # duplicación de la config global a nivel DB.
         Index(
             "uq_config_social_global",
             "propietario_tipo",
@@ -472,6 +479,7 @@ class ConfigSocial(TimestampMixin, Base):
             postgresql_where=text(
                 "propietario_tipo IS NULL AND propietario_id IS NULL"
             ),
+            postgresql_nulls_not_distinct=True,
         ),
     )
 
