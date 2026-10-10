@@ -24,7 +24,8 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 
 # --- Cifrado de secretos (tokens sociales, integraciones) ---
-cryptography==44.0.0
+# Fernet (AES-128 + HMAC-SHA256). La API es estable; permitimos 44-50.
+cryptography>=44.0.0,<51.0.0
 
 # --- Firebase Admin ---
 firebase-admin==6.6.0
