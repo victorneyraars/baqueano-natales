@@ -38,6 +38,9 @@ from app.modules.prestadores.routes import (
 from app.modules.prestadores.routes import (
     router_publico as prestadores_publico_router,
 )
+from app.modules.social.routes import (
+    router_admin as social_admin_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +104,9 @@ app.include_router(prestadores_publico_router, prefix="/api/v1")
 app.include_router(prestadores_propietario_router, prefix="/api/v1")
 app.include_router(prestadores_admin_categorias_router, prefix="/api/v1")
 app.include_router(prestadores_admin_router, prefix="/api/v1")
+
+# Social (redes: Facebook, Instagram, Google Business)
+app.include_router(social_admin_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
