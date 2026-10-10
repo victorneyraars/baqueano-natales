@@ -52,10 +52,12 @@ services:
     volumes:
       # Hot reload en dev (comentado por default, se activa con override)
       - ./backend/app:/app/app
-      # Migraciones y config de Alembic (así el container ve los archivos
-      # actualizados sin necesidad de rebuild tras cada migración)
+      # Migraciones y config de Alembic
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
+      # Tests y config de pytest
+      - ./backend/tests:/app/tests
+      - ./backend/pytest.ini:/app/pytest.ini
       - ./backend/secrets:/app/secrets:ro
       - media_data:/app/media
     expose:
