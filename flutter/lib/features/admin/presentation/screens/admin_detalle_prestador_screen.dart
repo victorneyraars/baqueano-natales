@@ -651,40 +651,67 @@ class _AccionesAdmin extends StatelessWidget {
     BuildContext context, {
     required String titulo,
     required String hint,
-  }) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
+  }) {
+    return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(titulo),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 4,
-          maxLength: 1000,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final texto = controller.text.trim();
-              if (texto.length < 5) return;
-              Navigator.of(ctx).pop(texto);
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
+      builder: (_) => _MotivoDialog(titulo: titulo, hint: hint),
     );
-    controller.dispose();
-    return result;
+  }
+}
+
+// =========================================================
+// Diálogo para pedir motivo (rechazar/suspender)
+// =========================================================
+class _MotivoDialog extends StatefulWidget {
+  const _MotivoDialog({required this.titulo, required this.hint});
+
+  final String titulo;
+  final String hint;
+
+  @override
+  State<_MotivoDialog> createState() => _MotivoDialogState();
+}
+
+class _MotivoDialogState extends State<_MotivoDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirmar() {
+    final texto = _controller.text.trim();
+    if (texto.length < 5) return;
+    Navigator.of(context).pop(texto);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.titulo),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 4,
+        maxLength: 1000,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _confirmar,
+          child: const Text('Confirmar'),
+        ),
+      ],
+    );
   }
 }
 
