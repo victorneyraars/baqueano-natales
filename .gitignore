@@ -81,3 +81,6 @@ Thumbs.db
 # El google-services.json NO es un secreto: contiene API keys públicas
 # que van en el APK de todos modos. Sin él, no se puede compilar.
 !flutter/android/app/google-services.json
+
+# Certificados TLS (self-signed / Let's Encrypt)
+deploy/nginx/certs/
