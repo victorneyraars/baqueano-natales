@@ -7,6 +7,22 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-09 (cont.) — Prestadores: formulario + editor de servicios
+- ✅ **Formulario real de crear/editar prestador** (dueño):
+  - Información básica: nombre, categoría (dropdown con 11 categorías), descripción, años experiencia
+  - Contacto: teléfono, WhatsApp, mensaje pre-armado, email, sitio web
+  - Ubicación: dirección
+  - Modalidad: 3 switches (domicilio/local/emergencias) + horario
+  - Especialidades: chips dinámicos (agregar/eliminar)
+  - Redes sociales: Instagram, Facebook, TikTok, YouTube
+- ✅ **Editor de servicios real** (dueño):
+  - Listado con precios, duración, garantía
+  - Modal bottom sheet para agregar/editar
+  - Categorías sugeridas: Mantenimiento, Frenos, Motor, Suspensión, Eléctrico, Emergencias, Instalaciones, Reparaciones
+  - Eliminar con confirmación
+- ✅ **Flujo CRUD completo verificado** end-to-end en emulador:
+  - POST/GET/PATCH/DELETE a `/mis-prestadores` y `/mis-prestadores/{id}/servicios`
+
 ### 2026-10-09 (cont.) — Prestadores: pantallas dueño + entorno dev optimizado
 - ✅ **Pantallas dueño de prestadores**:
   - `MisPrestadoresScreen` (listado con estados + rechazo visible)
