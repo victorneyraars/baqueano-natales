@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de base de datos del módulo social.
 
 Cuatro tablas, todas con UUID como PK, timestamps automáticos y (donde
@@ -48,6 +48,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -458,6 +459,19 @@ class ConfigSocial(TimestampMixin, Base):
             "propietario_tipo",
             "propietario_id",
             name="uq_config_social_propietario",
+        ),
+        # Índice único parcial: en Postgres, UNIQUE(a, b) NO bloquea
+        # duplicados cuando uno de los valores es NULL (NULL != NULL en
+        # SQL). Este índice garantiza que solo exista UNA fila con
+        # (propietario_tipo=NULL, propietario_id=NULL) — la config global.
+        Index(
+            "uq_config_social_global",
+            "propietario_tipo",
+            "propietario_id",
+            unique=True,
+            postgresql_where=text(
+                "propietario_tipo IS NULL AND propietario_id IS NULL"
+            ),
         ),
     )
 
