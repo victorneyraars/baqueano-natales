@@ -5,8 +5,8 @@
 ///
 /// Secciones:
 /// - Bienvenida con info del admin
-/// - Gestión: Prestadores, Comercios (próx.), Usuarios (próx.)
-/// - Configuración: Categorías de oficio, Categorías de comercio (próx.)
+/// - Gestión: Prestadores, Comercios, Usuarios (próx.)
+/// - Configuración: Categorías de oficio, Categorías de comercio
 library;
 
 import 'package:flutter/material.dart';
@@ -14,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
+import 'package:baqueano_natales/features/comercios/data/comercio_providers.dart';
+import 'package:baqueano_natales/features/comercios/domain/comercio.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 
@@ -57,12 +59,23 @@ class AdminHomeScreen extends ConsumerWidget {
     }
 
     // Contar prestadores pendientes (para badge)
-    final pendientesAsync = ref.watch(
+    final prestadoresPendientesAsync = ref.watch(
       adminPrestadoresProvider(
         const AdminPrestadoresParams(estado: EstadoPrestador.pendiente),
       ),
     );
-    final pendientesCount = pendientesAsync.maybeWhen(
+    final prestadoresPendientesCount = prestadoresPendientesAsync.maybeWhen(
+      data: (p) => p.meta.total,
+      orElse: () => 0,
+    );
+
+    // Contar comercios pendientes (para badge)
+    final comerciosPendientesAsync = ref.watch(
+      adminComerciosProvider(
+        const AdminComerciosParams(estado: EstadoComercio.pendiente),
+      ),
+    );
+    final comerciosPendientesCount = comerciosPendientesAsync.maybeWhen(
       data: (p) => p.meta.total,
       orElse: () => 0,
     );
@@ -82,6 +95,7 @@ class AdminHomeScreen extends ConsumerWidget {
         onRefresh: () async {
           await ref.read(authNotifierProvider.notifier).restoreSession();
           ref.invalidate(adminPrestadoresProvider);
+          ref.invalidate(adminComerciosProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -154,17 +168,25 @@ class AdminHomeScreen extends ConsumerWidget {
             _AdminCard(
               icon: Icons.handyman,
               title: 'Prestadores',
-              subtitle: pendientesCount > 0
-                  ? '$pendientesCount pendiente(s) de revisión'
+              subtitle: prestadoresPendientesCount > 0
+                  ? '$prestadoresPendientesCount pendiente(s) de revisión'
                   : 'Verificar, rechazar, gestionar oficios',
               onTap: () => context.push('/admin/prestadores'),
-              badge: pendientesCount > 0 ? '$pendientesCount' : null,
+              badge: prestadoresPendientesCount > 0
+                  ? '$prestadoresPendientesCount'
+                  : null,
             ),
 
-            const _AdminCard(
+            _AdminCard(
               icon: Icons.storefront,
               title: 'Comercios',
-              subtitle: 'Próximamente',
+              subtitle: comerciosPendientesCount > 0
+                  ? '$comerciosPendientesCount pendiente(s) de revisión'
+                  : 'Verificar, rechazar, gestionar comercios',
+              onTap: () => context.push('/admin/comercios'),
+              badge: comerciosPendientesCount > 0
+                  ? '$comerciosPendientesCount'
+                  : null,
             ),
 
             const _AdminCard(
@@ -191,10 +213,11 @@ class AdminHomeScreen extends ConsumerWidget {
               onTap: () => context.push('/admin/categorias-oficio'),
             ),
 
-            const _AdminCard(
+            _AdminCard(
               icon: Icons.category,
               title: 'Categorías de comercio',
-              subtitle: 'Próximamente',
+              subtitle: 'Crear, editar y desactivar categorías',
+              onTap: () => context.push('/admin/categorias-comercio'),
             ),
 
             const SizedBox(height: 24),

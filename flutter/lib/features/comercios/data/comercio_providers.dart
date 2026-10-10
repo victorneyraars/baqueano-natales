@@ -200,3 +200,16 @@ final adminComerciosProvider = FutureProvider.family<Paginated<Comercio>,
     incluirInactivos: params.incluirInactivos,
   );
 });
+
+// =========================================================
+// Admin: detalle de comercio (por ID)
+// =========================================================
+
+/// Detalle de un comercio para admin (por ID).
+///
+/// Se usa en el panel admin para verificar/rechazar/suspender/destacar.
+final adminComercioDetalleProvider =
+    FutureProvider.family<Comercio, String>((ref, id) async {
+  final repo = ref.watch(comercioRepositoryProvider);
+  return repo.adminObtenerComercio(id);
+});

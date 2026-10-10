@@ -13,7 +13,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_categorias_comercio_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_categorias_oficio_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_comercios_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_comercio_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
@@ -140,6 +143,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/categorias-oficio',
         name: 'admin-categorias-oficio',
         builder: (context, state) => const AdminCategoriasOficioScreen(),
+      ),
+
+      // =========================================================
+      // Admin — Comercios
+      // =========================================================
+      GoRoute(
+        path: '/admin/comercios',
+        name: 'admin-comercios',
+        builder: (context, state) => const AdminComerciosScreen(),
+      ),
+      GoRoute(
+        path: '/admin/comercios/:id',
+        name: 'admin-comercio-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AdminDetalleComercioScreen(id: id);
+        },
+      ),
+
+      // =========================================================
+      // Admin — Categorías de comercio
+      // =========================================================
+      GoRoute(
+        path: '/admin/categorias-comercio',
+        name: 'admin-categorias-comercio',
+        builder: (context, state) => const AdminCategoriasComercioScreen(),
       ),
 
       // =========================================================
