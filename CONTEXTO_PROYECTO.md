@@ -7,6 +7,18 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-10 — Admin de Comercios + Fix crítico del diálogo
+- ✅ **Admin de comercios completo** (paralelo al de prestadores):
+  - `AdminComerciosScreen`: listado con filtros por estado (Pendientes/Verificados/Rechazados/Suspendidos/Borradores)
+  - `AdminDetalleComercioScreen`: verificar/rechazar/suspender/destacar
+  - `AdminCategoriasComercioScreen`: CRUD completo de categorías con vista previa
+  - Integración en AdminHome con badge de pendientes
+- ✅ **3 rutas nuevas** en el router: `/admin/comercios`, `/admin/comercios/:id`, `/admin/categorias-comercio`
+- ✅ **Provider** `adminComercioDetalleProvider` agregado
+- 🐛 **Fix crítico**: el diálogo de motivo (rechazar/suspender) ahora usa `StatefulWidget`
+  con `dispose()` correcto. Antes crasheaba con `TextEditingController was used after being disposed`
+- ✅ **Verificado en emulador** end-to-end (suspender / re-verificar / destacar)
+
 ### 2026-10-09 (cont.) — Panel admin operativo (flavor admin)
 - ✅ **Panel de administración** en flavor `admin` con Home diferenciado:
   - Sección **Gestión**: Prestadores (con badge de pendientes), Comercios (próx.), Usuarios (próx.)
