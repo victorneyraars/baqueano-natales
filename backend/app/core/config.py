@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
 
+    # --- Cifrado de secretos (tokens sociales, integraciones) ---
+    # Clave Fernet (32 bytes base64). Obligatoria en producción.
+    # Generar con:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    TOKEN_ENCRYPTION_KEY: str = ""
+
     # --- Firebase ---
     FIREBASE_SERVICE_ACCOUNT_PATH: str = "/app/secrets/firebase-service-account.json"
     FIREBASE_PROJECT_ID: str = "baqueano-natales"
@@ -83,6 +89,10 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
 
+    @property
+    def is_development(self) -> bool:
+        return self.ENVIRONMENT == "development"
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -91,4 +101,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-
