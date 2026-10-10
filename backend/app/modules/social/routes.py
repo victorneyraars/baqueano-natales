@@ -11,7 +11,8 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 
 from app.core.db import DbSession
 from app.modules.social import services
@@ -22,12 +23,17 @@ from app.modules.social.models import (
     Red,
 )
 from app.modules.social.schemas import (
+    ConectarCuentaRequest,
+    ConectarCuentaResponse,
     ConfigSocialResponse,
     ConfigSocialUpdate,
     CuentaSocialCreate,
     CuentaSocialListResponse,
     CuentaSocialResponse,
     CuentaSocialUpdate,
+    ListarPaginasRequest,
+    ListarPaginasResponse,
+    OAuthUrlResponse,
     PaginacionMeta,
     PublicacionSocialCreate,
     PublicacionSocialListResponse,
@@ -276,3 +282,131 @@ async def encolar_publicacion(
 ) -> PublicacionSocialResponse:
     pub = await services.encolar_publicacion(db, datos)
     return PublicacionSocialResponse.model_validate(pub)
+
+# =========================================================
+# Facebook OAuth (Etapa 2)
+# =========================================================
+
+_CALLBACK_HTML = """<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Facebook autorizado</title>
+  <style>
+    body {{ font-family: -apple-system, sans-serif; max-width: 640px;
+            margin: 40px auto; padding: 0 20px; color: #1a1a1a; }}
+    h1 {{ color: #16a34a; }}
+    pre {{ background: #f4f4f5; padding: 16px; border-radius: 8px;
+           overflow-x: auto; font-size: 13px; word-break: break-all;
+           white-space: pre-wrap; }}
+    code {{ background: #f4f4f5; padding: 2px 6px; border-radius: 4px;
+            font-size: 13px; }}
+    .paso {{ background: #fffbeb; border-left: 4px solid #f59e0b;
+             padding: 12px 16px; border-radius: 4px; margin: 16px 0; }}
+  </style>
+</head>
+<body>
+  <h1>Facebook autorizado</h1>
+  <p>Copia este <strong>token_ref</strong> (expira en 15 minutos):</p>
+  <pre id="tr">{token_ref}</pre>
+  <div class="paso">
+    <strong>Siguiente paso:</strong><br>
+    <code>POST /api/v1/admin/social/facebook/pages</code><br>
+    con body <code>{{"token_ref": "..."}}</code> para listar tus paginas.
+  </div>
+</body>
+</html>"""
+
+
+@router_admin.get(
+    "/facebook/oauth/url",
+    response_model=OAuthUrlResponse,
+    summary="Iniciar OAuth con Facebook",
+    description=(
+        "Devuelve la URL del dialogo de Facebook y el state (10 min). "
+        "El admin debe abrir `url` en el navegador."
+    ),
+)
+async def facebook_oauth_url(_admin: AdminUser) -> OAuthUrlResponse:
+    url, state = await services.generar_url_oauth(_admin)
+    return OAuthUrlResponse(url=url, state=state)
+
+
+@router_admin.get(
+    "/facebook/oauth/callback",
+    response_class=HTMLResponse,
+    summary="Callback de Facebook (lo abre el navegador)",
+    description=(
+        "Facebook redirige aca tras la autorizacion. NO requiere auth: "
+        "el state firmado prueba la identidad del admin que inicio el flujo. "
+        "Devuelve HTML con el token_ref para el siguiente paso."
+    ),
+)
+async def facebook_oauth_callback(
+    code: str = Query(..., min_length=5),
+    state: str = Query(..., min_length=10),
+) -> HTMLResponse:
+    try:
+        _, token_ref = await services.procesar_callback_oauth(code, state)
+    except ValueError as e:
+        return HTMLResponse(
+            status_code=400,
+            content=f"<h1>Error</h1><pre>{e}</pre>",
+        )
+    return HTMLResponse(content=_CALLBACK_HTML.format(token_ref=token_ref))
+
+
+@router_admin.post(
+    "/facebook/pages",
+    response_model=ListarPaginasResponse,
+    summary="Listar paginas del usuario en Facebook",
+    description=(
+        "Lista las paginas del usuario con el page access token derivado "
+        "del token_ref. Marca cuales ya estan conectadas al sistema."
+    ),
+)
+async def facebook_listar_paginas(
+    body: ListarPaginasRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> ListarPaginasResponse:
+    try:
+        paginas = await services.listar_paginas_disponibles(db, body.token_ref)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    return ListarPaginasResponse(paginas=paginas)
+
+
+@router_admin.post(
+    "/facebook/conectar",
+    response_model=ConectarCuentaResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Conectar una pagina de Facebook al sistema",
+    description=(
+        "Crea (o actualiza) una cuenta social y guarda el page access "
+        "token cifrado. Si la pagina ya existe, rota el token."
+    ),
+)
+async def facebook_conectar(
+    body: ConectarCuentaRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> ConectarCuentaResponse:
+    try:
+        cuenta, nombre = await services.conectar_cuenta_facebook(
+            db=db,
+            user=_admin,
+            token_ref=body.token_ref,
+            page_id=body.page_id,
+            propietario_tipo=body.propietario_tipo,
+            propietario_id=body.propietario_id,
+            alias=body.alias,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    return ConectarCuentaResponse(cuenta=cuenta, nombre_pagina=nombre)
+

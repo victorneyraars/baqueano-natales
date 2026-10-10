@@ -78,6 +78,26 @@ class Settings(BaseSettings):
     PUBLIC_API_URL: str = "https://api.baqueanonatales.com"
     MAX_AVATAR_SIZE_BYTES: int = 5 * 1024 * 1024  # 5 MB
 
+
+    # --- Facebook / Meta (OAuth + Graph API) ---
+    # App de Meta for Developers. El App ID es p?blico; el App Secret es
+    # secreto (va en .env del server, nunca al repo).
+    FACEBOOK_APP_ID: str = ""
+    FACEBOOK_APP_SECRET: str = ""
+    # Redirect URI registrado en Meta Console. Debe ser HTTPS y coincidir
+    # EXACTAMENTE con el registrado en la app de Meta.
+    FACEBOOK_OAUTH_REDIRECT_URI: str = (
+        "https://dev-api.baqueanonatales.com"
+        "/api/v1/admin/social/facebook/oauth/callback"
+    )
+    # Versi?n de Graph API. Se fija expl?citamente para no romper cuando Meta
+    # deprecia versiones viejas.
+    FACEBOOK_GRAPH_API_VERSION: str = "v26.0"
+    # Permisos que pide el di?logo OAuth (comma-separated).
+    FACEBOOK_OAUTH_SCOPES: str = (
+        "pages_show_list,pages_read_engagement,pages_manage_posts"
+    )
+
     @property
     def admin_emails_list(self) -> list[str]:
         """Lista de emails admin parseados."""

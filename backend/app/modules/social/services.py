@@ -15,7 +15,7 @@ Lo que NO hace este módulo (todavía):
 - Procesar la cola de publicaciones (worker futuro).
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -23,18 +23,22 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import crypto
+from app.modules.auth.models import Usuario
+from app.modules.social import facebook_service, oauth_state
 from app.modules.social.models import (
     ConfigSocial,
     CuentaSocial,
     EstadoPublicacion,
     PropietarioTipo,
     PublicacionSocial,
+    Red,
     TokenSocial,
 )
 from app.modules.social.schemas import (
     ConfigSocialUpdate,
     CuentaSocialCreate,
     CuentaSocialUpdate,
+    PaginaFacebookPublic,
     PublicacionSocialCreate,
     TokenSocialGuardar,
 )
@@ -387,3 +391,164 @@ async def obtener_publicacion(
         PublicacionSocial.id == publicacion_id
     )
     return (await db.execute(stmt)).scalar_one_or_none()
+
+# =========================================================
+# OAuth Facebook (Etapa 2)
+# =========================================================
+
+async def generar_url_oauth(user: Usuario) -> tuple[str, str]:
+    """Devuelve `(url_facebook, state)` para que el admin abra el di?logo."""
+    state = oauth_state.generar_state(str(user.id))
+    url = facebook_service.construir_url_autorizacion(state)
+    return url, state
+
+
+async def procesar_callback_oauth(code: str, state: str) -> tuple[str, str]:
+    """Valida state, intercambia code -> short -> long token.
+
+    Devuelve `(user_id, token_ref)`. Lanza ValueError si algo falla.
+    """
+    try:
+        user_id = oauth_state.verificar_state(state)
+    except oauth_state.OAuthTokenError as e:
+        raise ValueError(f"state inv?lido: {e}")
+
+    short_token, err = await facebook_service.intercambiar_codigo_por_token(code)
+    if err or not short_token:
+        msg = err.message if err else "sin token"
+        raise ValueError(f"No se pudo intercambiar el code: {msg}")
+
+    long_token, err = await facebook_service.extender_token(short_token)
+    if err or not long_token:
+        msg = err.message if err else "sin token"
+        raise ValueError(f"No se pudo extender el token: {msg}")
+
+    token_ref = oauth_state.generar_token_ref(user_id, long_token)
+    return user_id, token_ref
+
+
+async def listar_paginas_disponibles(
+    db: AsyncSession, token_ref: str
+) -> list[PaginaFacebookPublic]:
+    """Lee el token_ref, consulta Meta, y marca las p?ginas ya conectadas."""
+    try:
+        _, user_token = oauth_state.leer_token_ref(token_ref)
+    except oauth_state.OAuthTokenError as e:
+        raise ValueError(f"token_ref inv?lido: {e}")
+
+    paginas, err = await facebook_service.listar_paginas(user_token)
+    if err:
+        raise ValueError(f"Error al listar p?ginas: {err.message}")
+
+    external_ids = [p.id for p in paginas]
+    ya_conectadas: set[str] = set()
+    if external_ids:
+        result = await db.execute(
+            select(CuentaSocial.external_id).where(
+                CuentaSocial.red == Red.FACEBOOK,
+                CuentaSocial.external_id.in_(external_ids),
+                CuentaSocial.activo.is_(True),
+            )
+        )
+        ya_conectadas = {row[0] for row in result.all()}
+
+    return [
+        PaginaFacebookPublic(
+            **p.to_public_dict(),
+            ya_conectada=p.id in ya_conectadas,
+        )
+        for p in paginas
+    ]
+
+
+async def conectar_cuenta_facebook(
+    db: AsyncSession,
+    user: Usuario,
+    token_ref: str,
+    page_id: str,
+    propietario_tipo: PropietarioTipo,
+    propietario_id: UUID | None,
+    alias: str | None = None,
+) -> tuple[CuentaSocial, str]:
+    """Crea (o actualiza) la cuenta social y guarda el page token cifrado.
+
+    Devuelve `(cuenta, nombre_pagina)`.
+    """
+    # 1. Validar token_ref
+    try:
+        _, user_token = oauth_state.leer_token_ref(token_ref)
+    except oauth_state.OAuthTokenError as e:
+        raise ValueError(f"token_ref inv?lido: {e}")
+
+    # 2. Traer p?ginas del usuario y encontrar la elegida
+    paginas, err = await facebook_service.listar_paginas(user_token)
+    if err:
+        raise ValueError(f"Error al listar p?ginas: {err.message}")
+
+    pagina = facebook_service.buscar_pagina(paginas, page_id)
+    if not pagina:
+        raise ValueError(f"La p?gina {page_id} no est? entre las del usuario")
+    if not pagina.access_token:
+        raise ValueError("La p?gina no devolvi? access_token (?permisos?)")
+
+    # 3. Verificar el token de la p?gina (por si acaso)
+    nombre, verr = await facebook_service.verificar_token_pagina(
+        pagina.id, pagina.access_token
+    )
+    if verr:
+        raise ValueError(f"Token de p?gina inv?lido: {verr.message}")
+    nombre_final = nombre or pagina.name
+
+    # 4. ?Ya existe la cuenta?
+    existing = await db.execute(
+        select(CuentaSocial).where(
+            CuentaSocial.red == Red.FACEBOOK,
+            CuentaSocial.external_id == pagina.id,
+        )
+    )
+    cuenta = existing.scalar_one_or_none()
+
+    if cuenta:
+        # Actualizar: reactivar, refrescar nombre, rotar token
+        cuenta.activo = True
+        cuenta.external_name = nombre_final
+        if alias:
+            cuenta.metadata_extra = {**(cuenta.metadata_extra or {}), "alias": alias}
+    else:
+        cuenta = CuentaSocial(
+            red=Red.FACEBOOK,
+            propietario_tipo=propietario_tipo,
+            propietario_id=propietario_id,
+            external_id=pagina.id,
+            external_name=nombre_final,
+            metadata_extra={"alias": alias} if alias else None,
+        )
+        db.add(cuenta)
+        await db.flush()  # necesitamos cuenta.id
+
+    # 5. Guardar token cifrado (reemplaza el anterior si exist?a)
+    ahora = datetime.now(timezone.utc)
+    token_row = await db.execute(
+        select(TokenSocial).where(TokenSocial.cuenta_id == cuenta.id)
+    )
+    token_obj = token_row.scalar_one_or_none()
+    token_cifrado = crypto.cifrar(pagina.access_token)
+    expira = ahora + timedelta(days=60)
+
+    if token_obj:
+        token_obj.access_token = token_cifrado
+        token_obj.expires_at = expira
+    else:
+        token_obj = TokenSocial(
+            cuenta_id=cuenta.id,
+            access_token=token_cifrado,
+            token_type="page",
+            expires_at=expira,
+            scope="pages_manage_posts,pages_read_engagement",
+        )
+        db.add(token_obj)
+
+    await db.commit()
+    await db.refresh(cuenta)
+    return cuenta, nombre_final
+

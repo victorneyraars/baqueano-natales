@@ -209,3 +209,52 @@ class ConfigSocialResponse(BaseModel):
     publicar_en_google: bool
     created_at: datetime
     updated_at: datetime
+
+# =========================================================
+# OAuth Facebook (Etapa 2)
+# =========================================================
+
+class OAuthUrlResponse(BaseModel):
+    """URL de autorizaci?n + state que el admin debe guardar."""
+    url: str
+    state: str
+    expires_in_min: int = 10
+
+
+class OAuthCallbackResponse(BaseModel):
+    """Respuesta del callback OAuth (?til para tests y API)."""
+    token_ref: str
+    user_id: str
+    expires_in_min: int = 15
+
+
+class PaginaFacebookPublic(BaseModel):
+    """P?gina de Facebook lista para el admin, sin access_token."""
+    id: str
+    name: str
+    category: str | None = None
+    tasks: list[str] = Field(default_factory=list)
+    ya_conectada: bool = False
+
+
+class ListarPaginasRequest(BaseModel):
+    token_ref: str = Field(..., min_length=10)
+
+
+class ListarPaginasResponse(BaseModel):
+    paginas: list[PaginaFacebookPublic]
+
+
+class ConectarCuentaRequest(BaseModel):
+    """Conecta una p?gina: crea cuenta_social + token_social."""
+    token_ref: str = Field(..., min_length=10)
+    page_id: str = Field(..., min_length=1)
+    propietario_tipo: PropietarioTipo = PropietarioTipo.BAQUEANO
+    propietario_id: UUID | None = None
+    alias: str | None = Field(None, max_length=120)
+
+
+class ConectarCuentaResponse(BaseModel):
+    cuenta: CuentaSocialResponse
+    nombre_pagina: str
+
