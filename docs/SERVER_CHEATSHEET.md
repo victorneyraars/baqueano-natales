@@ -353,3 +353,32 @@ Requiere JWT de admin (ver seccion Facebook/Meta para generarlo).
 
 Editar .env: SOCIAL_WORKER_ENABLED=false
 Recrear: docker compose up -d backend
+
+## Frontend admin de social (Etapa 6)
+
+3 pantallas admin en Flutter (flavor admin):
+
+| Pantalla | Ruta |
+|---|---|
+| Redes sociales | /admin/social/cuentas |
+| Configuracion | /admin/social/config |
+| Cola de publicaciones | /admin/social/publicaciones |
+
+Pantalla dueno (Etapa 7):
+| Mis publicaciones | /mis-prestadores/:id/publicaciones |
+
+Repository + providers:
+- lib/features/social/data/social_repository.dart
+- lib/features/social/data/social_providers.dart
+
+Endpoints backend consumidos:
+- GET    /api/v1/admin/social/cuentas
+- GET    /api/v1/admin/social/config
+- PATCH  /api/v1/admin/social/config
+- GET    /api/v1/admin/social/publicaciones    (?estado=&red=)
+- PATCH  /api/v1/admin/social/publicaciones/{id}/reencolar
+- POST   /api/v1/admin/social/publicaciones/procesar-ahora
+- GET    /api/v1/mis-prestadores/{id}/publicaciones    (dueno o admin)
+12. **Workflow dual-repo (backend + Flutter)**: cambios de backend por SSH (commit desde el server), cambios Flutter en Windows (commit desde Windows). pull --rebase antes de cada push.
+13. **CRLF rompe git log -3**: usar 'git log --oneline' o Python via stdin.
+14. **CRLF rompe git diff --cached --name-only**: usar 'git status' o 'git diff --cached' sin flags.
