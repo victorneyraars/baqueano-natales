@@ -970,6 +970,35 @@ B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97
 
 ---
 
+## 🔍 Temas pendientes de análisis (no deuda técnica activa)
+
+### Fase 6 — DNS cutover + SSL del server nuevo (PENDIENTE DE ANALIZAR)
+
+**Contexto (2026-10-11):** se posterga hasta tener claridad sobre el modelo
+final. No es deuda técnica activa porque hay decisiones estratégicas sin tomar.
+
+**Estado actual:**
+- `api.baqueanonatales.com` → server viejo (sistema legacy en producción).
+- `dev-api.baqueanonatales.com` → server nuevo (proyecto nuevo + OAuth FB).
+- SSL del server nuevo: Cloudflare Origin Certificate + modo `Full (strict)`.
+
+**Por qué se posterga:**
+1. El server nuevo aún no tiene paridad de features con el viejo.
+2. Sin usuarios reales, no hay urgencia de consolidar.
+3. **Decisión estratégica abierta:** Cloudflare proxied vs directo.
+   - Si se mantiene **Cloudflare proxied** → el Origin Certificate es suficiente,
+     **Let's Encrypt no aporta valor** (el usuario final ve el cert Edge de CF,
+     nunca el del server).
+   - Si se saca Cloudflare del medio (proxied=off) → ahí sí Let's Encrypt es
+     la solución correcta.
+4. Antes de decidir hay que definir el modelo de despliegue final del MVP.
+
+**Antes de ejecutar hay que definir:**
+- ¿Cloudflare queda proxied en producción final o no?
+- ¿Cuándo el proyecto nuevo reemplaza al legacy (paridad de features)?
+- ¿Se consolida en 1 solo server o se mantienen 2?
+
+**Estimación tentativa cuando se decida:** ~1.5 horas (DNS cutover + SSL + AppConfig Flutter + validación).
 ## 🚨 Secretos expuestos (pendientes rotar)
 
 **Durante el desarrollo, quedaron expuestos en chats/logs:**
