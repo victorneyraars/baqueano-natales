@@ -1,4 +1,4 @@
-﻿/// Router central de la aplicaciÃ³n.
+/// Router central de la aplicaciÃ³n.
 ///
 /// Detecta el flavor (client o admin) vÃ­a `AppConfig.appType`:
 /// - `client`: redirige `/home` â†’ HomeScreen (client normal)
@@ -36,6 +36,8 @@ import 'package:baqueano_natales/features/comercios/presentation/screens/formula
 import 'package:baqueano_natales/features/comercios/presentation/screens/lista_comercios_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/mis_comercios_screen.dart';
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/mis_vehiculos_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_vehiculo_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_mi_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
@@ -292,6 +294,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       // =========================================================
       // Prestadores â€” dueÃ±o (mis prestadores)
       // =========================================================
+        GoRoute(
+          path: '/mis-vehiculos',
+          name: 'mis-vehiculos',
+          builder: (context, state) => const MisVehiculosScreen(),
+        ),
+        GoRoute(
+          path: '/mis-vehiculos/nuevo',
+          name: 'mis-vehiculos-nuevo',
+          builder: (context, state) => const FormularioVehiculoScreen(),
+        ),
+        GoRoute(
+          path: '/mis-vehiculos/:id/editar',
+          name: 'mi-vehiculo-editar',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return FormularioVehiculoScreen(objetoId: id);
+          },
+        ),
       GoRoute(
         path: '/mis-prestadores',
         name: 'mis-prestadores',

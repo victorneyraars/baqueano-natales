@@ -149,6 +149,12 @@ class HomeScreen extends ConsumerWidget {
               subtitle: 'Gestioná tus perfiles de prestador',
               onTap: () => context.push('/mis-prestadores'),
             ),
+            _FeatureCard(
+              icon: Icons.directions_car_outlined,
+              title: 'Mis vehiculos',
+              subtitle: 'Gestiona tus autos y su historial',
+              onTap: () => context.push('/mis-vehiculos'),
+            ),
 
             const SizedBox(height: 24),
 
