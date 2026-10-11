@@ -7,6 +7,38 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-11 - Modulo social Etapa 8: Google Business Profile (codigo listo, gateado)
+- Backend completo para publicar en GBP, esperando aprobacion de la API de Google:
+  - google_business_service.py: cliente REST con httpx (sin SDK de Google).
+    publicar_post_en_gbp() respeta el feature flag GOOGLE_BUSINESS_ENABLED.
+  - 5 vars en Settings: GOOGLE_BUSINESS_ENABLED (default false), ACCOUNT_NAME,
+    CLIENT_ID, CLIENT_SECRET, API_VERSION
+  - services.obtener_google_business_ids_de_cuenta: resuelve account_name +
+    location_id desde metadata_extra (cache) o fallback a settings
+  - worker dispatch: GOOGLE_BUSINESS -> _publicar_en_google()
+  - eventos_prestadores: al aprobar prestador o agregar servicio, encola
+    tambien GBP si config.publicar_en_google=true
+  - 10 tests nuevos (8 google_business_service + 2 worker) - 124 verdes totales
+- Cuando Google apruebe la API, activar es solo:
+  1. GOOGLE_BUSINESS_ENABLED=true en .env
+  2. Cargar credenciales OAuth + account_name + location_id
+  3. ConfigSocial.publicar_en_google=true en la DB
+
+### 2026-10-11 - Modulo social Etapa 7: frontend propietario + endpoint reencolar
+- Backend:
+  - services.reencolar_publicacion: resetea estado a PENDIENTE, limpia
+    intentos + error. Rechaza (409) si esta en PUBLICANDO.
+  - PATCH /admin/social/publicaciones/{id}/reencolar
+  - services.listar_publicaciones_de_prestador: publicaciones del prestador
+    + publicaciones de sus servicios
+  - GET /api/v1/mis-prestadores/{id}/publicaciones (dueno o admin)
+- Frontend Flutter:
+  - Boton Reencolar en las cards de la cola (solo estados fallado/agotado)
+  - Pantalla MisPublicacionesScreen (read-only, vista del dueno)
+  - Boton 'Publicaciones en redes' en DetalleMiPrestadorScreen
+  - Ruta /mis-prestadores/:id/publicaciones
+- 5 archivos backend + 5 archivos Flutter modificados/creados
+
 ### 2026-10-10 (cont. 7) - Frontend admin del modulo social (Etapa 6)
 - 3 pantallas nuevas en el flavor admin (Flutter):
   - Redes sociales: lista cuentas conectadas (FB + IG) con badges por red,
@@ -1070,7 +1102,7 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - **Modulo social (Etapas 1-6)** desplegado: OAuth FB + worker + IG + prestadores + admin frontend
 
 **Lo que queda pendiente inmediato:**
-1. **Modulo social Etapa 7** - frontend propietario (cada prestador ve que se publico de el)
+1. **Modulo social Etapa 9** - modulo promocion (plantillas + afiche SVG)
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
@@ -1196,7 +1228,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1 a 6 completas)
+## Modulo `social` - estado actual (Etapas 1-8: solo Etapa 9 pendiente)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1215,7 +1247,7 @@ multi-tenant por recurso y tokens cifrados.
 | Etapa 4 (Instagram via FB) | instagram_service + smoke test real OK |
 | Etapa 5 (integracion con prestadores) | eventos + smoke test real OK |
 | Etapa 6 (frontend admin) | 3 pantallas Flutter + filtros OK |
-| Etapa 8 (Google Business Profile — pendiente aprobación API) | ⏳ |
+| Etapa 8 (Google Business Profile) | codigo listo, gateado por flag (espera aprobacion API) |
 | Etapa 9 (módulo promocion/ — plantillas + afiche) | ⏳ |
 
 **Ruta:** `backend/app/modules/social/` y `backend/app/core/crypto.py`
