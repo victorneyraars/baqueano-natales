@@ -22,10 +22,32 @@
 - Smoke test end-to-end en produccion:
   - Generar afiche -> PNG accesible por HTTPS publico
   - POST /publicar -> 201 -> worker publico en Facebook
-- Known issue (follow-up): share_plus 10.x en Android 14 tiene
-  SecurityException al escribir archivo temporal desde algunos targets
-  del share sheet. Share sheet abre OK. Upgrade a share_plus ^11+ pendiente.
+- RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 4) - Flutter deps upgrade: secure_storage v11 + share_plus v13 + plantilla lanzamiento
+- **Deuda tecnica #1 resuelta**: conflicto `win32` entre `flutter_secure_storage` y `share_plus`.
+  Ahora ambos usan `win32 ^6.4.0`. Warning KGP de `share_plus` eliminado de paso.
+- **`share_plus` 10.1.4 -> 13.3.1**:
+  - Migracion de API: `Share.shareXFiles` -> `SharePlus.instance.share(ShareParams(...))`
+    en las 2 llamadas del editor de promociones (descargar PNG + compartir PNG).
+  - Se paso por 11.1.0 intermedio por conflicto con secure_storage 9.x.
+- **`flutter_secure_storage` 9.2.2 -> 11.2.0**:
+  - Migracion en 2 fases (9 -> 10.3.4 -> 11.2.0) para preservar los datos.
+  - v10 migra el cifrado automaticamente; el log confirma:
+    `Migration complete: 3 items migrated from EncryptedSharedPreferences to custom cipher storage`.
+  - v11 elimina `encryptedSharedPreferences` de AndroidOptions (ya removido).
+  - **JWT preservado sin re-login** (verificado: `auth/me 200` directo).
+- **Plantilla `lanzamiento` nueva** en modulo promocion:
+  - Backend: `render_lanzamiento` con hero diagonal (verde -> morado) + caja info
+    con gradiente horizontal (verde claro -> blanco). Usa `svg_service.gradiente_linear`
+    (helper que estaba sin uso).
+  - Frontend: case visual en la galeria (icono cohete, fondo morado).
+  - Validado end-to-end en emulador Android 14: SVG 3193 chars, PNG 200KB,
+    cero warnings de flutter_svg.
+- **Warning `<defs/>` flutter_svg**: descartado. No aplicaba - ninguna plantilla
+  emitia `<defs>` antes. La nueva `lanzamiento` si lo hace, y **flutter_svg lo renderiza
+  sin warnings** siempre que `<defs>` vaya antes de las formas.
+- 5 commits nuevos en `origin/main` (116ac45 -> 1cd9036). Working tree limpio.
 ### 2026-10-11 - Modulo promocion Etapa 9: generador de afiches SVG (completo)
 - Modulo backend/app/modules/promocion/ completo:
   - brand_kit.py: paleta Baqueano, fuentes web-safe, baseline grid, 5 tamanos industria
@@ -656,9 +678,10 @@ dependencies:
   firebase_auth: ^5.3.3
   google_sign_in: ^6.2.0    # v6 (v7 tiene bug con Credential Manager)
   dio: ^5.7.0
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^11.2.0
   go_router: ^14.6.2
   flutter_riverpod: ^2.6.1
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test: sdk: flutter
@@ -671,6 +694,8 @@ dev_dependencies:
 - `google_sign_in: 6.3.0` (API v6, estable)
 - `dio: 5.11.1`
 - `flutter_riverpod: 2.6.1`
+- `flutter_secure_storage: 11.2.0` (upgrade v9 -> v11 en 2 fases)
+- `share_plus: 13.3.1` (upgrade v10 -> v13)
 
 ### ⚠️ Configuración nativa Android (CRÍTICA para login con Google)
 
@@ -720,7 +745,7 @@ dependencies {
 1. **Request:** agrega `Authorization: Bearer <jwt>` si hay token guardado.
 2. **Error:** mapea DioException a ApiException tipada.
 
-**Storage:** `flutter_secure_storage` con `encryptedSharedPreferences: true` (Android Keystore).
+**Storage:** `flutter_secure_storage` 11.2.0 con custom cipher storage (RSA OAEP + AES-GCM, Android Keystore). Nota: `encryptedSharedPreferences` fue deprecado en v10 y eliminado en v11.
 
 **Config central:** `AppConfig` con `AppType` (client/admin) y `Environment` (dev/prod).
 
