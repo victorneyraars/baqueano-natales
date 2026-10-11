@@ -169,9 +169,11 @@ class _AdminPromocionEditorScreenState
     try {
       final file = await _guardarPngTemporal();
       if (file == null || !mounted) return;
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'image/png')],
-        subject: 'Afiche Baqueano Natales',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'image/png')],
+          subject: 'Afiche Baqueano Natales',
+        ),
       );
     } on ApiException catch (e) {
       if (mounted) {
@@ -196,9 +198,11 @@ class _AdminPromocionEditorScreenState
     try {
       final file = await _guardarPngTemporal();
       if (file == null || !mounted) return;
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'image/png')],
-        text: 'Mira este afiche de Baqueano Natales',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'image/png')],
+          text: 'Mira este afiche de Baqueano Natales',
+        ),
       );
     } on ApiException catch (e) {
       if (mounted) {
