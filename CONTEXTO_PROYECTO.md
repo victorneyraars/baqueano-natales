@@ -7,6 +7,23 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-11 - Modulo promocion Etapa 9: generador de afiches SVG (completo)
+- Modulo backend/app/modules/promocion/ completo:
+  - brand_kit.py: paleta Baqueano, fuentes web-safe, baseline grid, 5 tamanos industria
+  - svg_service.py: helpers puros (canvas, texto, formas, gradientes). svgwrite escapa XML
+  - templates.py: 5 plantillas ricas (nuevo_servicio, oferta, destacado, evento, profesional)
+  - services.py: validacion anti-abuso (30 params, 2000 chars, 200KB SVG)
+  - routes.py: 3 endpoints admin (plantillas, generar JSON, generar-svg directo)
+  - 16 tests - 140 verdes totales
+- Frontend Flutter (flavor admin):
+  - domain/afiche.dart: modelos + TamanoAfiche enum
+  - data/promocion_repository.dart + providers con editor state
+  - Galeria: grid de 5 plantillas con preview visual
+  - Editor con preview SVG en vivo (flutter_svg), debounce 400ms
+  - Card nueva en AdminHome + 2 rutas (/admin/promocion + /editor/:id)
+  - flutter_svg 2.3.0 agregado
+- Etapa 9 completa. Modulo social cerrado: 9/9 etapas
+
 ### 2026-10-11 - Modulo social Etapa 8: Google Business Profile (codigo listo, gateado)
 - Backend completo para publicar en GBP, esperando aprobacion de la API de Google:
   - google_business_service.py: cliente REST con httpx (sin SDK de Google).
@@ -1102,7 +1119,7 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - **Modulo social (Etapas 1-6)** desplegado: OAuth FB + worker + IG + prestadores + admin frontend
 
 **Lo que queda pendiente inmediato:**
-1. **Modulo social Etapa 9** - modulo promocion (plantillas + afiche SVG)
+1. **Rotar secretos expuestos** (pendiente desde 2026-10-08)
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
@@ -1228,7 +1245,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1-8: solo Etapa 9 pendiente)
+## Modulo `social` - estado actual (9/9 etapas completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1248,7 +1265,7 @@ multi-tenant por recurso y tokens cifrados.
 | Etapa 5 (integracion con prestadores) | eventos + smoke test real OK |
 | Etapa 6 (frontend admin) | 3 pantallas Flutter + filtros OK |
 | Etapa 8 (Google Business Profile) | codigo listo, gateado por flag (espera aprobacion API) |
-| Etapa 9 (módulo promocion/ — plantillas + afiche) | ⏳ |
+| Etapa 9 (modulo promocion) | 5 plantillas SVG + editor + preview OK |
 
 **Ruta:** `backend/app/modules/social/` y `backend/app/core/crypto.py`
 
