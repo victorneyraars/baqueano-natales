@@ -7,6 +7,29 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-10 (cont. 7) - Frontend admin del modulo social (Etapa 6)
+- 3 pantallas nuevas en el flavor admin (Flutter):
+  - Redes sociales: lista cuentas conectadas (FB + IG) con badges por red,
+    propietario, activa/manual
+  - Configuracion: toggles auto-publish + FB/IG, radios de destino,
+    boton "Procesar cola ahora"
+  - Cola de publicaciones: filtros por estado + red, cards con preview,
+    intentos, error, proximo intento, empty state
+- Feature completa en Flutter:
+  - domain/cuenta_social.dart + domain/publicacion_social.dart
+  - data/social_repository.dart (listarCuentas, obtenerConfig,
+    actualizarConfig, listarPublicaciones, procesarColaAhora)
+  - data/social_providers.dart (5 providers)
+  - 3 screens en presentation/screens/
+- AdminHome: 3 cards nuevas (Redes sociales, Configuracion, Cola)
+- 3 rutas nuevas: /admin/social/cuentas, /admin/social/config,
+  /admin/social/publicaciones
+- 7 archivos nuevos/modificados en Flutter (1800+ lineas)
+- Backend fix: endpoint GET /publicaciones ignoraba query param red.
+  Se agrego red: Red | None en routes + services (5 lineas)
+- Verificado en emulador Android 14 end-to-end: filtros funcionando con
+  los 3 posts reales de los smoke tests previos
+
 ### 2026-10-10 (cont. 6) - Modulo social Etapa 5: integracion con prestadores
 - eventos_prestadores.py: al aprobar prestador o agregar servicio, encola
   publicaciones en FB + IG automaticamente:
@@ -281,7 +304,7 @@
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
-- Modulo social (Etapas 1-5) - OAuth FB + worker + Instagram + integracion con prestadores, 114 tests
+- Modulo social (Etapas 1-6) - OAuth FB + worker + IG + integracion prestadores + frontend admin, 114 tests
 - ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
@@ -1044,10 +1067,10 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
 - **114 tests automatizados** (78 unit + 36 con DB) - todos verdes
-- **Modulo social (Etapas 1-5)** desplegado: OAuth FB + worker + IG + integracion prestadores
+- **Modulo social (Etapas 1-6)** desplegado: OAuth FB + worker + IG + prestadores + admin frontend
 
 **Lo que queda pendiente inmediato:**
-1. **Modulo social Etapa 3** - worker de publicacion en Facebook (reintentos + backoff)
+1. **Modulo social Etapa 7** - frontend propietario (cada prestador ve que se publico de el)
 2. 🚨 **Rotar secretos expuestos** (ver sección "Secretos expuestos") — CRÍTICO
    - Prioridad alta: `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo
    - **Nuevo:** `POSTGRES_PASSWORD` expuesto en chat 2026-10-08
@@ -1173,7 +1196,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1 + 2 + 3 + 4 + 5 completas)
+## Modulo `social` - estado actual (Etapas 1 a 6 completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1191,7 +1214,7 @@ multi-tenant por recurso y tokens cifrados.
 | Etapa 3 (publicacion FB con worker) | worker in-process + smoke test real OK |
 | Etapa 4 (Instagram via FB) | instagram_service + smoke test real OK |
 | Etapa 5 (integracion con prestadores) | eventos + smoke test real OK |
-| Etapa 6-7 (frontend admin + propietario) | ⏳ |
+| Etapa 6 (frontend admin) | 3 pantallas Flutter + filtros OK |
 | Etapa 8 (Google Business Profile — pendiente aprobación API) | ⏳ |
 | Etapa 9 (módulo promocion/ — plantillas + afiche) | ⏳ |
 
