@@ -41,6 +41,12 @@ from app.modules.prestadores.routes import (
 from app.modules.promocion.routes import (
     router_admin as promocion_admin_router,
 )
+from app.modules.oficios.routes import (
+    router_publico as oficios_publico_router,
+    router_propietario as oficios_propietario_router,
+    router_admin_categorias as oficios_admin_categorias_router,
+    router_admin_repuestos as oficios_admin_repuestos_router,
+)
 from app.modules.social.routes import (
     router_admin as social_admin_router,
 )
@@ -122,6 +128,10 @@ app.include_router(social_admin_router, prefix="/api/v1")
 
 # Promocion (afiches SVG)
 app.include_router(promocion_admin_router, prefix="/api/v1")
+app.include_router(oficios_publico_router, prefix="/api/v1")
+app.include_router(oficios_propietario_router, prefix="/api/v1")
+app.include_router(oficios_admin_categorias_router, prefix="/api/v1")
+app.include_router(oficios_admin_repuestos_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
