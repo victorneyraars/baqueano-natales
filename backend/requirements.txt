@@ -39,6 +39,7 @@ slowapi==0.1.9
 
 # --- Procesamiento de imágenes ---
 Pillow==11.0.0
+svgwrite==1.4.3
 filetype==1.2.0
 
 # --- Utilidades ---
