@@ -355,6 +355,7 @@ async def listar_publicaciones(
     *,
     cuenta_id: UUID | None = None,
     estado: EstadoPublicacion | None = None,
+    red: Red | None = None,
     recurso_tipo: str | None = None,
     recurso_id: UUID | None = None,
     limit: int = 50,
@@ -366,6 +367,8 @@ async def listar_publicaciones(
         base = base.where(PublicacionSocial.cuenta_id == cuenta_id)
     if estado is not None:
         base = base.where(PublicacionSocial.estado == estado)
+    if red is not None:
+        base = base.where(PublicacionSocial.red == red)
     if recurso_tipo is not None:
         base = base.where(PublicacionSocial.recurso_tipo == recurso_tipo)
     if recurso_id is not None:
