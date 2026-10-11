@@ -28,7 +28,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
-from app.modules.social import facebook_service, instagram_service, services
+from app.modules.social import (
+    facebook_service,
+    google_business_service as gbp_service,
+    instagram_service,
+    services,
+)
 from app.modules.social.models import EstadoPublicacion, Red
 
 logger = logging.getLogger(__name__)
@@ -98,7 +103,7 @@ async def _procesar_una(db, pub) -> str:
     NO captura excepciones: lo hace `procesar_cola`.
     """
     # 1. Dispatch por red
-    if pub.red not in (Red.FACEBOOK, Red.INSTAGRAM):
+    if pub.red not in (Red.FACEBOOK, Red.INSTAGRAM, Red.GOOGLE_BUSINESS):
         await services.marcar_publicacion_fallada(
             db, pub, f"Red no soportada en este worker: {pub.red.value}"
         )
@@ -142,6 +147,10 @@ async def _procesar_una(db, pub) -> str:
     # 6. Publicar segun red
     if pub.red == Red.INSTAGRAM:
         external_id, fb_error = await _publicar_en_instagram(
+            db, pub, token, mensaje, image_url
+        )
+    elif pub.red == Red.GOOGLE_BUSINESS:
+        external_id, fb_error = await _publicar_en_google(
             db, pub, token, mensaje, image_url
         )
     else:
@@ -192,6 +201,38 @@ async def _publicar_en_instagram(
         page_token=page_token,
         image_url=image_url,
         caption=mensaje,
+    )
+
+
+async def _publicar_en_google(
+    db, pub, token: str, mensaje: str, image_url: str | None
+):
+    """Publica en Google Business Profile.
+
+    Feature flag: si GOOGLE_BUSINESS_ENABLED=false, el servicio devuelve
+    error inmediato (sin llamada HTTP).
+    """
+    from app.core.config import settings as _settings
+
+    if not _settings.GOOGLE_BUSINESS_ENABLED:
+        return None, facebook_service.FacebookError(
+            message="Google Business Profile deshabilitado en el backend"
+        )
+
+    account_name, location_id = await services.obtener_google_business_ids_de_cuenta(
+        db, pub.cuenta_id
+    )
+    if not account_name or not location_id:
+        return None, facebook_service.FacebookError(
+            message="La cuenta no tiene Google Business configurado"
+        )
+
+    return await gbp_service.publicar_post_en_gbp(
+        account_name=account_name,
+        location_id=location_id,
+        access_token=token,
+        mensaje=mensaje,
+        image_url=image_url,
     )
 
 

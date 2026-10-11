@@ -99,6 +99,19 @@ class Settings(BaseSettings):
         "pages_show_list,pages_read_engagement,pages_manage_posts"
     )
 
+    # --- Google Business Profile (Etapa 8) ---
+    # Feature flag: activa/desactiva la publicacion en GBP. Cuando se
+    # apruebe la API de Google, cambiar a true.
+    GOOGLE_BUSINESS_ENABLED: bool = False
+    # Cuenta principal de GBP. Formato: "accounts/1234567890".
+    GOOGLE_BUSINESS_ACCOUNT_NAME: str = ""
+    # OAuth credentials para la API (distintas de GOOGLE_CLIENT_ID que es
+    # para Sign-In).
+    GOOGLE_BUSINESS_CLIENT_ID: str = ""
+    GOOGLE_BUSINESS_CLIENT_SECRET: str = ""
+    # Version de la API de GBP.
+    GOOGLE_BUSINESS_API_VERSION: str = "v4"
+
     # --- Worker de publicaciones sociales (Etapa 3) ---
     # Scheduler in-process (APScheduler) que procesa la cola
     # publicaciones_sociales. Deshabilitar en tests o si corre un worker

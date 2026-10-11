@@ -115,6 +115,29 @@ async def _encolar_para_ambas_redes(
         except Exception as e:
             logger.warning("Social: fallo encolando IG: %s", e)
 
+    # Google Business Profile (opcional, gateado por flag)
+    if config.publicar_en_google:
+        try:
+            contenido_gbp: dict = {"message": mensaje}
+            if image_url:
+                contenido_gbp["image_urls"] = [image_url]
+            await social_services.encolar_publicacion(
+                db,
+                PublicacionSocialCreate(
+                    cuenta_id=cuenta.id,
+                    recurso_tipo=recurso_tipo,
+                    recurso_id=recurso_id,
+                    red=Red.GOOGLE_BUSINESS,
+                    contenido=contenido_gbp,
+                ),
+            )
+            logger.info(
+                "Social: encolada publicacion GBP para %s/%s",
+                recurso_tipo, recurso_id,
+            )
+        except Exception as e:
+            logger.warning("Social: fallo encolando GBP: %s", e)
+
 
 async def encolar_prestador_nuevo(db: AsyncSession, prestador) -> None:
     try:

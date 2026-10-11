@@ -12,7 +12,12 @@ import pytest
 import respx
 
 from app.core import crypto
-from app.modules.social import instagram_service, services, worker
+from app.modules.social import (
+    google_business_service as gbp_service,
+    instagram_service,
+    services,
+    worker,
+)
 from app.modules.social.models import (
     CuentaSocial,
     EstadoPublicacion,
@@ -235,4 +240,82 @@ async def test_procesar_cola_instagram_sin_imagen_falla(db):
 
     await db.refresh(pub)
     assert "image_url" in (pub.error_ultimo or "").lower() or "imagen" in (pub.error_ultimo or "").lower()
+
+# ------------------------------------------------------------ google business
+
+@respx.mock
+async def test_procesar_cola_gbp_ok(db, monkeypatch):
+    """Worker publica en GBP cuando pub.red == GOOGLE_BUSINESS y el flag esta ON."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "GOOGLE_BUSINESS_ENABLED", True)
+    monkeypatch.setattr(settings, "GOOGLE_BUSINESS_API_VERSION", "v4")
+
+    cuenta = await _crear_cuenta(db)
+    await _crear_token(db, cuenta)
+
+    # Mock del helper que resuelve (account, location)
+    async def fake_gbp_ids(db_, cuenta_id):
+        return "accounts/123", "456"
+    monkeypatch.setattr(
+        services, "obtener_google_business_ids_de_cuenta", fake_gbp_ids
+    )
+
+    # Mock del endpoint de GBP
+    url = "https://mybusiness.googleapis.com/v4/accounts/123/locations/456/localPosts"
+    respx.post(url).mock(
+        return_value=httpx.Response(200, json={
+            "name": "accounts/123/locations/456/localPosts/789"
+        })
+    )
+
+    pub = PublicacionSocial(
+        cuenta_id=cuenta.id,
+        recurso_tipo="test_gbp",
+        recurso_id=uuid4(),
+        red=Red.GOOGLE_BUSINESS,
+        contenido={"message": "Post de prueba en Google"},
+        estado=EstadoPublicacion.PENDIENTE,
+    )
+    db.add(pub)
+    await db.commit()
+    await db.refresh(pub)
+
+    stats = await worker.procesar_cola(db=db)
+    assert stats["procesadas"] == 1
+    assert stats["publicadas"] == 1
+
+    await db.refresh(pub)
+    assert pub.estado == EstadoPublicacion.PUBLICADO
+    assert pub.external_post_id == "accounts/123/locations/456/localPosts/789"
+
+
+async def test_procesar_cola_gbp_disabled_falla(db, monkeypatch):
+    """Con GOOGLE_BUSINESS_ENABLED=false, el worker falla la publicacion."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "GOOGLE_BUSINESS_ENABLED", False)
+
+    cuenta = await _crear_cuenta(db)
+    await _crear_token(db, cuenta)
+
+    pub = PublicacionSocial(
+        cuenta_id=cuenta.id,
+        recurso_tipo="test_gbp_disabled",
+        recurso_id=uuid4(),
+        red=Red.GOOGLE_BUSINESS,
+        contenido={"message": "Debe fallar"},
+        estado=EstadoPublicacion.PENDIENTE,
+    )
+    db.add(pub)
+    await db.commit()
+    await db.refresh(pub)
+
+    stats = await worker.procesar_cola(db=db)
+    assert stats["procesadas"] == 1
+    assert stats["falladas"] == 1
+
+    await db.refresh(pub)
+    assert pub.estado != EstadoPublicacion.PUBLICADO
+    assert "deshabilitado" in (pub.error_ultimo or "").lower()
 

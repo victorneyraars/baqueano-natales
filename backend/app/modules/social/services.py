@@ -745,6 +745,47 @@ async def marcar_publicacion_fallada(
     await db.commit()
     await db.refresh(pub)
 
+async def obtener_google_business_ids_de_cuenta(
+    db: AsyncSession, cuenta_id: UUID
+) -> tuple[str | None, str | None]:
+    """Devuelve (account_name, location_id) de la cuenta Google Business.
+
+    Los busca primero en metadata_extra. Si no estan, los consulta a la
+    API de GBP (requiere access_token valido) y los guarda.
+
+    Returns:
+        (account_name, location_id). Ambos None si no se pueden resolver.
+    """
+    from app.modules.social import google_business_service as gbp
+
+    stmt = select(CuentaSocial).where(CuentaSocial.id == cuenta_id)
+    cuenta = (await db.execute(stmt)).scalar_one_or_none()
+    if cuenta is None:
+        return None, None
+
+    meta = cuenta.metadata_extra or {}
+    acc = meta.get("gbp_account_name")
+    loc = meta.get("gbp_location_id")
+    if acc and loc:
+        return acc, loc
+
+    # Fallback: derivar desde settings + external_id
+    # (cuando se active la API, se llenaran con el OAuth)
+    acc_fallback = settings.GOOGLE_BUSINESS_ACCOUNT_NAME or None
+    loc_fallback = cuenta.external_id or None
+    if acc_fallback and loc_fallback:
+        # Cachear en metadata_extra
+        cuenta.metadata_extra = {
+            **meta,
+            "gbp_account_name": acc_fallback,
+            "gbp_location_id": loc_fallback,
+        }
+        await db.commit()
+        return acc_fallback, loc_fallback
+
+    return None, None
+
+
 async def obtener_instagram_id_de_cuenta(
     db: AsyncSession, cuenta_id: UUID
 ) -> str | None:
