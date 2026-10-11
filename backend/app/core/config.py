@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     # --- Storage de avatares ---
     AVATAR_STORAGE_PATH: str = "/app/media/avatars"
     PUBLIC_API_URL: str = "https://api.baqueanonatales.com"
+    PUBLIC_WEB_URL: str = "https://www.baqueanonatales.com"
     MAX_AVATAR_SIZE_BYTES: int = 5 * 1024 * 1024  # 5 MB
 
 

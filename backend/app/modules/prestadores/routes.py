@@ -18,6 +18,7 @@ from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.prestadores import services
 from app.modules.prestadores.deps import PrestadorPropietario
+from app.modules.social import eventos_prestadores as social_eventos
 from app.modules.prestadores.models import EstadoPrestador
 from app.modules.prestadores.schemas import (
     CategoriaOficioCreate,
@@ -255,6 +256,8 @@ async def agregar_servicio_mi_prestador(
     db: DbSession,
 ) -> PrestadorServicioResponse:
     srv = await services.agregar_servicio(db, prestador, data)
+    # Best-effort: encolar publicacion para redes (Etapa 5)
+    await social_eventos.encolar_servicio_nuevo(db, prestador, srv)
     return PrestadorServicioResponse.model_validate(srv)
 
 
@@ -468,6 +471,8 @@ async def admin_verificar_prestador(
     prestador = await services.verificar_prestador(
         db, prestador, admin, categoria_id=data.categoria_id
     )
+    # Best-effort: encolar publicacion para redes (Etapa 5)
+    await social_eventos.encolar_prestador_nuevo(db, prestador)
     return PrestadorPrivadoResponse.model_validate(prestador)
 
 
