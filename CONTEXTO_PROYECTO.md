@@ -24,6 +24,51 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 8) - Modulo oficios Fase M2 backend completa (ordenes de trabajo)
+
+**Corazon del MVP de mecanica: ciclo completo de orden con state machine.**
+
+- **3 tablas nuevas** (migracion `8597373be79b`):
+  - `ordenes_trabajo`: numero OT-YYYY-NNNN, 10 estados, prioridad, cliente,
+    prestador, objeto_servicio, totales, fechas, notas internas/cliente.
+  - `orden_items`: items del presupuesto (servicio, repuesto, mano_obra, otro)
+    con aprobacion por item individual (None=pendiente, True/False=decision).
+  - `orden_historial`: timeline **append-only** con estado_anterior/nuevo,
+    usuario_id y contenido JSONB. Fuente de verdad del ciclo de vida.
+- **State machine de 10 estados**:
+  `ingresado -> diagnosticando -> presupuestado -> aprobado -> en_proceso
+   -> listo -> entregado -> garantia`.
+  Ramas: `presupuestado -> rechazado`, cualquier estado inicial `-> cancelado`.
+  Validacion por rol (prestador vs cliente) con retorno 409 en transicion invalida.
+- **Numeracion automatica** de ordenes con formato `OT-2026-0001`.
+- **Presupuesto con aprobacion parcial**: el cliente puede aprobar/rechazar
+  items individualmente. Si aprueba todos -> estado `aprobado`. Si aprueba
+  parcial -> sigue en `presupuestado`. Si rechaza todos -> `rechazado`.
+- **Eventos registrados en `orden_historial`** para cada cambio de estado,
+  aprobacion, rechazo. Con `usuario_id` y `contenido` (motivo, total, etc.).
+- **Fix critico `MissingGreenlet`**: en endpoints que devuelven `OrdenTrabajo`
+  serializada se recarga con `selectinload(items, historial)` antes de responder.
+  Los listados tambien usan `selectinload(items)` en la query.
+- **~20 endpoints nuevos**:
+  - Prestador: `GET/POST /mis-prestadores/{id}/ordenes`,
+    `GET/PATCH /mis-prestadores/{id}/ordenes/{oid}`,
+    `POST/PATCH/DELETE .../items`, `POST .../estado`.
+  - Cliente: `GET /mis-ordenes`, `GET /mis-ordenes/{id}`,
+    `POST /mis-ordenes/{id}/aprobar`.
+- **Validado end-to-end: 10/10 tests HTTP**:
+  - Crear orden -> numero OT-2026-0001 en estado `ingresado`.
+  - Agregar 3 items -> total $295.000.
+  - Transiciones: `ingresado -> diagnosticando -> presupuestado`.
+  - Aprobacion parcial (2/3 items) -> total aprobado $260.000, estado sigue
+    en `presupuestado`.
+  - Aprobacion total -> estado `aprobado`.
+  - Ejecucion: `aprobado -> en_proceso -> listo -> entregado`.
+  - Historial: 8 eventos registrados en orden correcto.
+  - Transicion invalida `entregado -> ingresado` -> **409**.
+  - Listados de taller + cliente funcionando.
+- **Pendiente**: frontend Flutter de M2 (pantallas de ordenes).
+- **Commits**: `a93904c` (M1 backend), `da1923d` (M1 frontend),
+  `f17119a`/`280f136` (M2 backend).
 ### 2026-10-11 (cont. 7) - Modulo oficios Fase M1 completa (backend + frontend)
 
 **Arranque del MVP de mecanica con arquitectura reutilizable al resto de oficios.**
