@@ -266,6 +266,39 @@ async def obtener_publicacion(
     return PublicacionSocialResponse.model_validate(pub)
 
 
+@router_admin.patch(
+    "/publicaciones/{publicacion_id}/reencolar",
+    response_model=PublicacionSocialResponse,
+    summary="Reencolar una publicacion (resetear para reintento)",
+    description=(
+        "Resetea la publicacion a PENDIENTE, limpia intentos y error, "
+        "y la deja lista para que el worker la procese en el proximo "
+        "ciclo (o cuando se llame a procesar-ahora)."
+    ),
+)
+async def reencolar_publicacion(
+    publicacion_id: UUID,
+    db: DbSession,
+    _admin: AdminUser,
+) -> PublicacionSocialResponse:
+    pub = await services.obtener_publicacion(db, publicacion_id)
+    if pub is None:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Publicacion no encontrada",
+        )
+    try:
+        pub = await services.reencolar_publicacion(db, pub)
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        )
+    return PublicacionSocialResponse.model_validate(pub)
+
+
 @router_admin.post(
     "/publicaciones",
     response_model=PublicacionSocialResponse,
