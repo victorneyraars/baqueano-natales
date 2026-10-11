@@ -7,7 +7,35 @@
 
 ## 📋 Changelog reciente
 
-1. **Modulo social Etapa 4** - Instagram via Facebook (reutiliza el token de la pagina FB)
+1. **Modulo social Etapa 5** - integracion con vertical prestadores (trigger evento -> encolar -> worker publica)
+- instagram_service.py: publicar_post_en_instagram con flujo de 2 pasos:
+  - POST /{ig-user-id}/media (crear container)
+  - POST /{ig-user-id}/media_publish (publicar)
+  - Reintentos cortos (2s/4s/8s) para container asincronico
+- services.obtener_instagram_id_de_cuenta: busca IG ID en metadata_extra
+  (cache), si no esta lo consulta a Meta y lo guarda
+- worker: dispatch por red (FACEBOOK | INSTAGRAM)
+  - _publicar_en_instagram exige image_url (IG no acepta solo texto)
+- 9 tests nuevos (7 instagram_service + 2 worker) - 107 verdes totales
+- Smoke test end-to-end: post real publicado en @baqueanonatales
+  (external_post_id=18131824649504757)
+
+### 2026-10-10 (cont. 4) - Modulo social Etapa 3: worker de publicacion
+- Worker in-process con APScheduler que procesa la cola publicaciones_sociales cada 30s:
+  - facebook_service.publicar_post_en_pagina: POST a /feed (texto) o /photos (con imagen)
+  - services: 5 funciones del worker (obtener pendientes, token vigente, marcar publicando/publicada/fallada)
+  - Backoff exponencial: 1min -> 5min -> 30min -> 2h -> AGOTADO (5 intentos max)
+  - worker.py: procesar_cola + start/stop + ejecutar_ciclo_manual (acepta db opcional)
+  - Endpoint admin POST /publicaciones/procesar-ahora
+  - main.py lifespan: arranca/detiene el scheduler automaticamente
+  - config: SOCIAL_WORKER_ENABLED + SOCIAL_WORKER_INTERVAL_SEC
+  - apscheduler==3.10.4 en requirements
+  - 12 tests nuevos (6 publicar_post + 6 worker) - 98 verdes totales
+- Smoke test end-to-end: post real publicado en la pagina Baqueano Natales
+  (external_post_id=1319567627902106_122120360697479454)
+- Aprendizaje: pip install manual se pierde al recrear el container -> siempre
+  va primero a requirements.txt + docker compose build
+
 ### 2026-10-10 (cont. 3) - Modulo social Etapa 2: OAuth Facebook completo
 - Backend OAuth Facebook end-to-end funcionando en produccion:
   - oauth_state.py - JWT firmados (state CSRF + token_ref stateless)
@@ -239,7 +267,7 @@
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
-- Modulo social (Etapas 1 + 2 + 3) - OAuth Facebook + worker de publicacion, 4 tablas, crypto, 15 endpoints admin, 98 tests
+- Modulo social (Etapas 1+2+3+4) - OAuth Facebook + worker + Instagram, 4 tablas, crypto, 15 endpoints admin, 107 tests
 - ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
@@ -1001,8 +1029,8 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - App Flutter client con **persistencia de sesión funcional**
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
-- **98 tests automatizados** (62 unit + 36 con DB) - todos verdes
-- **Modulo social (Etapas 1 + 2 + 3)** desplegado: OAuth Facebook + worker de publicacion
+- **107 tests automatizados** (71 unit + 36 con DB) - todos verdes
+- **Modulo social (Etapas 1+2+3+4)** desplegado: OAuth Facebook + worker de publicacion + Instagram
 
 **Lo que queda pendiente inmediato:**
 1. **Modulo social Etapa 3** - worker de publicacion en Facebook (reintentos + backoff)
@@ -1131,7 +1159,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1 + 2 + 3 completas)
+## Modulo `social` - estado actual (Etapas 1 + 2 + 3 + 4 completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1143,11 +1171,11 @@ multi-tenant por recurso y tokens cifrados.
 | Backend (schemas + services + deps) | ✅ |
 | Backend (router admin + 15 endpoints) | OK |
 | Backend (README del módulo) | ✅ |
-| Tests (98: 62 unit + 36 con DB) | OK |
+| Tests (107: 71 unit + 36 con DB) | OK |
 | Deploy en producción | ✅ |
 | **Etapa 2 (OAuth Facebook)** | backend + smoke test end-to-end OK |
 | Etapa 3 (publicacion FB con worker) | worker in-process + smoke test real OK |
-| Etapa 4 (Instagram vía FB) | ⏳ |
+| Etapa 4 (Instagram via FB) | instagram_service + smoke test real OK |
 | Etapa 5 (integración con prestadores) | ⏳ |
 | Etapa 6-7 (frontend admin + propietario) | ⏳ |
 | Etapa 8 (Google Business Profile — pendiente aprobación API) | ⏳ |
