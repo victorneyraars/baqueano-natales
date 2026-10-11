@@ -24,6 +24,39 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 7) - Modulo oficios Fase M1 completa (backend + frontend)
+
+**Arranque del MVP de mecanica con arquitectura reutilizable al resto de oficios.**
+
+- **Diseno fundacional** (`docs/oficios/DISENO.md`, 311 lineas):
+  - Arquitectura en 2 capas: CORE (aplica a TODOS los oficios) + VERTICAL (mecanica).
+  - `objetos_servicio` como punto de extension polimorfico (vehiculo, propiedad, jardin).
+  - 13 tablas disenadas, ~45 endpoints, state machine de 10 estados, 7 flujos, 6 ADRs.
+  - 80% del codigo reutilizable. Agregar gasfiteria = ~2 sesiones.
+- **Fase M1 backend** (commit `a93904c`):
+  - 4 tablas nuevas: `objetos_servicio`, `vehiculos`, `mecanica_categorias_servicio`,
+    `mecanica_repuestos`.
+  - Migracion `4db12ad04733` aplicada (Alembic autogenerate limpio).
+  - 6 archivos: models, schemas, services, deps, routes, seed.
+  - 4 routers nuevos: publico (categorias/repuestos), propietario (mis-vehiculos CRUD),
+    admin categorias, admin repuestos.
+  - 11 categorias mecanica seedeadas (Mantenimiento, Frenos, Motor, etc.).
+  - 10/10 tests HTTP end-to-end verdes.
+- **Fase M1 frontend** (commit `da1923d`):
+  - Feature `oficios/` en Flutter: domain (Vehiculo + MecanicaCategoria),
+    data (OficiosRepository + providers Riverpod 3), presentation (2 pantallas).
+  - Pantalla "Mis vehiculos" (lista + empty state + refresh + delete).
+  - Formulario crear/editar vehiculo con validaciones.
+  - Card "Mis vehiculos" en el Home cliente.
+  - 3 rutas: `/mis-vehiculos`, `/mis-vehiculos/nuevo`, `/mis-vehiculos/:id/editar`.
+  - Validado end-to-end en emulador Android 14: POST/GET/PATCH/DELETE funcionando.
+  - `flutter analyze` limpio + build apk client OK.
+- **Estado del roadmap del modulo oficios**:
+  - M1: objetos_servicio + vehiculos + CRUD ✅ COMPLETA
+  - M2: ordenes_trabajo + items + presupuesto + state machine (proxima)
+  - M3: turnos + agenda
+  - M4: garantias + recordatorios + worker
+  - M5: fotos + notificaciones + reportes
 ### 2026-10-11 (cont. 6) - Riverpod 3.4.3 (deuda tecnica #7 cerrada)
 - **Migracion completa a Riverpod 3.4.3** (estaba en 2.6.1).
   Estrategia en 2 fases para cero downtime:
