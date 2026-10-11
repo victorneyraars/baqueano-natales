@@ -188,6 +188,32 @@ class SocialRepository {
     }
   }
 
+  /// Lista las publicaciones relacionadas con un prestador.
+  ///
+  /// Incluye su alta como prestador + los servicios agregados.
+  /// Endpoint: GET /api/v1/mis-prestadores/{id}/publicaciones
+  Future<List<PublicacionSocial>> listarPublicacionesDePrestador(
+    String prestadorId,
+  ) async {
+    try {
+      final resp = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/publicaciones',
+      );
+      final data = resp.data as Map<String, dynamic>;
+      final items = (data['items'] as List)
+          .map((j) => PublicacionSocial.fromJson(j as Map<String, dynamic>))
+          .toList();
+      return items;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   /// Reencola una publicacion fallada/agotada.
   ///
   /// Resetea estado a PENDIENTE, limpia intentos y error. El worker

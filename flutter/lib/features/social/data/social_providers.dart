@@ -77,6 +77,16 @@ final publicacionesSocialesProvider =
 );
 
 // =========================================================
+// Publicaciones de un prestador (family)
+// =========================================================
+
+final publicacionesDePrestadorProvider =
+    FutureProvider.family<List<PublicacionSocial>, String>((ref, id) async {
+  final repo = ref.watch(socialRepositoryProvider);
+  return repo.listarPublicacionesDePrestador(id);
+});
+
+// =========================================================
 // Acciones (no son providers de estado, son helpers)
 // =========================================================
 

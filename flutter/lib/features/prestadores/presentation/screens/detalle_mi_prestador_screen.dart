@@ -197,6 +197,16 @@ class _Contenido extends StatelessWidget {
         const SizedBox(height: 8),
 
         OutlinedButton.icon(
+          icon: const Icon(Icons.share_outlined),
+          label: const Text('Publicaciones en redes'),
+          onPressed: () => context.push(
+            '/mis-prestadores/${prestador.id}/publicaciones',
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),
           label: const Text('Eliminar prestador'),
           style: OutlinedButton.styleFrom(
