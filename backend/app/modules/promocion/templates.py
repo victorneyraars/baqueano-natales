@@ -698,6 +698,146 @@ def render_profesional(params: dict, tamano: str = "ig_feed") -> Drawing:
 
 
 # =========================================================
+# Plantilla 6: lanzamiento (gradiente diagonal)
+# =========================================================
+
+def render_lanzamiento(params: dict, tamano: str = "ig_feed") -> Drawing:
+    """Afiche: lanzamiento/apertura con gradiente diagonal.
+
+    params:
+        titulo (str): que se lanza.
+        subtitulo (str, opcional): bajada.
+        descripcion (str, opcional): detalle.
+        fecha (str, opcional): cuando.
+        ubicacion (str, opcional): donde.
+    """
+    w, h = bk.TAMANOS[tamano]
+    dwg = svg.canvas(tamano, bg_color=bk.BLANCO)
+
+    # 1) Gradientes en <defs> ANTES de cualquier forma.
+    svg.gradiente_linear(
+        dwg, "grad_hero",
+        desde=bk.VERDE_PRIMARIO,
+        hasta=bk.MORADO_PRIMARIO,
+        x1="0%", y1="0%", x2="100%", y2="100%",
+    )
+    svg.gradiente_linear(
+        dwg, "grad_info",
+        desde=bk.VERDE_CLARO,
+        hasta=bk.BLANCO,
+        x1="0%", y1="0%", x2="100%", y2="0%",
+    )
+
+    # 2) Bloque hero con gradiente (55% superior).
+    hero_h = int(h * 0.55)
+    dwg.add(dwg.rect(
+        insert=(0, 0),
+        size=(w, hero_h),
+        fill="url(#grad_hero)",
+    ))
+
+    # 3) Blobs decorativos SOBRE el hero.
+    svg.circulo_decorativo(dwg, w + 60, -80, 320, bk.BLANCO, 0.10)
+    svg.circulo_decorativo(dwg, -60, hero_h + 60, 240, bk.VERDE_ACENTO, 0.18)
+
+    # 4) Badge "LANZAMIENTO".
+    tag_w = 360
+    tag_y = bk.SP_XL
+    svg.rect_redondeado(
+        dwg, bk.SP_XL, tag_y, tag_w, 56, 28,
+        bk.BLANCO, 0.20,
+    )
+    svg.texto(
+        dwg, bk.SP_XL + tag_w // 2, tag_y + 38,
+        "LANZAMIENTO",
+        size=26,
+        weight=bk.FW_BOLD,
+        color=bk.BLANCO,
+        anchor="middle",
+        letter_spacing=4,
+    )
+
+    # 5) Titulo principal sobre el hero.
+    y_titulo = tag_y + 180
+    svg.texto_multilinea(
+        dwg,
+        bk.SP_XL, y_titulo,
+        [params.get("titulo", "")],
+        size=bk.FS_HERO,
+        weight=bk.FW_BOLD,
+        color=bk.BLANCO,
+        line_height_px=110,
+        max_chars=16,
+    )
+
+    # 6) Subtitulo en zona blanca.
+    y = hero_h + bk.SP_XXL
+    sub = params.get("subtitulo")
+    if sub:
+        svg.texto(
+            dwg, bk.SP_XL, y,
+            sub,
+            size=bk.FS_TITULO,
+            weight=bk.FW_SEMIBOLD,
+            color=bk.NEGRO,
+        )
+        y += bk.SP_XL
+
+    # 7) Descripcion.
+    desc = params.get("descripcion")
+    if desc:
+        y += bk.SP_MD
+        svg.texto_multilinea(
+            dwg,
+            bk.SP_XL, y,
+            [desc],
+            size=bk.FS_CUERPO,
+            color=bk.GRIS_700,
+            max_chars=40,
+            line_height_px=48,
+        )
+
+    # 8) Caja info (fecha + ubicacion) con gradiente suave horizontal.
+    fecha = params.get("fecha")
+    ubic = params.get("ubicacion")
+    if fecha or ubic:
+        caja_y = h - bk.SP_XXL - 160
+        caja_h = 140
+        svg.rect_redondeado(
+            dwg,
+            bk.SP_XL, caja_y,
+            w - 2 * bk.SP_XL, caja_h, 24,
+            "url(#grad_info)",
+        )
+        # Acento lateral izquierdo.
+        svg.rect_redondeado(
+            dwg,
+            bk.SP_XL, caja_y,
+            10, caja_h, 5,
+            bk.VERDE_PRIMARIO,
+        )
+        if fecha:
+            svg.texto(
+                dwg, bk.SP_XL + bk.SP_LG, caja_y + 55,
+                fecha,
+                size=36,
+                weight=bk.FW_BOLD,
+                color=bk.NEGRO,
+            )
+        if ubic:
+            svg.texto(
+                dwg, bk.SP_XL + bk.SP_LG, caja_y + 110,
+                ubic,
+                size=bk.FS_CUERPO,
+                color=bk.GRIS_500,
+            )
+
+    # 9) Footer marca.
+    _footer_marca(dwg, tamano)
+    return dwg
+
+
+# =========================================================
 # Registro de plantillas
 # =========================================================
 
@@ -707,6 +847,7 @@ TEMPLATES: dict[str, Callable[[dict, str], Drawing]] = {
     "destacado": render_destacado,
     "evento": render_evento,
     "profesional": render_profesional,
+    "lanzamiento": render_lanzamiento,
 }
 
 
@@ -754,5 +895,12 @@ def listar_plantillas() -> list[dict]:
             "descripcion": "Frase + datos de contacto",
             "params_requeridos": ["prestador", "oficio", "frase"],
             "params_opcionales": ["telefono", "comuna"],
+        },
+        {
+            "id": "lanzamiento",
+            "nombre": "Lanzamiento",
+            "descripcion": "Apertura o novedad con gradiente diagonal",
+            "params_requeridos": ["titulo"],
+            "params_opcionales": ["subtitulo", "descripcion", "fecha", "ubicacion"],
         },
     ]
