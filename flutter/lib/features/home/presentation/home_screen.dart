@@ -155,6 +155,12 @@ class HomeScreen extends ConsumerWidget {
               subtitle: 'Gestiona tus autos y su historial',
               onTap: () => context.push('/mis-vehiculos'),
             ),
+            _FeatureCard(
+              icon: Icons.receipt_long_outlined,
+              title: 'Mis ordenes',
+              subtitle: 'Servicios agendados con talleres',
+              onTap: () => context.push('/mis-ordenes'),
+            ),
 
             const SizedBox(height: 24),
 

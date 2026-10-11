@@ -197,6 +197,15 @@ class _Contenido extends StatelessWidget {
         const SizedBox(height: 8),
 
         OutlinedButton.icon(
+          icon: const Icon(Icons.receipt_long_outlined),
+          label: const Text('Ordenes del taller'),
+          onPressed: () => context.push(
+            '/mis-prestadores/${prestador.id}/ordenes',
+          ),
+        ),
+
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
           icon: const Icon(Icons.share_outlined),
           label: const Text('Publicaciones en redes'),
           onPressed: () => context.push(

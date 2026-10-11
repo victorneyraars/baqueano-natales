@@ -38,6 +38,11 @@ import 'package:baqueano_natales/features/comercios/presentation/screens/mis_com
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_vehiculos_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_vehiculo_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/mis_ordenes_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_orden_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/ordenes_taller_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_orden_taller_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_orden_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_mi_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
@@ -317,6 +322,44 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'mis-prestadores',
         builder: (context, state) => const MisPrestadoresScreen(),
       ),
+        GoRoute(
+          path: '/mis-ordenes',
+          name: 'mis-ordenes',
+          builder: (context, state) => const MisOrdenesScreen(),
+        ),
+        GoRoute(
+          path: '/mis-ordenes/:id',
+          name: 'mi-orden-detalle',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return DetalleMiOrdenScreen(ordenId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/ordenes',
+          name: 'ordenes-taller',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return OrdenesTallerScreen(prestadorId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/ordenes/nueva',
+          name: 'orden-taller-nueva',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return FormularioOrdenScreen(prestadorId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/ordenes/:oid',
+          name: 'orden-taller-detalle',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            final oid = state.pathParameters['oid']!;
+            return DetalleOrdenTallerScreen(prestadorId: id, ordenId: oid);
+          },
+        ),
       GoRoute(
         path: '/mis-prestadores/nuevo',
         name: 'mis-prestadores-nuevo',

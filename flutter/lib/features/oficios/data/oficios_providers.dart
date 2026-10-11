@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/oficios/data/oficios_repository.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
+import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
 // =========================================================
@@ -41,4 +42,77 @@ final vehiculoDetalleProvider =
     FutureProvider.family<Vehiculo, String>((ref, objetoId) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.obtenerVehiculo(objetoId);
+});
+
+// =========================================================
+// M2: Ordenes del prestador
+// =========================================================
+class OrdenesPrestadorParams {
+  const OrdenesPrestadorParams({
+    required this.prestadorId,
+    this.estado,
+  });
+
+  final String prestadorId;
+  final String? estado;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OrdenesPrestadorParams &&
+      other.prestadorId == prestadorId &&
+      other.estado == estado;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, estado);
+}
+
+final ordenesPrestadorProvider =
+    FutureProvider.family<List<OrdenTrabajo>, OrdenesPrestadorParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarOrdenesPrestador(
+    params.prestadorId,
+    estado: params.estado,
+  );
+});
+
+class OrdenPrestadorDetalleParams {
+  const OrdenPrestadorDetalleParams({
+    required this.prestadorId,
+    required this.ordenId,
+  });
+
+  final String prestadorId;
+  final String ordenId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OrdenPrestadorDetalleParams &&
+      other.prestadorId == prestadorId &&
+      other.ordenId == ordenId;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, ordenId);
+}
+
+final ordenPrestadorDetalleProvider =
+    FutureProvider.family<OrdenTrabajo, OrdenPrestadorDetalleParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.detalleOrdenPrestador(params.prestadorId, params.ordenId);
+});
+
+// =========================================================
+// M2: Ordenes del cliente
+// =========================================================
+final misOrdenesProvider =
+    FutureProvider.family<List<OrdenTrabajo>, String?>((ref, estado) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarMisOrdenes(estado: estado);
+});
+
+final miOrdenDetalleProvider =
+    FutureProvider.family<OrdenTrabajo, String>((ref, ordenId) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.detalleMiOrden(ordenId);
 });
