@@ -3,7 +3,7 @@
 /// Expone:
 /// - Repositorio (inyectable para tests).
 /// - Categorías (públicas y admin).
-/// - Filtros de búsqueda (StateNotifier).
+/// - Filtros de búsqueda (Notifier).
 /// - Listado público con auto-refresh al cambiar filtros.
 /// - Detalle por slug.
 /// - Mis comercios (dueño).
@@ -32,7 +32,7 @@ final categoriasProvider = FutureProvider<List<Categoria>>((ref) async {
 });
 
 // =========================================================
-// Filtros de búsqueda (StateNotifier)
+// Filtros de búsqueda (Notifier)
 // =========================================================
 class ComerciosFiltrosState {
   const ComerciosFiltrosState({
@@ -80,8 +80,9 @@ class ComerciosFiltrosState {
   }
 }
 
-class ComerciosFiltrosNotifier extends StateNotifier<ComerciosFiltrosState> {
-  ComerciosFiltrosNotifier() : super(const ComerciosFiltrosState());
+class ComerciosFiltrosNotifier extends Notifier<ComerciosFiltrosState> {
+  @override
+  ComerciosFiltrosState build() => const ComerciosFiltrosState();
 
   void setCategoria(String? categoriaId) {
     if (categoriaId == null) {
@@ -114,8 +115,8 @@ class ComerciosFiltrosNotifier extends StateNotifier<ComerciosFiltrosState> {
 }
 
 final comerciosFiltrosProvider =
-    StateNotifierProvider<ComerciosFiltrosNotifier, ComerciosFiltrosState>(
-  (ref) => ComerciosFiltrosNotifier(),
+    NotifierProvider<ComerciosFiltrosNotifier, ComerciosFiltrosState>(
+  ComerciosFiltrosNotifier.new,
 );
 
 // =========================================================

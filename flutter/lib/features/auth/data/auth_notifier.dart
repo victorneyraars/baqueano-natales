@@ -66,10 +66,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 /// Notifier del estado de autenticación.
-class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repository) : super(const AuthState.unknown());
+class AuthNotifier extends Notifier<AuthState> {
+  late final AuthRepository _repository;
 
-  final AuthRepository _repository;
+  @override
+  AuthState build() {
+    _repository = ref.read(authRepositoryProvider);
+    return const AuthState.unknown();
+  }
 
   /// Intenta restaurar la sesión al arrancar la app.
   ///
@@ -131,7 +135,4 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 /// Provider del AuthNotifier (global).
 final authNotifierProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return AuthNotifier(repository);
-});
+    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

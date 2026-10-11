@@ -61,8 +61,9 @@ class EditorAficheState {
   }
 }
 
-class EditorAficheNotifier extends StateNotifier<EditorAficheState> {
-  EditorAficheNotifier() : super(const EditorAficheState());
+class EditorAficheNotifier extends Notifier<EditorAficheState> {
+  @override
+  EditorAficheState build() => const EditorAficheState();
 
   void seleccionarPlantilla(String id) {
     state = EditorAficheState(
@@ -92,9 +93,9 @@ class EditorAficheNotifier extends StateNotifier<EditorAficheState> {
 }
 
 final editorAficheProvider =
-    StateNotifierProvider<EditorAficheNotifier, EditorAficheState>((ref) {
-  return EditorAficheNotifier();
-});
+    NotifierProvider<EditorAficheNotifier, EditorAficheState>(
+  EditorAficheNotifier.new,
+);
 
 // =========================================================
 // Generacion del afiche (reactiva a editorAficheProvider)

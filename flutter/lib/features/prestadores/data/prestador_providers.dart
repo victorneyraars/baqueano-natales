@@ -3,7 +3,7 @@
 /// Expone:
 /// - Repositorio (inyectable para tests).
 /// - Categorías (públicas y admin).
-/// - Filtros de búsqueda (StateNotifier).
+/// - Filtros de búsqueda (Notifier).
 /// - Listado público con auto-refresh al cambiar filtros.
 /// - Detalle por slug.
 /// - Mis prestadores (dueño).
@@ -35,7 +35,7 @@ final categoriasOficioProvider =
 });
 
 // =========================================================
-// Filtros de búsqueda (StateNotifier)
+// Filtros de búsqueda (Notifier)
 // =========================================================
 class PrestadoresFiltrosState {
   const PrestadoresFiltrosState({
@@ -89,9 +89,9 @@ class PrestadoresFiltrosState {
   }
 }
 
-class PrestadoresFiltrosNotifier
-    extends StateNotifier<PrestadoresFiltrosState> {
-  PrestadoresFiltrosNotifier() : super(const PrestadoresFiltrosState());
+class PrestadoresFiltrosNotifier extends Notifier<PrestadoresFiltrosState> {
+  @override
+  PrestadoresFiltrosState build() => const PrestadoresFiltrosState();
 
   void setCategoria(String? categoriaId) {
     if (categoriaId == null) {
@@ -127,9 +127,9 @@ class PrestadoresFiltrosNotifier
   }
 }
 
-final prestadoresFiltrosProvider = StateNotifierProvider<
+final prestadoresFiltrosProvider = NotifierProvider<
     PrestadoresFiltrosNotifier, PrestadoresFiltrosState>(
-  (ref) => PrestadoresFiltrosNotifier(),
+  PrestadoresFiltrosNotifier.new,
 );
 
 // =========================================================
