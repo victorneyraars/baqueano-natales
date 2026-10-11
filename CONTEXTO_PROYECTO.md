@@ -24,6 +24,52 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 9) - Modulo oficios Fase M2 frontend completa (pantallas de ordenes)
+
+**Frontend Flutter del ciclo completo de ordenes. M2 cerrada end-to-end.**
+
+- **Domain (3 archivos nuevos)**:
+  - `orden_trabajo.dart`: clase `OrdenTrabajo` con `EstadoOrden` (10 estados
+    con `colorHex` por estado) y `PrioridadOrden` (4 niveles con color).
+  - `orden_item.dart`: `OrdenItem` con `TipoItemOrden` (servicio, repuesto,
+    mano_obra, otro). Estado `aprobado` nullable (pendiente/aprobado/rechazado).
+  - `orden_historial.dart`: `OrdenHistorialEvento` con `TipoEventoHistorial`
+    (7 tipos). Getters `descripcion` y helpers de formato.
+- **Data extendida**:
+  - `oficios_repository.dart`: +9 metodos M2 (listarOrdenesPrestador,
+    crearOrden, detalleOrdenPrestador, agregarItem, eliminarItem,
+    cambiarEstado, listarMisOrdenes, detalleMiOrden, aprobarPresupuesto).
+  - `oficios_providers.dart`: +4 providers family (`ordenesPrestadorProvider`,
+    `ordenPrestadorDetalleProvider`, `misOrdenesProvider`, `miOrdenDetalleProvider`)
+    con params inmutables (`==`/`hashCode` para cache correcto).
+- **5 pantallas nuevas**:
+  - `MisOrdenesScreen` (cliente): lista con filtros por estado + badges.
+  - `DetalleMiOrdenScreen` (cliente): items con **checkbox para aprobacion
+    parcial**, timeline del historial, boton "Enviar respuesta".
+  - `OrdenesTallerScreen` (prestador): lista con filtros + FAB "Nueva orden".
+  - `DetalleOrdenTallerScreen` (prestador): editor de items (modal bottom
+    sheet), acciones de cambio de estado contextuales (segun el estado actual),
+    timeline, overlay de carga durante operaciones.
+  - `FormularioOrdenScreen` (prestador): MVP con inputs manuales de UUIDs
+    (busqueda de clientes/vehiculos es mejora futura).
+- **Router**: +5 rutas (`/mis-ordenes`, `/mis-ordenes/:id`,
+  `/mis-prestadores/:id/ordenes`, `/ordenes/nueva`, `/ordenes/:oid`).
+- **Home**: card "Mis ordenes" en "Mi actividad" (icono recibo).
+- **Detalle prestador**: boton "Ordenes del taller" junto a "Publicaciones".
+- **Validado en emulador Android 14**:
+  - Card "Mis ordenes" visible y navegable.
+  - Pantalla de ordenes carga con empty state + filtros.
+  - Formulario de nueva orden carga con todos los campos.
+  - Filtros por estado disparan queries correctas (`?estado=...`).
+  - Validacion del backend responde 422 en UUIDs invalidos (correcto).
+- **`flutter analyze`**: No issues found.
+- **Build apk client**: OK.
+- **Commits**: `296a0f1` (M2 frontend).
+
+**Deuda tecnica pendiente para M2:**
+- Tests automatizados de oficios (pytest) — no existen aun.
+- Formulario de nueva orden: reemplazar UUIDs manuales por busqueda.
+- Notificaciones in-app cuando el cliente aprueba.
 ### 2026-10-11 (cont. 8) - Modulo oficios Fase M2 backend completa (ordenes de trabajo)
 
 **Corazon del MVP de mecanica: ciclo completo de orden con state machine.**
