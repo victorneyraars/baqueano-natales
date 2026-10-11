@@ -24,6 +24,27 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 6) - Riverpod 3.4.3 (deuda tecnica #7 cerrada)
+- **Migracion completa a Riverpod 3.4.3** (estaba en 2.6.1).
+  Estrategia en 2 fases para cero downtime:
+  - **Fase 1 (compatible con v2)**: migrar los 4 `StateNotifierProvider` a
+    `NotifierProvider` (API moderna disponible desde Riverpod 2):
+    - `auth_notifier.dart`: `AuthNotifier extends Notifier<AuthState>` con
+      `build()` y `late final _repository = ref.read(...)`.
+    - `comercio_providers.dart`: `ComerciosFiltrosNotifier`.
+    - `prestador_providers.dart`: `PrestadoresFiltrosNotifier`.
+    - `promocion_providers.dart`: `EditorAficheNotifier`.
+  - **Fase 2**: bump `flutter_riverpod ^2.6.1 -> ^3.0.0` (resolvio 3.4.3).
+    Dependencias: `flutter_riverpod 3.4.3`, `riverpod 3.4.3`, `+listen 1.0.1`.
+- **Cero breaking changes en el codigo**: la migracion previa de providers dejo
+  el proyecto sin deuda de API (`flutter analyze` = No issues found).
+- **Validado end-to-end en emulador Android 14**: home admin, afiches (preview
+  SVG con gradientes), filtros de prestadores y comercios, logout + re-login
+  con Google -> todo OK.
+- Beneficios habilitados para el futuro: reintento automatico de providers,
+  persistencia offline (experimental), mutaciones (experimental).
+- Sin cambios necesarios por auto-pause de `ref.watch` ni `UnmountedRefException`
+  en los flujos actuales.
 ### 2026-10-11 (cont. 5) - Cloudflare Origin Certificate + SSL Full (Strict) + Cloudflare Global Key decisión
 - **Deuda tecnica #3 resuelta**: SSL del server ahora usa Cloudflare Origin Certificate
   (reemplaza self-signed). Cloudflare SSL mode cambiado de `Full` a **`Full (strict)`**.
