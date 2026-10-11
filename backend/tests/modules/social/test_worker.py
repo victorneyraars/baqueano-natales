@@ -12,7 +12,7 @@ import pytest
 import respx
 
 from app.core import crypto
-from app.modules.social import services, worker
+from app.modules.social import instagram_service, services, worker
 from app.modules.social.models import (
     CuentaSocial,
     EstadoPublicacion,
@@ -163,3 +163,76 @@ async def test_backoff_llega_a_agotado(db):
     assert pub.estado == EstadoPublicacion.AGOTADO
     assert pub.intentos == services.MAX_INTENTOS
     assert pub.proximo_intento_en is None
+
+# ------------------------------------------------------------ instagram
+
+@respx.mock
+async def test_procesar_cola_instagram_ok(db, monkeypatch):
+    """Worker publica en IG cuando pub.red == INSTAGRAM."""
+    from datetime import datetime, timezone, timedelta
+
+    cuenta = await _crear_cuenta(db)
+    await _crear_token(db, cuenta)
+
+    # Mock del helper de IG ID (no golpea Graph API real)
+    async def fake_ig_id(db_, cuenta_id):
+        return "17841429137816851"
+    monkeypatch.setattr(services, "obtener_instagram_id_de_cuenta", fake_ig_id)
+
+    # Mock de los 2 endpoints de IG
+    respx.post("https://graph.facebook.com/v26.0/17841429137816851/media").mock(
+        return_value=httpx.Response(200, json={"id": "CONTAINER_1"})
+    )
+    respx.post("https://graph.facebook.com/v26.0/17841429137816851/media_publish").mock(
+        return_value=httpx.Response(200, json={"id": "IG_POST_1"})
+    )
+
+    # Crear publicacion con red=INSTAGRAM y con imagen (requerida)
+    pub = PublicacionSocial(
+        cuenta_id=cuenta.id,
+        recurso_tipo="test_ig",
+        recurso_id=uuid4(),
+        red=Red.INSTAGRAM,
+        contenido={
+            "message": "Test IG desde worker",
+            "image_urls": ["https://x.com/i.jpg"],
+        },
+        estado=EstadoPublicacion.PENDIENTE,
+    )
+    db.add(pub)
+    await db.commit()
+    await db.refresh(pub)
+
+    stats = await worker.procesar_cola(db=db)
+    assert stats["procesadas"] == 1
+    assert stats["publicadas"] == 1
+
+    await db.refresh(pub)
+    assert pub.estado == EstadoPublicacion.PUBLICADO
+    assert pub.external_post_id == "IG_POST_1"
+
+
+async def test_procesar_cola_instagram_sin_imagen_falla(db):
+    """IG requiere imagen. Sin image_url, falla con error claro."""
+    cuenta = await _crear_cuenta(db)
+    await _crear_token(db, cuenta)
+
+    pub = PublicacionSocial(
+        cuenta_id=cuenta.id,
+        recurso_tipo="test_ig_sin_img",
+        recurso_id=uuid4(),
+        red=Red.INSTAGRAM,
+        contenido={"message": "solo texto"},  # sin image_urls
+        estado=EstadoPublicacion.PENDIENTE,
+    )
+    db.add(pub)
+    await db.commit()
+    await db.refresh(pub)
+
+    stats = await worker.procesar_cola(db=db)
+    assert stats["procesadas"] == 1
+    assert stats["falladas"] == 1
+
+    await db.refresh(pub)
+    assert "image_url" in (pub.error_ultimo or "").lower() or "imagen" in (pub.error_ultimo or "").lower()
+

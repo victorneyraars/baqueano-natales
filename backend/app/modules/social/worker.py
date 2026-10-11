@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
-from app.modules.social import facebook_service, services
+from app.modules.social import facebook_service, instagram_service, services
 from app.modules.social.models import EstadoPublicacion, Red
 
 logger = logging.getLogger(__name__)
@@ -97,8 +97,8 @@ async def _procesar_una(db, pub) -> str:
 
     NO captura excepciones: lo hace `procesar_cola`.
     """
-    # 1. Solo Facebook por ahora
-    if pub.red != Red.FACEBOOK:
+    # 1. Dispatch por red
+    if pub.red not in (Red.FACEBOOK, Red.INSTAGRAM):
         await services.marcar_publicacion_fallada(
             db, pub, f"Red no soportada en este worker: {pub.red.value}"
         )
@@ -139,14 +139,19 @@ async def _procesar_una(db, pub) -> str:
         )
         return "falladas"
 
-    # 6. Publicar
-    external_id, fb_error = await facebook_service.publicar_post_en_pagina(
-        page_id=pub.cuenta.external_id,
-        page_token=token,
-        mensaje=mensaje,
-        image_url=image_url,
-        link=link,
-    )
+    # 6. Publicar segun red
+    if pub.red == Red.INSTAGRAM:
+        external_id, fb_error = await _publicar_en_instagram(
+            db, pub, token, mensaje, image_url
+        )
+    else:
+        external_id, fb_error = await facebook_service.publicar_post_en_pagina(
+            page_id=pub.cuenta.external_id,
+            page_token=token,
+            mensaje=mensaje,
+            image_url=image_url,
+            link=link,
+        )
 
     if fb_error or not external_id:
         msg = fb_error.message if fb_error else "sin external_post_id"
@@ -156,9 +161,38 @@ async def _procesar_una(db, pub) -> str:
     # 7. Exito
     await services.marcar_publicacion_publicada(db, pub, external_id)
     logger.info(
-        "Worker: publicada pub=%s -> %s", pub.id, external_id
+        "Worker: publicada pub=%s (%s) -> %s",
+        pub.id, pub.red.value, external_id,
     )
     return "publicadas"
+
+
+async def _publicar_en_instagram(
+    db, pub, page_token: str, mensaje: str, image_url: str | None
+):
+    """Publica en Instagram Business via la cuenta Facebook.
+
+    Instagram requiere imagen. Si no hay image_url, devuelve error claro.
+    """
+    if not image_url:
+        return None, facebook_service.FacebookError(
+            message="Instagram requiere image_url (no acepta solo texto)"
+        )
+
+    ig_user_id = await services.obtener_instagram_id_de_cuenta(
+        db, pub.cuenta_id
+    )
+    if not ig_user_id:
+        return None, facebook_service.FacebookError(
+            message="La cuenta no tiene Instagram Business vinculado"
+        )
+
+    return await instagram_service.publicar_post_en_instagram(
+        ig_user_id=ig_user_id,
+        page_token=page_token,
+        image_url=image_url,
+        caption=mensaje,
+    )
 
 
 # ------------------------------------------------------------------ scheduler

@@ -670,3 +670,59 @@ async def marcar_publicacion_fallada(
     await db.commit()
     await db.refresh(pub)
 
+async def obtener_instagram_id_de_cuenta(
+    db: AsyncSession, cuenta_id: UUID
+) -> str | None:
+    """Devuelve el IG Business ID de la cuenta Facebook.
+
+    Lo busca primero en metadata_extra (cacheado) y si no esta, lo
+    consulta a la Graph API y lo guarda.
+    """
+    import httpx
+    from app.modules.social import facebook_service
+
+    stmt = select(CuentaSocial).where(CuentaSocial.id == cuenta_id)
+    cuenta = (await db.execute(stmt)).scalar_one_or_none()
+    if cuenta is None:
+        return None
+
+    # 1. Cache hit
+    meta = cuenta.metadata_extra or {}
+    if meta.get("instagram_business_account_id"):
+        return meta["instagram_business_account_id"]
+
+    # 2. Cache miss -> consultar Meta
+    token, err = await obtener_token_vigente_de_cuenta(db, cuenta_id)
+    if err or not token:
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                facebook_service._graph_url(cuenta.external_id),
+                params={
+                    "fields": "instagram_business_account{id,username}",
+                    "access_token": token,
+                },
+            )
+    except httpx.HTTPError:
+        return None
+
+    if resp.status_code != 200:
+        return None
+
+    iga = (resp.json() or {}).get("instagram_business_account")
+    if not iga:
+        return None
+
+    # 3. Guardar cache
+    ig_id = iga.get("id")
+    ig_user = iga.get("username")
+    cuenta.metadata_extra = {
+        **meta,
+        "instagram_business_account_id": ig_id,
+        "instagram_username": ig_user,
+    }
+    await db.commit()
+    return ig_id
+
