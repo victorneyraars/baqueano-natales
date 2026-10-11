@@ -108,7 +108,7 @@ class PromocionRepository {
           'plantilla': plantilla,
           'tamano': tamano.id,
           'params': params,
-          if (redes != null) 'redes': redes,
+          'redes': ?redes,
           if (caption != null && caption.isNotEmpty) 'caption': caption,
         },
       );

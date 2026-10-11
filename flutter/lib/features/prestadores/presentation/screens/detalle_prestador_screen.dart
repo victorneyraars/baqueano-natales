@@ -411,7 +411,7 @@ class _BannerHeader extends StatelessWidget {
                 ? Image.network(
                     prestador.fotoPortadaUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _bannerPlaceholder(theme),
+                    errorBuilder: (_, _, _) => _bannerPlaceholder(theme),
                   )
                 : _bannerPlaceholder(theme),
           ),
@@ -484,7 +484,7 @@ class _BannerHeader extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarPlaceholder(theme, size),
+          errorBuilder: (_, _, _) => _avatarPlaceholder(theme, size),
         ),
       );
     }
@@ -911,7 +911,7 @@ class _Galeria extends StatelessWidget {
           child: Image.network(
             foto.url,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               color: Colors.grey.shade200,
               child: const Center(
                 child: Icon(Icons.broken_image, color: Colors.grey),

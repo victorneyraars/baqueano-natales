@@ -1,4 +1,4 @@
-﻿/// Repositorio de social (admin).
+/// Repositorio de social (admin).
 ///
 /// Encapsula las llamadas HTTP al backend. No maneja estado, solo hace
 /// las llamadas y devuelve datos o lanza ApiException.
@@ -244,13 +244,11 @@ class SocialRepository {
   }) async {
     try {
       final body = <String, dynamic>{
-        if (autoPublish != null) 'auto_publish': autoPublish,
-        if (destino != null) 'destino': destino,
-        if (publicarEnFacebook != null)
-          'publicar_en_facebook': publicarEnFacebook,
-        if (publicarEnInstagram != null)
-          'publicar_en_instagram': publicarEnInstagram,
-        if (publicarEnGoogle != null) 'publicar_en_google': publicarEnGoogle,
+        'auto_publish': ?autoPublish,
+        'destino': ?destino,
+        'publicar_en_facebook': ?publicarEnFacebook,
+        'publicar_en_instagram': ?publicarEnInstagram,
+        'publicar_en_google': ?publicarEnGoogle,
       };
       final resp = await _dio.patch('$_base/config', data: body);
       return ConfigSocial.fromJson(resp.data as Map<String, dynamic>);

@@ -58,7 +58,7 @@ class _Contenido extends StatelessWidget {
                 ? Image.network(
                     comercio.portadaUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _placeholderPortada(theme),
+                    errorBuilder: (_, _, _) => _placeholderPortada(theme),
                   )
                 : _placeholderPortada(theme),
           ),
@@ -256,7 +256,7 @@ class _Contenido extends StatelessWidget {
           width: 72,
           height: 72,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _logoPlaceholder(theme),
+          errorBuilder: (_, _, _) => _logoPlaceholder(theme),
         ),
       );
     }

@@ -636,7 +636,7 @@ class _CategoriaDropdown extends ConsumerWidget {
           ),
         ),
       ),
-      error: (_, __) => const InputDecorator(
+      error: (_, _) => const InputDecorator(
         decoration: InputDecoration(
           labelText: 'Categoría',
           border: OutlineInputBorder(),

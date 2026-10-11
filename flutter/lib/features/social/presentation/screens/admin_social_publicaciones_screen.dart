@@ -1,4 +1,4 @@
-﻿/// Pantalla admin: cola de publicaciones en redes sociales.
+/// Pantalla admin: cola de publicaciones en redes sociales.
 ///
 /// Lista las publicaciones con filtros por estado y red. Muestra:
 /// - Red (Facebook / Instagram)
@@ -82,7 +82,7 @@ class _AdminSocialPublicacionesScreenState
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: data.items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) =>
                         _PublicacionCard(pub: data.items[i]),
                   ),

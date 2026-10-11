@@ -98,7 +98,7 @@ class _ListaPrestadoresScreenState
                 ),
               ),
             ),
-            error: (_, __) => const SizedBox(height: 8),
+            error: (_, _) => const SizedBox(height: 8),
           ),
 
           // --- Chips de filtros adicionales ---
@@ -210,7 +210,7 @@ class _CategoriasChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: categorias.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == 0) {
             return ChoiceChip(

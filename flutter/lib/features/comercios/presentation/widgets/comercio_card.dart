@@ -33,7 +33,7 @@ class ComercioCard extends StatelessWidget {
                 comercio.portadaUrl!,
                 height: 110,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _placeholderPortada(theme),
+                errorBuilder: (_, _, _) => _placeholderPortada(theme),
               )
             else
               _placeholderPortada(theme),
@@ -182,7 +182,7 @@ class ComercioCard extends StatelessWidget {
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _logoPlaceholder(theme),
+          errorBuilder: (_, _, _) => _logoPlaceholder(theme),
         ),
       );
     }

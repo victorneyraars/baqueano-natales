@@ -284,7 +284,7 @@ class _PrestadorAdminCard extends StatelessWidget {
           width: 56,
           height: 56,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _thumbPlaceholder(theme),
+          errorBuilder: (_, _, _) => _thumbPlaceholder(theme),
         ),
       );
     }

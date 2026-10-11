@@ -174,7 +174,7 @@ class PrestadorCard extends StatelessWidget {
           width: 64,
           height: 64,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarPlaceholder(theme),
+          errorBuilder: (_, _, _) => _avatarPlaceholder(theme),
         ),
       );
     }

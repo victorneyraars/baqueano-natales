@@ -1,4 +1,4 @@
-﻿/// Pantalla del dueño: publicaciones en redes del prestador.
+/// Pantalla del dueño: publicaciones en redes del prestador.
 ///
 /// Lista las publicaciones en redes sociales relacionadas con este
 /// prestador (su alta + servicios agregados). Read-only.
@@ -60,7 +60,7 @@ class MisPublicacionesScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: pubs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (ctx, i) => _PublicacionCard(pub: pubs[i]),
             ),
           );

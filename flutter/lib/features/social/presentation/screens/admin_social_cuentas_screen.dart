@@ -1,4 +1,4 @@
-﻿/// Pantalla admin: cuentas sociales conectadas.
+/// Pantalla admin: cuentas sociales conectadas.
 ///
 /// Lista las cuentas de Facebook, Instagram, etc. conectadas al sistema.
 /// Muestra red, nombre, propietario, si esta activa y si publica automatico.
@@ -49,7 +49,7 @@ class AdminSocialCuentasScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: data.items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (ctx, i) =>
                   _CuentaCard(cuenta: data.items[i]),
             ),
