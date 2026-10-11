@@ -17,6 +17,7 @@ import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/comercios/data/comercio_providers.dart';
 import 'package:baqueano_natales/features/comercios/domain/comercio.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
+import 'package:baqueano_natales/features/social/data/social_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
@@ -76,6 +77,13 @@ class AdminHomeScreen extends ConsumerWidget {
       ),
     );
     final comerciosPendientesCount = comerciosPendientesAsync.maybeWhen(
+      data: (p) => p.meta.total,
+      orElse: () => 0,
+    );
+
+    // Contar cuentas sociales conectadas (para badge informativo)
+    final cuentasSocialesAsync = ref.watch(cuentasSocialesProvider);
+    final cuentasSocialesCount = cuentasSocialesAsync.maybeWhen(
       data: (p) => p.meta.total,
       orElse: () => 0,
     );
@@ -189,10 +197,29 @@ class AdminHomeScreen extends ConsumerWidget {
                   : null,
             ),
 
+            _AdminCard(
+              icon: Icons.share,
+              title: 'Redes sociales',
+              subtitle: cuentasSocialesCount > 0
+                  ? '$cuentasSocialesCount cuenta(s) conectada(s)'
+                  : 'Conectar Facebook e Instagram',
+              onTap: () => context.push('/admin/social/cuentas'),
+              badge: cuentasSocialesCount > 0
+                  ? '$cuentasSocialesCount'
+                  : null,
+            ),
+
+            _AdminCard(
+              icon: Icons.tune,
+              title: 'Configuracion de redes',
+              subtitle: 'Auto-publish, redes activas, destino',
+              onTap: () => context.push('/admin/social/config'),
+            ),
+
             const _AdminCard(
               icon: Icons.people_outline,
               title: 'Usuarios',
-              subtitle: 'Próximamente',
+              subtitle: 'Pr?ximamente',
             ),
 
             const SizedBox(height: 24),

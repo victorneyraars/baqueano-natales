@@ -1,8 +1,8 @@
-/// Router central de la aplicación.
+﻿/// Router central de la aplicaciÃ³n.
 ///
-/// Detecta el flavor (client o admin) vía `AppConfig.appType`:
-/// - `client`: redirige `/home` → HomeScreen (client normal)
-/// - `admin`:  redirige `/home` → AdminHomeScreen (panel morado)
+/// Detecta el flavor (client o admin) vÃ­a `AppConfig.appType`:
+/// - `client`: redirige `/home` â†’ HomeScreen (client normal)
+/// - `admin`:  redirige `/home` â†’ AdminHomeScreen (panel morado)
 ///
 /// Las rutas de `/admin/*` solo son accesibles desde el flavor admin
 /// (o desde client si el usuario logueado tiene rol admin).
@@ -20,6 +20,8 @@ import 'package:baqueano_natales/features/admin/presentation/screens/admin_detal
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
+import 'package:baqueano_natales/features/social/presentation/screens/admin_social_cuentas_screen.dart';
+import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -47,7 +49,7 @@ class _AuthChangeNotifier extends ChangeNotifier {
   }
 }
 
-/// Path del Home según el flavor.
+/// Path del Home segÃºn el flavor.
 /// - Admin: `/admin/home`
 /// - Client: `/home`
 String _homePathForFlavor() {
@@ -76,11 +78,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/login';
 
         case AuthStatus.authenticated:
-          // Si está en splash o login, redirigir al home del flavor
+          // Si estÃ¡ en splash o login, redirigir al home del flavor
           if (location == '/splash' || location == '/login') {
             return homePath;
           }
-          // Si en flavor admin está en /home (client), redirigir a /admin/home
+          // Si en flavor admin estÃ¡ en /home (client), redirigir a /admin/home
           if (AppConfig.appType == AppType.admin && location == '/home') {
             return '/admin/home';
           }
@@ -121,7 +123,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Admin — Prestadores
+      // Admin â€” Prestadores
       // =========================================================
       GoRoute(
         path: '/admin/prestadores',
@@ -138,7 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Admin — Categorías de oficio
+      // Admin â€” CategorÃ­as de oficio
       // =========================================================
       GoRoute(
         path: '/admin/categorias-oficio',
@@ -147,7 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Admin — Comercios
+      // Admin â€” Comercios
       // =========================================================
       GoRoute(
         path: '/admin/comercios',
@@ -164,7 +166,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Admin — Categorías de comercio
+      // Admin â€” CategorÃ­as de comercio
       // =========================================================
       GoRoute(
         path: '/admin/categorias-comercio',
@@ -173,7 +175,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Comercios — público
+      // Admin - Redes sociales
+      // =========================================================
+      GoRoute(
+        path: '/admin/social/cuentas',
+        name: 'admin-social-cuentas',
+        builder: (context, state) => const AdminSocialCuentasScreen(),
+      ),
+
+      GoRoute(
+        path: '/admin/social/config',
+        name: 'admin-social-config',
+        builder: (context, state) => const AdminSocialConfigScreen(),
+      ),
+
+      // =========================================================
+      // Comercios â€” pÃºblico
       // =========================================================
       GoRoute(
         path: '/comercios',
@@ -190,7 +207,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Comercios — dueño (mis comercios)
+      // Comercios â€” dueÃ±o (mis comercios)
       // =========================================================
       GoRoute(
         path: '/mis-comercios',
@@ -228,7 +245,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Prestadores — público
+      // Prestadores â€” pÃºblico
       // =========================================================
       GoRoute(
         path: '/prestadores',
@@ -245,7 +262,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // =========================================================
-      // Prestadores — dueño (mis prestadores)
+      // Prestadores â€” dueÃ±o (mis prestadores)
       // =========================================================
       GoRoute(
         path: '/mis-prestadores',
