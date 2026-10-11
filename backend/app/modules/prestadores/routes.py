@@ -244,6 +244,38 @@ async def setear_servicios_mi_prestador(
     return [PrestadorServicioResponse.model_validate(s) for s in nuevos]
 
 
+@router_propietario.get(
+    "/{prestador_id}/publicaciones",
+    summary="Publicaciones en redes del prestador",
+    description=(
+        "Lista las publicaciones en redes sociales relacionadas con el "
+        "prestador (su alta como prestador + los servicios agregados). "
+        "Solo el due?o o un admin pueden consultarla."
+    ),
+)
+async def publicaciones_de_mi_prestador(
+    prestador: PrestadorPropietario,
+    db: DbSession,
+) -> dict:
+    from app.modules.social import services as social_services
+    from app.modules.social.schemas import PublicacionSocialResponse
+
+    pubs = await social_services.listar_publicaciones_de_prestador(
+        db, prestador.id
+    )
+    return {
+        "items": [
+            PublicacionSocialResponse.model_validate(p).model_dump(mode="json")
+            for p in pubs
+        ],
+        "meta": {
+            "total": len(pubs),
+            "limit": len(pubs),
+            "offset": 0,
+        },
+    }
+
+
 @router_propietario.post(
     "/{prestador_id}/servicios",
     response_model=PrestadorServicioResponse,

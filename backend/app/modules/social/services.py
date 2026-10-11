@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import crypto
@@ -384,6 +384,78 @@ async def listar_publicaciones(
     )
     items = list((await db.execute(items_stmt)).scalars().all())
     return items, total
+
+
+async def listar_publicaciones_de_prestador(
+    db: AsyncSession, prestador_id: UUID
+) -> list[PublicacionSocial]:
+    """Publicaciones en redes relacionadas con un prestador.
+
+    Incluye:
+    - Publicaciones del prestador mismo (recurso_tipo='prestador')
+    - Publicaciones de sus servicios (recurso_tipo='prestador_servicio')
+
+    Ordenadas de mas reciente a mas antigua.
+    """
+    from app.modules.prestadores.models import PrestadorServicio
+
+    # Subquery: IDs de servicios del prestador
+    servicios_stmt = select(PrestadorServicio.id).where(
+        PrestadorServicio.prestador_id == prestador_id
+    )
+
+    stmt = (
+        select(PublicacionSocial)
+        .where(
+            or_(
+                and_(
+                    PublicacionSocial.recurso_tipo == "prestador",
+                    PublicacionSocial.recurso_id == prestador_id,
+                ),
+                and_(
+                    PublicacionSocial.recurso_tipo == "prestador_servicio",
+                    PublicacionSocial.recurso_id.in_(servicios_stmt),
+                ),
+            )
+        )
+        .order_by(PublicacionSocial.created_at.desc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def reencolar_publicacion(
+    db: AsyncSession, pub: PublicacionSocial
+) -> PublicacionSocial:
+    """Resetea una publicacion para que el worker la procese de nuevo.
+
+    Limpia:
+    - estado -> PENDIENTE
+    - intentos -> 0 (resetea el backoff)
+    - proximo_intento_en -> NULL (intentar ya)
+    - error_ultimo -> NULL
+
+    Mantiene:
+    - external_post_id (trazabilidad del intento anterior, se sobreescribe
+      cuando el worker publique de nuevo)
+
+    Raises:
+        ValueError: si la publicacion esta en PUBLICANDO (evita race con
+        un worker que ya la tomo).
+    """
+    if pub.estado == EstadoPublicacion.PUBLICANDO:
+        raise ValueError(
+            "La publicacion esta siendo procesada por el worker. "
+            "Espera a que termine y reintenta."
+        )
+
+    pub.estado = EstadoPublicacion.PENDIENTE
+    pub.intentos = 0
+    pub.proximo_intento_en = None
+    pub.error_ultimo = None
+
+    await db.commit()
+    await db.refresh(pub)
+    return pub
 
 
 async def obtener_publicacion(
