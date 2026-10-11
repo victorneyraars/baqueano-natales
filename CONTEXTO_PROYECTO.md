@@ -440,6 +440,15 @@
 
 **Path del proyecto:** `/home/deploy/baqueano-natales/`
 
+### 🔐 Credenciales del server (decisiones conscientes)
+
+**Cloudflare Global API Key** — se mantiene **a propósito** en el server
+(`~/.cf-env` + `~/.bashrc`) para poder operar CUALQUIER proyecto/dominio
+de la cuenta Cloudflare desde este server, sin crear/rotar tokens por
+proyecto. **No es deuda técnica.** Reglas: nunca commitear, nunca pegar
+en chats/logs, permisos 600, y si se filtra → rotar YA + auditar en
+Cloudflare.
+
 ### Server viejo (a decommissionar)
 | Item | Valor |
 |---|---|

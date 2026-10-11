@@ -286,7 +286,14 @@ usar `core.security.create_access_token()`, no armar el payload a mano.
 - **Rotar secretos expuestos** (ver `CONTEXTO_PROYECTO.md` ?Secretos expuestos):
   - `SECRET_KEY` (JWT), frase GPG de backups, GitHub PAT viejo, `POSTGRES_PASSWORD`
   - Prioridad alta: frase GPG + `SECRET_KEY`
-- **Migrar Cloudflare Global Key ? API Token acotado** (m?s seguro, permisos m?nimos)
+- **Cloudflare Global API Key: DECISION CONSCIENTE (no es deuda tecnica)**
+  Se mantiene la Global API Key en el server de forma deliberada para poder
+  operar CUALQUIER proyecto/dominio de la cuenta Cloudflare desde este server
+  sin crear/rotar tokens individuales por proyecto.
+  Reglas no-negociables:
+    1. NUNCA commitear, ni pegar en chats, ni loguear (evitar 'set -x').
+    2. Vive solo en '~/.cf-env' y '~/.bashrc' del server (permisos 600).
+    3. Si alguna vez se filtra: rotar YA + auditar accesos en Cloudflare.
 - **Migrar SSL a Cloudflare Origin Certificate** (en vez de self-signed)
 - **Fase 6 real** ? DNS cutover + Let's Encrypt en el server nuevo
 - **Decommission server viejo** ? apagar tras 1 semana sin incidentes
