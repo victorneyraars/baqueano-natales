@@ -1,6 +1,8 @@
 /// Providers del modulo promocion.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/promocion/data/promocion_repository.dart';
@@ -109,3 +111,53 @@ final aficheGeneradoProvider =
     params: state.params,
   );
 });
+
+// =========================================================
+// Acciones: descargar / compartir / publicar
+// =========================================================
+
+/// Descarga el PNG del afiche actual (bytes).
+final descargarAficheProvider =
+    Provider<Future<Uint8List> Function()>((ref) {
+  return () async {
+    final editor = ref.read(editorAficheProvider);
+    if (!editor.listo) {
+      throw StateError('Falta elegir plantilla o completar params');
+    }
+    final repo = ref.read(promocionRepositoryProvider);
+    return repo.generarAfichePng(
+      plantilla: editor.plantillaId!,
+      tamano: editor.tamano,
+      params: editor.params,
+    );
+  };
+});
+
+/// Publica el afiche actual en las redes elegidas.
+final publicarAficheProvider = Provider<
+    Future<PublicarAficheResult> Function({
+      List<String>? redes,
+      String? caption,
+    })>((ref) {
+  return ({
+    List<String>? redes,
+    String? caption,
+  }) async {
+    final editor = ref.read(editorAficheProvider);
+    if (!editor.listo) {
+      throw StateError('Falta elegir plantilla o completar params');
+    }
+    final repo = ref.read(promocionRepositoryProvider);
+    final result = await repo.publicarAfiche(
+      plantilla: editor.plantillaId!,
+      tamano: editor.tamano,
+      params: editor.params,
+      redes: redes,
+      caption: caption,
+    );
+    // Refrescar la cola social
+    ref.invalidate(plantillasPromocionProvider);
+    return result;
+  };
+});
+

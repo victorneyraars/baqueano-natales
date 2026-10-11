@@ -12,6 +12,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import 'dart:io';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/promocion/data/promocion_providers.dart';
@@ -37,6 +41,8 @@ class _AdminPromocionEditorScreenState
   AficheGenerado? _afiche;
   String? _error;
   bool _generando = false;
+  bool _descargando = false;
+  bool _publicando = false;
   Timer? _debounce;
 
   @override
@@ -135,6 +141,137 @@ class _AdminPromocionEditorScreenState
     }
   }
 
+  /// Descarga el PNG y lo guarda en un archivo temporal.
+  Future<File?> _guardarPngTemporal() async {
+    final plantillas = await ref.read(plantillasPromocionProvider.future);
+    final plantilla = plantillas.firstWhere(
+      (p) => p.id == widget.plantillaId,
+      orElse: () => plantillas.first,
+    );
+    final params = _paramsActuales(plantilla.todosLosParams);
+    final repo = ref.read(promocionRepositoryProvider);
+    final bytes = await repo.generarAfichePng(
+      plantilla: widget.plantillaId,
+      tamano: _tamano,
+      params: params,
+    );
+    final dir = await getTemporaryDirectory();
+    final file = File(
+      '${dir.path}/afiche-${widget.plantillaId}-${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  /// Descarga el PNG al dispositivo (via share sheet con opcion "Guardar").
+  Future<void> _descargarPng() async {
+    setState(() => _descargando = true);
+    try {
+      final file = await _guardarPngTemporal();
+      if (file == null || !mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        subject: 'Afiche Baqueano Natales',
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error inesperado: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _descargando = false);
+    }
+  }
+
+  /// Comparte el PNG via share sheet nativo.
+  Future<void> _compartirPng() async {
+    setState(() => _descargando = true);
+    try {
+      final file = await _guardarPngTemporal();
+      if (file == null || !mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        text: 'Mira este afiche de Baqueano Natales',
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error inesperado: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _descargando = false);
+    }
+  }
+
+  /// Abre modal para elegir redes + caption y publica.
+  Future<void> _publicarEnRedes() async {
+    final plantillas = await ref.read(plantillasPromocionProvider.future);
+    final plantilla = plantillas.firstWhere(
+      (p) => p.id == widget.plantillaId,
+      orElse: () => plantillas.first,
+    );
+    final params = _paramsActuales(plantilla.todosLosParams);
+    if (!mounted) return;
+
+    final result = await showModalBottomSheet<_PublicarConfig>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PublicarModal(plantilla: plantilla),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() => _publicando = true);
+    try {
+      final repo = ref.read(promocionRepositoryProvider);
+      final res = await repo.publicarAfiche(
+        plantilla: widget.plantillaId,
+        tamano: _tamano,
+        params: params,
+        redes: result.redes,
+        caption: result.caption,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Encolado en: ${res.redes.join(", ")}. '
+              'El worker lo publicara en segundos.',
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error inesperado: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _publicando = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final plantillasAsync = ref.watch(plantillasPromocionProvider);
@@ -164,6 +301,8 @@ class _AdminPromocionEditorScreenState
             afiche: _afiche,
             error: _error,
             generando: _generando,
+            descargando: _descargando,
+            publicando: _publicando,
             controllerFor: _controller,
             onTamanoChange: (t) {
               setState(() => _tamano = t);
@@ -171,6 +310,9 @@ class _AdminPromocionEditorScreenState
             },
             onParamChange: () => _onParamChange(plantilla.todosLosParams),
             onGenerar: _generar,
+            onDescargar: _descargarPng,
+            onCompartir: _compartirPng,
+            onPublicar: _publicarEnRedes,
           );
         },
       ),
@@ -188,10 +330,15 @@ class _Editor extends StatelessWidget {
     required this.afiche,
     required this.error,
     required this.generando,
+    required this.descargando,
+    required this.publicando,
     required this.controllerFor,
     required this.onTamanoChange,
     required this.onParamChange,
     required this.onGenerar,
+    required this.onDescargar,
+    required this.onCompartir,
+    required this.onPublicar,
   });
 
   final PlantillaInfo plantilla;
@@ -199,10 +346,15 @@ class _Editor extends StatelessWidget {
   final AficheGenerado? afiche;
   final String? error;
   final bool generando;
+  final bool descargando;
+  final bool publicando;
   final TextEditingController Function(String) controllerFor;
   final ValueChanged<TamanoAfiche> onTamanoChange;
   final VoidCallback onParamChange;
   final Future<void> Function() onGenerar;
+  final Future<void> Function() onDescargar;
+  final Future<void> Function() onCompartir;
+  final Future<void> Function() onPublicar;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +407,8 @@ class _Editor extends StatelessWidget {
         }),
 
         const SizedBox(height: 16),
+
+        // Regenerar
         FilledButton.icon(
           onPressed: generando ? null : () => onGenerar(),
           icon: generando
@@ -265,6 +419,55 @@ class _Editor extends StatelessWidget {
                 )
               : const Icon(Icons.refresh),
           label: const Text('Regenerar afiche'),
+        ),
+        const SizedBox(height: 12),
+
+        // Descargar + Compartir (side by side)
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: descargando ? null : () => onDescargar(),
+                icon: descargando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download),
+                label: const Text('Descargar'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: descargando ? null : () => onCompartir(),
+                icon: const Icon(Icons.share),
+                label: const Text('Compartir'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Publicar en redes (full width, primario)
+        FilledButton.icon(
+          onPressed: publicando ? null : () => onPublicar(),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF16a34a),
+            minimumSize: const Size.fromHeight(48),
+          ),
+          icon: publicando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.send),
+          label: const Text('Publicar en redes'),
         ),
         const SizedBox(height: 24),
       ],
@@ -408,3 +611,186 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------
+// Modal de publicacion
+// ---------------------------------------------------------
+
+class _PublicarConfig {
+  const _PublicarConfig({required this.redes, this.caption});
+
+  final List<String> redes;
+  final String? caption;
+}
+
+class _PublicarModal extends StatefulWidget {
+  const _PublicarModal({required this.plantilla});
+
+  final PlantillaInfo plantilla;
+
+  @override
+  State<_PublicarModal> createState() => _PublicarModalState();
+}
+
+class _PublicarModalState extends State<_PublicarModal> {
+  bool _facebook = true;
+  bool _instagram = true;
+  bool _google = false;
+  late final TextEditingController _caption;
+
+  @override
+  void initState() {
+    super.initState();
+    final placeholder =
+        kParamPlaceholders[widget.plantilla.paramsRequeridos.first] ?? '';
+    _caption = TextEditingController(text: placeholder);
+  }
+
+  @override
+  void dispose() {
+    _caption.dispose();
+    super.dispose();
+  }
+
+  List<String> get _redesSeleccionadas {
+    final r = <String>[];
+    if (_facebook) r.add('facebook');
+    if (_instagram) r.add('instagram');
+    if (_google) r.add('google_business');
+    return r;
+  }
+
+  void _publicar() {
+    if (_redesSeleccionadas.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Eleg? al menos una red')),
+      );
+      return;
+    }
+    Navigator.of(context).pop(
+      _PublicarConfig(
+        redes: _redesSeleccionadas,
+        caption: _caption.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final padding = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + padding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text(
+            'Publicar afiche',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Eleg? las redes y edit? el texto del post.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Redes
+          Text(
+            'Redes',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          CheckboxListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            value: _facebook,
+            onChanged: (v) => setState(() => _facebook = v ?? false),
+            title: const Text('Facebook'),
+            secondary: const Icon(Icons.facebook),
+          ),
+          CheckboxListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            value: _instagram,
+            onChanged: (v) => setState(() => _instagram = v ?? false),
+            title: const Text('Instagram'),
+            subtitle: const Text('Requiere imagen (el afiche ya la tiene)'),
+            secondary: const Icon(Icons.camera_alt),
+          ),
+          CheckboxListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            value: _google,
+            onChanged: (v) => setState(() => _google = v ?? false),
+            title: const Text('Google Business'),
+            subtitle: const Text('Requiere API aprobada (flag)'),
+            secondary: const Icon(Icons.storefront),
+          ),
+          const SizedBox(height: 16),
+
+          // Caption
+          Text(
+            'Texto del post',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _caption,
+            maxLines: 4,
+            maxLength: 2200,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Ej: Nuevo servicio en Baqueano Natales...',
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Botones
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _publicar,
+                  icon: const Icon(Icons.send),
+                  label: const Text('Publicar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
