@@ -7,7 +7,21 @@
 
 ## 📋 Changelog reciente
 
-1. **Modulo social Etapa 5** - integracion con vertical prestadores (trigger evento -> encolar -> worker publica)
+### 2026-10-10 (cont. 6) - Modulo social Etapa 5: integracion con prestadores
+- eventos_prestadores.py: al aprobar prestador o agregar servicio, encola
+  publicaciones en FB + IG automaticamente:
+  - encolar_prestador_nuevo(db, prestador)
+  - encolar_servicio_nuevo(db, prestador, servicio)
+- Respeta config_social: auto_publish + publicar_en_facebook/instagram
+- Best-effort: nunca rompe el flujo del caller
+- IG skip si no hay imagen (requisito Meta)
+- Solo publica en la cuenta central de Baqueano
+- config.py: PUBLIC_WEB_URL para links de los posts
+- prestadores/routes.py: wire en admin_verificar_prestador + agregar_servicio
+- 7 tests nuevos - 114 verdes totales
+- Smoke test end-to-end: "Taller Mecanico del Sur" (sin fotos) -> pub FB ok
+
+### 2026-10-10 (cont. 5) - Modulo social Etapa 4: Instagram via Facebook
 - instagram_service.py: publicar_post_en_instagram con flujo de 2 pasos:
   - POST /{ig-user-id}/media (crear container)
   - POST /{ig-user-id}/media_publish (publicar)
@@ -267,7 +281,7 @@
 **Estado actual:**
 - ✅ Backend desplegado en producción (server nuevo)
 - ✅ 5 módulos backend completos (auth, usuarios, admin, comercios, prestadores)
-- Modulo social (Etapas 1+2+3+4) - OAuth Facebook + worker + Instagram, 4 tablas, crypto, 15 endpoints admin, 107 tests
+- Modulo social (Etapas 1-5) - OAuth FB + worker + Instagram + integracion con prestadores, 114 tests
 - ✅ **Infraestructura de tests** (pytest + DB de test aislada)
 - ✅ 3 módulos backend completos (auth, usuarios, admin)
 - ✅ App Flutter con flavors (client + admin)
@@ -1029,8 +1043,8 @@ ssh deploy@104.129.59.151 "cd ~/baqueano-natales && docker compose exec -T backe
 - App Flutter client con **persistencia de sesión funcional**
 - Home con datos reales (nombre, email, rol ADMIN)
 - Flujo verificado: Google Sign-In → Firebase → backend → JWT → Home
-- **107 tests automatizados** (71 unit + 36 con DB) - todos verdes
-- **Modulo social (Etapas 1+2+3+4)** desplegado: OAuth Facebook + worker de publicacion + Instagram
+- **114 tests automatizados** (78 unit + 36 con DB) - todos verdes
+- **Modulo social (Etapas 1-5)** desplegado: OAuth FB + worker + IG + integracion prestadores
 
 **Lo que queda pendiente inmediato:**
 1. **Modulo social Etapa 3** - worker de publicacion en Facebook (reintentos + backoff)
@@ -1159,7 +1173,7 @@ Luego, los primeros comandos a correr son:
 
 ---
 
-## Modulo `social` - estado actual (Etapas 1 + 2 + 3 + 4 completas)
+## Modulo `social` - estado actual (Etapas 1 + 2 + 3 + 4 + 5 completas)
 
 Publicación en redes sociales (Facebook, Instagram, Google Business) con
 multi-tenant por recurso y tokens cifrados.
@@ -1171,12 +1185,12 @@ multi-tenant por recurso y tokens cifrados.
 | Backend (schemas + services + deps) | ✅ |
 | Backend (router admin + 15 endpoints) | OK |
 | Backend (README del módulo) | ✅ |
-| Tests (107: 71 unit + 36 con DB) | OK |
+| Tests (114: 78 unit + 36 con DB) | OK |
 | Deploy en producción | ✅ |
 | **Etapa 2 (OAuth Facebook)** | backend + smoke test end-to-end OK |
 | Etapa 3 (publicacion FB con worker) | worker in-process + smoke test real OK |
 | Etapa 4 (Instagram via FB) | instagram_service + smoke test real OK |
-| Etapa 5 (integración con prestadores) | ⏳ |
+| Etapa 5 (integracion con prestadores) | eventos + smoke test real OK |
 | Etapa 6-7 (frontend admin + propietario) | ⏳ |
 | Etapa 8 (Google Business Profile — pendiente aprobación API) | ⏳ |
 | Etapa 9 (módulo promocion/ — plantillas + afiche) | ⏳ |
