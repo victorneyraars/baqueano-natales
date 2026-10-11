@@ -209,31 +209,36 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
-                RadioListTile<String>(
-                  value: 'central',
-                  groupValue: _destino,
-                  onChanged: _autoPublish
-                      ? (v) => setState(() => _destino = v ?? 'central')
-                      : null,
-                  title: const Text('Solo cuenta central'),
-                  subtitle: const Text('Baqueano Natales'),
-                ),
-                RadioListTile<String>(
-                  value: 'propio',
-                  groupValue: _destino,
-                  onChanged: _autoPublish
-                      ? (v) => setState(() => _destino = v ?? 'central')
-                      : null,
-                  title: const Text('Solo cuenta del prestador'),
-                  subtitle: const Text('Requiere que el prestador tenga una'),
-                ),
-                RadioListTile<String>(
-                  value: 'ambos',
-                  groupValue: _destino,
-                  onChanged: _autoPublish
-                      ? (v) => setState(() => _destino = v ?? 'central')
-                      : null,
-                  title: const Text('Ambas'),
+                AbsorbPointer(
+                  absorbing: !_autoPublish,
+                  child: Opacity(
+                    opacity: _autoPublish ? 1.0 : 0.5,
+                    child: RadioGroup<String>(
+                      groupValue: _destino,
+                      onChanged: (v) =>
+                          setState(() => _destino = v ?? 'central'),
+                      child: const Column(
+                        children: [
+                          RadioListTile<String>(
+                            value: 'central',
+                            title: Text('Solo cuenta central'),
+                            subtitle: Text('Baqueano Natales'),
+                          ),
+                          RadioListTile<String>(
+                            value: 'propio',
+                            title: Text('Solo cuenta del prestador'),
+                            subtitle: Text(
+                              'Requiere que el prestador tenga una',
+                            ),
+                          ),
+                          RadioListTile<String>(
+                            value: 'ambos',
+                            title: Text('Ambas'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
