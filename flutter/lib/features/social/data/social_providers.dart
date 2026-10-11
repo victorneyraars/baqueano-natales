@@ -92,6 +92,18 @@ final procesarColaAhoraProvider = Provider<Future<Map<String, dynamic>>
   };
 });
 
+/// Devuelve una funcion que reencola una publicacion y refresca la lista.
+final reencolarPublicacionProvider =
+    Provider<Future<PublicacionSocial> Function(String)>((ref) {
+  return (String publicacionId) async {
+    final repo = ref.read(socialRepositoryProvider);
+    final result = await repo.reencolarPublicacion(publicacionId);
+    // Refrescar todos los listados de publicaciones
+    ref.invalidate(publicacionesSocialesProvider);
+    return result;
+  };
+});
+
 /// Actualiza la config global y refresca el provider.
 final actualizarConfigProvider =
     Provider<Future<ConfigSocial> Function({

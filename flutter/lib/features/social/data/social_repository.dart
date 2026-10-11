@@ -188,6 +188,26 @@ class SocialRepository {
     }
   }
 
+  /// Reencola una publicacion fallada/agotada.
+  ///
+  /// Resetea estado a PENDIENTE, limpia intentos y error. El worker
+  /// la procesara en el proximo ciclo o cuando se llame a procesar-ahora.
+  Future<PublicacionSocial> reencolarPublicacion(String publicacionId) async {
+    try {
+      final resp = await _dio.patch(
+        '$_base/publicaciones/$publicacionId/reencolar',
+      );
+      return PublicacionSocial.fromJson(resp.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   /// Actualiza la config global (parcial). Solo envia los campos no-null.
   Future<ConfigSocial> actualizarConfig({
     bool? autoPublish,

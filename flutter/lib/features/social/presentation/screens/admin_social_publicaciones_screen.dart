@@ -305,13 +305,44 @@ class _ErrorView extends StatelessWidget {
 // ---------------------------------------------------------
 // Card de publicacion
 // ---------------------------------------------------------
-class _PublicacionCard extends StatelessWidget {
+class _PublicacionCard extends ConsumerStatefulWidget {
   const _PublicacionCard({required this.pub});
 
   final PublicacionSocial pub;
 
   @override
+  ConsumerState<_PublicacionCard> createState() => _PublicacionCardState();
+}
+
+class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
+  bool _reencolando = false;
+
+  Future<void> _reencolar() async {
+    setState(() => _reencolando = true);
+    try {
+      final fn = ref.read(reencolarPublicacionProvider);
+      await fn(widget.pub.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Publicacion reencolada. El worker la procesara pronto.'),
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _reencolando = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final pub = widget.pub;
     final theme = Theme.of(context);
     final estadoColor = Color(pub.estado.colorValue);
 
@@ -442,6 +473,26 @@ class _PublicacionCard extends StatelessWidget {
               _Meta(
                 icon: Icons.link,
                 text: 'ID: ${pub.externalPostId}',
+              ),
+            ],
+
+            // Boton Reencolar (solo para estados que pueden reintentar)
+            if (pub.estado == EstadoPublicacion.fallado ||
+                pub.estado == EstadoPublicacion.agotado) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _reencolando ? null : _reencolar,
+                  icon: _reencolando
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh, size: 16),
+                  label: const Text('Reencolar'),
+                ),
               ),
             ],
           ],
