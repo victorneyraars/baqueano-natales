@@ -7,6 +7,25 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-11 (cont.) - Etapa 9b: Publicar afiches SVG end-to-end
+- Backend completo para generar PNG + publicar afiches en redes:
+  - svg_service.svg_a_png() via cairosvg (libs de sistema: libcairo2, libpango)
+  - services.publicar_afiche() + _guardar_png() en /app/media/promociones/
+  - Endpoints nuevos: POST /generar-png (image/png) y POST /publicar (201)
+  - Nginx dev-api.conf: location /media/ (Meta descarga PNG por HTTPS)
+  - Dockerfile: agregadas libcairo2-dev, libpango1.0-dev, libgdk-pixbuf (builder + runtime)
+  - cairosvg==2.7.1 en requirements
+- Frontend Flutter:
+  - 3 botones en el editor: Descargar / Compartir / Publicar en redes
+  - Modal de publicacion: checkboxes por red + caption editable
+  - Deps: path_provider + share_plus
+- Smoke test end-to-end en produccion:
+  - Generar afiche -> PNG accesible por HTTPS publico
+  - POST /publicar -> 201 -> worker publico en Facebook
+- Known issue (follow-up): share_plus 10.x en Android 14 tiene
+  SecurityException al escribir archivo temporal desde algunos targets
+  del share sheet. Share sheet abre OK. Upgrade a share_plus ^11+ pendiente.
+
 ### 2026-10-11 - Modulo promocion Etapa 9: generador de afiches SVG (completo)
 - Modulo backend/app/modules/promocion/ completo:
   - brand_kit.py: paleta Baqueano, fuentes web-safe, baseline grid, 5 tamanos industria
