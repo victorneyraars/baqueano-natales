@@ -22,7 +22,7 @@ dependencies:
   dio: ^5.7.0
 
   # --- Storage seguro (JWT) ---
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^10.3.2
 
   # --- Navegación ---
   go_router: ^14.6.2
