@@ -24,6 +24,8 @@ import 'package:baqueano_natales/features/social/presentation/screens/admin_soci
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_publicaciones_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/mis_publicaciones_screen.dart';
+import 'package:baqueano_natales/features/promocion/presentation/screens/admin_promocion_editor_screen.dart';
+import 'package:baqueano_natales/features/promocion/presentation/screens/admin_promocion_galeria_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -148,6 +150,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/categorias-oficio',
         name: 'admin-categorias-oficio',
         builder: (context, state) => const AdminCategoriasOficioScreen(),
+      ),
+
+      // =========================================================
+      // Admin - Promocion (afiches SVG)
+      // =========================================================
+      GoRoute(
+        path: '/admin/promocion',
+        name: 'admin-promocion',
+        builder: (context, state) => const AdminPromocionGaleriaScreen(),
+      ),
+      GoRoute(
+        path: '/admin/promocion/editor/:plantillaId',
+        name: 'admin-promocion-editor',
+        builder: (context, state) {
+          final id = state.pathParameters['plantillaId']!;
+          return AdminPromocionEditorScreen(plantillaId: id);
+        },
       ),
 
       // =========================================================

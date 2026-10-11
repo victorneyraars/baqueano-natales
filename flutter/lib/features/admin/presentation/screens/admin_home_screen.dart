@@ -223,6 +223,13 @@ class AdminHomeScreen extends ConsumerWidget {
               onTap: () => context.push('/admin/social/publicaciones'),
             ),
 
+            _AdminCard(
+              icon: Icons.auto_awesome,
+              title: 'Afiches para redes',
+              subtitle: 'Generar promociones SVG',
+              onTap: () => context.push('/admin/promocion'),
+            ),
+
             const _AdminCard(
               icon: Icons.people_outline,
               title: 'Usuarios',
