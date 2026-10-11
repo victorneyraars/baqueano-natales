@@ -104,6 +104,12 @@ class _PlantillaCard extends StatelessWidget {
           bg: const Color(0xFFf1f5f9),
           fg: const Color(0xFF16a34a),
         );
+      case 'lanzamiento':
+        return _Visual(
+          icon: Icons.rocket_launch,
+          bg: const Color(0xFF7c3aed),
+          fg: const Color(0xFFdcfce7),
+        );
       default:
         return _Visual(
           icon: Icons.image,
