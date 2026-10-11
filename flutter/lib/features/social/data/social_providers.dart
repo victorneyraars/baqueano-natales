@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/social/data/social_repository.dart';
 import 'package:baqueano_natales/features/social/domain/cuenta_social.dart';
+import 'package:baqueano_natales/features/social/domain/publicacion_social.dart';
 
 // =========================================================
 // Repositorio (inyectable para tests)
@@ -44,6 +45,36 @@ final cuentasSocialesPorRedProvider =
   return repo.listarCuentas(red: red);
 });
 
+
+// =========================================================
+// Cola de publicaciones (filtro por estado)
+// =========================================================
+
+/// Parametros de filtro para el listado de publicaciones.
+class PublicacionesFiltro {
+  const PublicacionesFiltro({this.estado, this.red});
+
+  final EstadoPublicacion? estado;
+  final RedSocial? red;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PublicacionesFiltro &&
+      other.estado == estado &&
+      other.red == red;
+
+  @override
+  int get hashCode => Object.hash(estado, red);
+}
+
+/// Listado de publicaciones con filtros.
+final publicacionesSocialesProvider =
+    FutureProvider.family<PublicacionesPaginadas, PublicacionesFiltro>(
+  (ref, filtro) async {
+    final repo = ref.watch(socialRepositoryProvider);
+    return repo.listarPublicaciones(estado: filtro.estado, red: filtro.red);
+  },
+);
 
 // =========================================================
 // Acciones (no son providers de estado, son helpers)

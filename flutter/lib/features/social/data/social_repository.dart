@@ -14,6 +14,7 @@ import 'package:dio/dio.dart';
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/features/social/domain/cuenta_social.dart';
+import 'package:baqueano_natales/features/social/domain/publicacion_social.dart';
 
 /// Metadata de paginacion del backend.
 ///
@@ -89,6 +90,14 @@ class ConfigSocial {
   }
 }
 
+/// Listado paginado de publicaciones.
+class PublicacionesPaginadas {
+  const PublicacionesPaginadas({required this.items, required this.meta});
+
+  final List<PublicacionSocial> items;
+  final SocialPaginacion meta;
+}
+
 /// Repositorio del modulo social (admin).
 class SocialRepository {
   SocialRepository({Dio? dio}) : _dio = dio ?? DioClient.instance;
@@ -133,6 +142,42 @@ class SocialRepository {
     try {
       final resp = await _dio.get('$_base/config');
       return ConfigSocial.fromJson(resp.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Lista las publicaciones de la cola, opcionalmente filtradas.
+  Future<PublicacionesPaginadas> listarPublicaciones({
+    EstadoPublicacion? estado,
+    RedSocial? red,
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    try {
+      final query = <String, dynamic>{
+        'page': page,
+        'page_size': pageSize,
+        if (estado != null) 'estado': estado.value,
+        if (red != null) 'red': red.value,
+      };
+      final resp = await _dio.get(
+        '$_base/publicaciones',
+        queryParameters: query,
+      );
+      final data = resp.data as Map<String, dynamic>;
+      final items = (data['items'] as List)
+          .map((j) => PublicacionSocial.fromJson(j as Map<String, dynamic>))
+          .toList();
+      final meta = SocialPaginacion.fromJson(
+        data['meta'] as Map<String, dynamic>,
+      );
+      return PublicacionesPaginadas(items: items, meta: meta);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

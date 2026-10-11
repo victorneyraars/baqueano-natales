@@ -216,6 +216,13 @@ class AdminHomeScreen extends ConsumerWidget {
               onTap: () => context.push('/admin/social/config'),
             ),
 
+            _AdminCard(
+              icon: Icons.queue,
+              title: 'Cola de publicaciones',
+              subtitle: 'Ver historial y errores',
+              onTap: () => context.push('/admin/social/publicaciones'),
+            ),
+
             const _AdminCard(
               icon: Icons.people_outline,
               title: 'Usuarios',

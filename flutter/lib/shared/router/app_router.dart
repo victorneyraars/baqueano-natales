@@ -22,6 +22,7 @@ import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_cuentas_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
+import 'package:baqueano_natales/features/social/presentation/screens/admin_social_publicaciones_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -187,6 +188,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/social/config',
         name: 'admin-social-config',
         builder: (context, state) => const AdminSocialConfigScreen(),
+      ),
+
+      GoRoute(
+        path: '/admin/social/publicaciones',
+        name: 'admin-social-publicaciones',
+        builder: (context, state) =>
+            const AdminSocialPublicacionesScreen(),
       ),
 
       // =========================================================
