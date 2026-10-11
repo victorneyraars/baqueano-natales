@@ -19,7 +19,7 @@ nos costaron tiempo. Mantener actualizado cuando aparezcan nuevos.
 | Subdominio | Apunta a | Uso |
 |---|---|---|
 | `api.baqueanonatales.com` | Server viejo (`161.118.240.229`) | Producci?n actual (migrar en Fase 6) |
-| `dev-api.baqueanonatales.com` | Server nuevo (`104.129.59.151`) | Dev + OAuth Facebook (SSL mode: full) |
+| `dev-api.baqueanonatales.com` | Server nuevo (`104.129.59.151`) | Dev + OAuth Facebook (SSL mode: full strict + Origin Cert) |
 
 ---
 
@@ -147,7 +147,7 @@ migraci?n generada.
     curl -s "https://api.cloudflare.com/client/v4/zones/9c45d549b5955a4ab18aee9ec9209de6/settings/ssl" \
       -H "X-Auth-Email: $CF_API_EMAIL" -H "X-Auth-Key: $CF_API_KEY"
 
-**SSL mode actual:** `full` (Cloudflare habla HTTPS al origin pero no valida el cert ? self-signed alcanza).
+**SSL mode actual:** `full (strict)` con Cloudflare Origin Certificate (`origin.crt`/`origin.key`, wildcard `*.baqueanonatales.com`, 15 anos). Cloudflare valida criptograficamente el cert del origen.
 
 ---
 
@@ -389,3 +389,4 @@ Endpoints backend consumidos:
 12. **Workflow dual-repo (backend + Flutter)**: cambios de backend por SSH (commit desde el server), cambios Flutter en Windows (commit desde Windows). pull --rebase antes de cada push.
 13. **CRLF rompe git log -3**: usar 'git log --oneline' o Python via stdin.
 14. **CRLF rompe git diff --cached --name-only**: usar 'git status' o 'git diff --cached' sin flags.
+15. **Set-Content de PowerShell 5.1 escribe en Windows-1252**: rompe emojis y acentos al editar .md. Usar [System.IO.File]::WriteAllText con UTF8Encoding($false).

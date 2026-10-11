@@ -24,6 +24,25 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 5) - Cloudflare Origin Certificate + SSL Full (Strict) + Cloudflare Global Key decisión
+- **Deuda tecnica #3 resuelta**: SSL del server ahora usa Cloudflare Origin Certificate
+  (reemplaza self-signed). Cloudflare SSL mode cambiado de `Full` a **`Full (strict)`**.
+  Cloudflare ahora valida criptograficamente el cert del origen -> elimina riesgo MITM
+  entre Cloudflare y el server.
+  - Cert generado en Cloudflare (wildcard `*.baqueanonatales.com`, RSA 2048, 15 anos).
+  - Instalado en `~/baqueano-natales/deploy/nginx/certs/origin.crt` + `origin.key` (600).
+  - `deploy/nginx/conf.d/dev-api.conf` actualizado (rutas + comentario).
+  - Certs viejos (`dev-api.crt/key`) y `authenticated_origin_pull_ca.pem` eliminados.
+  - Health check HTTPS post-migracion: 200 OK.
+- **Cloudflare Global API Key: DECISION CONSCIENTE (no es deuda tecnica)**.
+  Se mantiene a proposito en el server para poder operar CUALQUIER proyecto/dominio
+  de la cuenta desde este server sin crear/rotar tokens individuales. Reglas:
+  nunca commitear ni pegar en chats/logs, permisos 600, rotar si se filtra.
+  Documentado en `CONTEXTO_PROYECTO.md` (seccion nueva "Credenciales del server")
+  y en `SERVER_CHEATSHEET.md`.
+- **Gotcha nuevo documentado (cheatsheet #15)**: `Set-Content` de PowerShell 5.1
+  escribe en Windows-1252 y rompe emojis/acentos al editar `.md`. Usar
+  `[System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding($false)))`.
 ### 2026-10-11 (cont. 4) - Flutter deps upgrade: secure_storage v11 + share_plus v13 + plantilla lanzamiento
 - **Deuda tecnica #1 resuelta**: conflicto `win32` entre `flutter_secure_storage` y `share_plus`.
   Ahora ambos usan `win32 ^6.4.0`. Warning KGP de `share_plus` eliminado de paso.
