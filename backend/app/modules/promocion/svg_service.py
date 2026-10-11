@@ -167,3 +167,33 @@ def texto_multilinea(
 def to_string(dwg: Drawing) -> str:
     """Serializa el Drawing a string XML."""
     return dwg.tostring()
+
+# =========================================================
+# Conversion SVG -> PNG (para publicar en redes)
+# =========================================================
+
+def svg_a_png(svg_str: str, width_px: int | None = None) -> bytes:
+    """Convierte un SVG string a PNG (bytes).
+
+    Args:
+        svg_str: SVG completo (con <svg>...</svg>).
+        width_px: ancho final. None = tamano nativo del SVG.
+
+    Returns:
+        Bytes del PNG.
+
+    Raises:
+        RuntimeError: si cairosvg falla o el SVG es invalido.
+
+    Nota: cairosvg usa libcairo (nativa). Requiere libcairo2, libpango
+    y libgdk-pixbuf que ya estan en el Dockerfile.
+    """
+    import cairosvg
+    try:
+        kwargs = {"bytestring": svg_str.encode("utf-8")}
+        if width_px:
+            kwargs["output_width"] = width_px
+        return cairosvg.svg2png(**kwargs)
+    except Exception as e:
+        raise RuntimeError(f"Error convirtiendo SVG a PNG: {e}") from e
+

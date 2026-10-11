@@ -47,3 +47,42 @@ class GenerarAficheResponse(BaseModel):
     tamano: str
     width: int
     height: int
+
+# =========================================================
+# Publicar afiche en redes
+# =========================================================
+
+class PublicarAficheRequest(BaseModel):
+    """Request para generar + publicar un afiche en redes.
+
+    `redes` puede ser:
+    - None o ["auto"]: usa ConfigSocial (respeta auto_publish + flags).
+    - ["facebook", "instagram", "google_business"]: publica solo en las
+      indicadas (override del admin).
+    """
+    plantilla: str = Field(..., min_length=1, max_length=50)
+    tamano: str = Field("ig_feed", min_length=1, max_length=30)
+    params: dict[str, Any] = Field(..., description="Datos del afiche.")
+    redes: list[str] | None = Field(
+        None,
+        description="Redes a publicar. None/['auto'] = usar config.",
+    )
+    caption: str | None = Field(
+        None,
+        max_length=2000,
+        description="Texto del post. Si None, se deduce de params.",
+    )
+
+
+class PublicarAficheResponse(BaseModel):
+    """Respuesta de publicar afiche.
+
+    - afiche_url: URL publica del PNG (para preview o reuso).
+    - publicaciones: ids de PublicacionSocial encoladas.
+    - redes: redes donde se encolo (subconjunto de las pedidas).
+    """
+    afiche_url: str
+    afiche_filename: str
+    publicaciones: list[str]
+    redes: list[str]
+
