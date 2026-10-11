@@ -25,6 +25,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     Enum as SQLEnum,
     ForeignKey,
     Integer,
@@ -32,6 +33,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -325,3 +327,321 @@ class MecanicaRepuesto(TimestampMixin, SoftDeleteMixin, Base):
 
     def __repr__(self) -> str:
         return f"<MecanicaRepuesto(nombre={self.nombre})>"
+
+
+# =========================================================
+# CORE: Orden de trabajo (M2)
+# =========================================================
+class EstadoOrden(str, Enum):
+    """Ciclo de vida de una orden de trabajo.
+
+    Flujo principal:
+        ingresado -> diagnosticando -> presupuestado -> aprobado
+            -> en_proceso -> listo -> entregado
+
+    Ramas:
+        presupuestado -> rechazado (cliente rechaza)
+        cualquier estado inicial -> cancelado
+        entregado -> garantia (si el cliente reclama)
+    """
+
+    INGRESADO = "ingresado"
+    DIAGNOSTICANDO = "diagnosticando"
+    PRESUPUESTADO = "presupuestado"
+    APROBADO = "aprobado"
+    RECHAZADO = "rechazado"
+    EN_PROCESO = "en_proceso"
+    LISTO = "listo"
+    ENTREGADO = "entregado"
+    CANCELADO = "cancelado"
+    GARANTIA = "garantia"
+
+
+class PrioridadOrden(str, Enum):
+    BAJA = "baja"
+    NORMAL = "normal"
+    ALTA = "alta"
+    URGENTE = "urgente"
+
+
+class TipoItemOrden(str, Enum):
+    SERVICIO = "servicio"
+    REPUESTO = "repuesto"
+    MANO_OBRA = "mano_obra"
+    OTRO = "otro"
+
+
+class TipoEventoHistorial(str, Enum):
+    ESTADO_CAMBIO = "estado_cambio"
+    COMENTARIO = "comentario"
+    FOTO = "foto"
+    PRESUPUESTO = "presupuesto"
+    APROBACION = "aprobacion"
+    RECHAZO = "rechazo"
+    GARANTIA = "garantia"
+
+
+class OrdenTrabajo(TimestampMixin, Base):
+    """Orden de trabajo entre un cliente y un prestador.
+
+    Es el objeto central del modulo oficios. Une:
+    - cliente (usuario)
+    - prestador (taller/oficio)
+    - objeto_servicio (vehiculo, propiedad, etc.)
+
+    Flujo: cliente agenda -> prestador diagnostica -> presupuesto ->
+    cliente aprueba -> prestador ejecuta -> entrega.
+
+    Los cambios de estado se registran en `orden_historial` (append-only).
+    """
+
+    __tablename__ = "ordenes_trabajo"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    numero: Mapped[str] = mapped_column(
+        String(20),
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="Formato OT-YYYY-NNNN",
+    )
+    cliente_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    objeto_servicio_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("objetos_servicio.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    estado: Mapped[EstadoOrden] = mapped_column(
+        SQLEnum(
+            EstadoOrden,
+            name="estado_orden",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=EstadoOrden.INGRESADO,
+        server_default=EstadoOrden.INGRESADO.value,
+        index=True,
+    )
+    prioridad: Mapped[PrioridadOrden] = mapped_column(
+        SQLEnum(
+            PrioridadOrden,
+            name="prioridad_orden",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=PrioridadOrden.NORMAL,
+        server_default=PrioridadOrden.NORMAL.value,
+    )
+
+    diagnostico_inicial: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notas_internas: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Notas del prestador (no visibles al cliente)",
+    )
+    notas_cliente: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    fecha_ingreso: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    fecha_estimada_entrega: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    fecha_entrega_real: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    km_ingreso: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    km_salida: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    total_presupuesto: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default="0.00",
+        comment="Suma de todos los items",
+    )
+    total_aprobado: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default="0.00",
+        comment="Suma de items aprobados por el cliente",
+    )
+
+    # Relaciones
+    cliente: Mapped["Usuario"] = relationship(
+        foreign_keys=[cliente_id],
+        lazy="selectin",
+    )
+    prestador: Mapped["Prestador"] = relationship(
+        foreign_keys=[prestador_id],
+        lazy="selectin",
+    )
+    objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")
+    items: Mapped[list["OrdenItem"]] = relationship(
+        back_populates="orden",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="OrdenItem.orden_display, OrdenItem.created_at",
+    )
+    historial: Mapped[list["OrdenHistorial"]] = relationship(
+        back_populates="orden",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="OrdenHistorial.created_at",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrdenTrabajo(numero={self.numero}, "
+            f"estado={self.estado.value})>"
+        )
+
+
+class OrdenItem(TimestampMixin, Base):
+    """Item del presupuesto de una orden.
+
+    Puede ser:
+    - servicio (mano de obra con descripcion)
+    - repuesto (pieza)
+    - mano_obra (cargo separado)
+    - otro (cualquier otra cosa)
+
+    El cliente puede aprobar/rechazar cada item individualmente.
+    `aprobado=None` significa pendiente. True/False son decisiones.
+    """
+
+    __tablename__ = "orden_items"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    orden_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo: Mapped[TipoItemOrden] = mapped_column(
+        SQLEnum(
+            TipoItemOrden,
+            name="tipo_item_orden",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=TipoItemOrden.SERVICIO,
+        server_default=TipoItemOrden.SERVICIO.value,
+    )
+    descripcion: Mapped[str] = mapped_column(String(255), nullable=False)
+    cantidad: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=Decimal("1.00"),
+        server_default="1.00",
+    )
+    precio_unitario: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default="0.00",
+    )
+    subtotal: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default="0.00",
+        comment="cantidad * precio_unitario (calculado)",
+    )
+    aprobado: Mapped[bool | None] = mapped_column(
+        Boolean,
+        nullable=True,
+        comment="None=pendiente, True=aprobado, False=rechazado",
+    )
+    orden_display: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment="Para ordenar visualmente",
+    )
+
+    orden: Mapped[OrdenTrabajo] = relationship(back_populates="items")
+
+    def __repr__(self) -> str:
+        return f"<OrdenItem(desc={self.descripcion[:30]}, subtotal={self.subtotal})>"
+
+
+class OrdenHistorial(TimestampMixin, Base):
+    """Evento del timeline de una orden (append-only).
+
+    NUNCA se modifica ni se borra. Es la fuente de verdad.
+    Registra:
+    - Cambios de estado (con estado_anterior y estado_nuevo)
+    - Comentarios (contenido JSONB con texto)
+    - Aprobaciones / rechazos del cliente
+    - Adjuntos (contenido JSONB con URL de foto)
+    """
+
+    __tablename__ = "orden_historial"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    orden_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo: Mapped[TipoEventoHistorial] = mapped_column(
+        SQLEnum(
+            TipoEventoHistorial,
+            name="tipo_evento_historial",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+    )
+    estado_anterior: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    estado_nuevo: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    usuario_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Quien genero el evento (NULL = sistema)",
+    )
+    contenido: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Datos libres: texto, motivo, url de foto, etc.",
+    )
+
+    orden: Mapped[OrdenTrabajo] = relationship(back_populates="historial")
+
+    def __repr__(self) -> str:
+        return f"<OrdenHistorial(orden_id={self.orden_id}, tipo={self.tipo.value})>"

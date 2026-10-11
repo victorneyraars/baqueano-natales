@@ -2,12 +2,15 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
+
+from sqlalchemy import select
 
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.oficios import services
-from app.modules.oficios.deps import CategoriaMecanica, Repuesto
+from app.modules.oficios.deps import CategoriaMecanica, OrdenDelUsuario, Repuesto
+from app.modules.oficios.models import EstadoOrden
 from app.modules.oficios.schemas import (
     MecanicaCategoriaCreate,
     MecanicaCategoriaResponse,
@@ -15,6 +18,16 @@ from app.modules.oficios.schemas import (
     MecanicaRepuestoCreate,
     MecanicaRepuestoResponse,
     MecanicaRepuestoUpdate,
+    OrdenAprobarRequest,
+    OrdenCambiarEstadoRequest,
+    OrdenItemCreate,
+    OrdenItemResponse,
+    OrdenItemUpdate,
+    OrdenListItemResponse,
+    OrdenTrabajoCreate,
+    OrdenTrabajoDetalleResponse,
+    OrdenTrabajoResponse,
+    OrdenTrabajoUpdate,
     VehiculoCreate,
     VehiculoResponse,
     VehiculoUpdate,
@@ -224,3 +237,296 @@ async def admin_actualizar_repuesto(
 ) -> MecanicaRepuestoResponse:
     obj = await services.actualizar_repuesto(db, repuesto.id, data)
     return MecanicaRepuestoResponse.model_validate(obj)
+
+
+# =========================================================
+# M2: Ordenes - Prestador
+# =========================================================
+router_mis_ordenes = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/ordenes",
+    tags=["oficios-ordenes-prestador"],
+)
+
+
+def _serializar_orden(orden, incluir_notas_internas: bool = True, con_historial: bool = False):
+    """Convierte ORM -> dict, respetando visibilidad de notas_internas."""
+    data = {
+        "id": orden.id,
+        "numero": orden.numero,
+        "cliente_id": orden.cliente_id,
+        "prestador_id": orden.prestador_id,
+        "objeto_servicio_id": orden.objeto_servicio_id,
+        "estado": orden.estado.value,
+        "prioridad": orden.prioridad.value,
+        "diagnostico_inicial": orden.diagnostico_inicial,
+        "notas_cliente": orden.notas_cliente,
+        "notas_internas": orden.notas_internas if incluir_notas_internas else None,
+        "fecha_ingreso": orden.fecha_ingreso,
+        "fecha_estimada_entrega": orden.fecha_estimada_entrega,
+        "fecha_entrega_real": orden.fecha_entrega_real,
+        "km_ingreso": orden.km_ingreso,
+        "km_salida": orden.km_salida,
+        "total_presupuesto": orden.total_presupuesto,
+        "total_aprobado": orden.total_aprobado,
+        "items": [
+            {
+                "id": it.id,
+                "tipo": it.tipo.value,
+                "descripcion": it.descripcion,
+                "cantidad": it.cantidad,
+                "precio_unitario": it.precio_unitario,
+                "subtotal": it.subtotal,
+                "aprobado": it.aprobado,
+                "orden_display": it.orden_display,
+            }
+            for it in orden.items
+        ],
+    }
+    if con_historial:
+        data["historial"] = [
+            {
+                "id": ev.id,
+                "tipo": ev.tipo.value,
+                "estado_anterior": ev.estado_anterior,
+                "estado_nuevo": ev.estado_nuevo,
+                "usuario_id": ev.usuario_id,
+                "contenido": ev.contenido,
+                "created_at": ev.created_at,
+            }
+            for ev in orden.historial
+        ]
+    return data
+
+
+@router_mis_ordenes.get(
+    "",
+    response_model=list[OrdenListItemResponse],
+    summary="Listar ordenes del prestador",
+)
+async def listar_ordenes_prestador(
+    prestador_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    estado: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    # Validar permiso sobre el prestador
+    from app.modules.prestadores.models import Prestador
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+
+    ordenes = await services.listar_ordenes_prestador(
+        db, prestador_id, estado=estado, limit=limit
+    )
+    return [_serializar_orden(o, incluir_notas_internas=False) for o in ordenes]
+
+
+@router_mis_ordenes.post(
+    "",
+    response_model=OrdenTrabajoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear una orden",
+)
+async def crear_orden(
+    prestador_id: UUID,
+    data: OrdenTrabajoCreate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    from app.modules.prestadores.models import Prestador
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+
+    orden = await services.crear_orden(db, prestador_id, user.id, data)
+    # Recargar con items+historial cargados (evita MissingGreenlet)
+    orden = await services.obtener_orden(db, orden.id)
+    return _serializar_orden(orden)
+
+
+@router_mis_ordenes.get(
+    "/{orden_id}",
+    response_model=OrdenTrabajoDetalleResponse,
+    summary="Ver detalle de una orden (con historial)",
+)
+async def detalle_orden(
+    prestador_id: UUID,
+    orden_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return _serializar_orden(orden, con_historial=True)
+
+
+@router_mis_ordenes.patch(
+    "/{orden_id}",
+    response_model=OrdenTrabajoResponse,
+    summary="Actualizar orden",
+)
+async def actualizar_orden(
+    prestador_id: UUID,
+    orden_id: UUID,
+    data: OrdenTrabajoUpdate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    orden = await services.actualizar_orden(db, orden_id, data)
+    orden = await services.obtener_orden(db, orden.id)
+    return _serializar_orden(orden)
+
+
+@router_mis_ordenes.post(
+    "/{orden_id}/items",
+    response_model=OrdenItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Agregar item al presupuesto",
+)
+async def agregar_item(
+    prestador_id: UUID,
+    orden_id: UUID,
+    data: OrdenItemCreate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    item = await services.agregar_item(db, orden_id, data, user.id)
+    return OrdenItemResponse.model_validate(item)
+
+
+@router_mis_ordenes.patch(
+    "/{orden_id}/items/{item_id}",
+    response_model=OrdenItemResponse,
+    summary="Editar item",
+)
+async def editar_item(
+    prestador_id: UUID,
+    orden_id: UUID,
+    item_id: UUID,
+    data: OrdenItemUpdate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    item = await services.actualizar_item(db, orden_id, item_id, data)
+    return OrdenItemResponse.model_validate(item)
+
+
+@router_mis_ordenes.delete(
+    "/{orden_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar item",
+)
+async def eliminar_item(
+    prestador_id: UUID,
+    orden_id: UUID,
+    item_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    await services.eliminar_item(db, orden_id, item_id)
+
+
+@router_mis_ordenes.post(
+    "/{orden_id}/estado",
+    response_model=OrdenTrabajoResponse,
+    summary="Cambiar estado de la orden",
+)
+async def cambiar_estado(
+    prestador_id: UUID,
+    orden_id: UUID,
+    data: OrdenCambiarEstadoRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    orden = await services.cambiar_estado(
+        db, orden_id, data.nuevo_estado, user.id, es_prestador=True, motivo=data.motivo
+    )
+    orden = await services.obtener_orden(db, orden.id)
+    return _serializar_orden(orden)
+
+
+# =========================================================
+# M2: Ordenes - Cliente
+# =========================================================
+router_mis_ordenes_cliente = APIRouter(
+    prefix="/mis-ordenes",
+    tags=["oficios-ordenes-cliente"],
+)
+
+
+@router_mis_ordenes_cliente.get(
+    "",
+    response_model=list[OrdenListItemResponse],
+    summary="Listar mis ordenes (cliente)",
+)
+async def listar_mis_ordenes(
+    user: CurrentUser,
+    db: DbSession,
+    estado: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    ordenes = await services.listar_mis_ordenes_cliente(
+        db, user.id, estado=estado, limit=limit
+    )
+    return [_serializar_orden(o, incluir_notas_internas=False) for o in ordenes]
+
+
+@router_mis_ordenes_cliente.get(
+    "/{orden_id}",
+    response_model=OrdenTrabajoDetalleResponse,
+    summary="Ver detalle de mi orden (cliente)",
+)
+async def detalle_mi_orden(
+    orden_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.cliente_id != user.id and user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    # Sin notas internas para el cliente
+    return _serializar_orden(orden, incluir_notas_internas=False, con_historial=True)
+
+
+@router_mis_ordenes_cliente.post(
+    "/{orden_id}/aprobar",
+    response_model=OrdenTrabajoResponse,
+    summary="Aprobar/rechazar presupuesto (cliente)",
+)
+async def aprobar_presupuesto(
+    orden_id: UUID,
+    data: OrdenAprobarRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.cliente_id != user.id and user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    orden = await services.aprobar_presupuesto(db, orden_id, user.id, data)
+    orden = await services.obtener_orden(db, orden.id)
+    return _serializar_orden(orden, incluir_notas_internas=False)

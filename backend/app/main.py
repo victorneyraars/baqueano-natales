@@ -46,6 +46,8 @@ from app.modules.oficios.routes import (
     router_propietario as oficios_propietario_router,
     router_admin_categorias as oficios_admin_categorias_router,
     router_admin_repuestos as oficios_admin_repuestos_router,
+    router_mis_ordenes as oficios_ordenes_prestador_router,
+    router_mis_ordenes_cliente as oficios_ordenes_cliente_router,
 )
 from app.modules.social.routes import (
     router_admin as social_admin_router,
@@ -132,6 +134,8 @@ app.include_router(oficios_publico_router, prefix="/api/v1")
 app.include_router(oficios_propietario_router, prefix="/api/v1")
 app.include_router(oficios_admin_categorias_router, prefix="/api/v1")
 app.include_router(oficios_admin_repuestos_router, prefix="/api/v1")
+app.include_router(oficios_ordenes_prestador_router, prefix="/api/v1")
+app.include_router(oficios_ordenes_cliente_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------

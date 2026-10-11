@@ -141,3 +141,152 @@ class MecanicaRepuestoUpdate(BaseModel):
     unidad: str | None = Field(None, max_length=30)
     notas: str | None = None
     activo: bool | None = None
+
+
+# =========================================================
+# M2: Ordenes de trabajo
+# =========================================================
+class OrdenItemCreate(BaseModel):
+    """Item del presupuesto (crear)."""
+
+    tipo: str = Field("servicio", description="servicio|repuesto|mano_obra|otro")
+    descripcion: str = Field(..., min_length=1, max_length=255)
+    cantidad: Decimal = Field(Decimal("1.00"), gt=0)
+    precio_unitario: Decimal = Field(Decimal("0.00"), ge=0)
+    orden_display: int = 0
+
+
+class OrdenItemUpdate(BaseModel):
+    """Actualizar item (parcial)."""
+
+    tipo: str | None = None
+    descripcion: str | None = Field(None, min_length=1, max_length=255)
+    cantidad: Decimal | None = Field(None, gt=0)
+    precio_unitario: Decimal | None = Field(None, ge=0)
+    orden_display: int | None = None
+
+
+class OrdenItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tipo: str
+    descripcion: str
+    cantidad: Decimal
+    precio_unitario: Decimal
+    subtotal: Decimal
+    aprobado: bool | None
+    orden_display: int
+
+
+class OrdenTrabajoCreate(BaseModel):
+    """Crear una orden (prestador la crea para un cliente)."""
+
+    cliente_id: UUID
+    objeto_servicio_id: UUID
+    diagnostico_inicial: str | None = None
+    notas_internas: str | None = None
+    notas_cliente: str | None = None
+    prioridad: str = Field("normal", description="baja|normal|alta|urgente")
+    fecha_estimada_entrega: datetime | None = None
+    km_ingreso: int | None = Field(None, ge=0)
+
+
+class OrdenTrabajoUpdate(BaseModel):
+    """Actualizar orden (parcial, solo prestador)."""
+
+    diagnostico_inicial: str | None = None
+    notas_internas: str | None = None
+    notas_cliente: str | None = None
+    prioridad: str | None = None
+    fecha_estimada_entrega: datetime | None = None
+    km_ingreso: int | None = Field(None, ge=0)
+    km_salida: int | None = Field(None, ge=0)
+
+
+class OrdenCambiarEstadoRequest(BaseModel):
+    """Cambiar estado de la orden."""
+
+    nuevo_estado: str
+    motivo: str | None = Field(None, max_length=500)
+
+
+class OrdenAprobarItemRequest(BaseModel):
+    """Aprobar/rechazar items individualmente."""
+
+    item_id: UUID
+    aprobado: bool
+
+
+class OrdenAprobarRequest(BaseModel):
+    """Aprobar/rechazar el presupuesto completo o por items."""
+
+    aprobar_todos: bool = False
+    items: list[OrdenAprobarItemRequest] | None = None
+    motivo_rechazo: str | None = Field(None, max_length=500)
+
+
+class OrdenHistorialEventoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tipo: str
+    estado_anterior: str | None
+    estado_nuevo: str | None
+    usuario_id: UUID | None
+    contenido: dict | None
+    created_at: datetime
+
+
+class OrdenTrabajoResponse(BaseModel):
+    """Vista completa de una orden."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    numero: str
+    cliente_id: UUID
+    prestador_id: UUID
+    objeto_servicio_id: UUID
+    estado: str
+    prioridad: str
+    diagnostico_inicial: str | None
+    notas_cliente: str | None
+    # notas_internas solo se incluye si el caller es el prestador (ver endpoint)
+    notas_internas: str | None = None
+
+    fecha_ingreso: datetime
+    fecha_estimada_entrega: datetime | None
+    fecha_entrega_real: datetime | None
+
+    km_ingreso: int | None
+    km_salida: int | None
+
+    total_presupuesto: Decimal
+    total_aprobado: Decimal
+
+    items: list[OrdenItemResponse] = []
+
+
+class OrdenTrabajoDetalleResponse(OrdenTrabajoResponse):
+    """Vista con historial completo."""
+
+    historial: list[OrdenHistorialEventoResponse] = []
+
+
+class OrdenListItemResponse(BaseModel):
+    """Item resumido para listados."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    numero: str
+    estado: str
+    prioridad: str
+    cliente_id: UUID
+    prestador_id: UUID
+    objeto_servicio_id: UUID
+    total_presupuesto: Decimal
+    total_aprobado: Decimal
+    fecha_ingreso: datetime
+    fecha_estimada_entrega: datetime | None
