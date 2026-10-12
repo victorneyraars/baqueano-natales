@@ -338,6 +338,28 @@ Importar en este orden:
 marca es la fuente de verdad. Si el push falla, el recordatorio no se
 re-dispara. Esto es intencional: mejor perder 1 push que spamear al user.
 
+
+**Frontend Flutter:**
+- Servicio en `lib/core/fcm/fcm_service.dart` (transversal).
+- `main_client.dart` inicializa FCM al arranque (listeners).
+- `auth_notifier._registrarFcmAsync()` post-login pide permiso + registra
+  token (fire-and-forget, best-effort).
+- **Emulador con Play Store obligatorio.** Crear AVD con
+  `system-images;android-34;google_apis_playstore;x86_64` via Android
+  Studio SDK Manager (el CLI `sdkmanager` falla silenciosamente en la
+  version nueva).
+- El AVD `Pixel6_API34_Play` requiere **~5 GB libres en D:** para bootear.
+
+**Gotchas conocidos:**
+- Los pushes a app en **foreground** NO muestran banner del sistema. El
+  listener `onMessage` los captura. Para banner en foreground se necesita
+  `flutter_local_notifications` (no implementado).
+- Warning `Unable to log event: analytics library is missing` es cosmetico
+  (falta `firebase_analytics`, no lo necesitamos).
+- Los scripts ad-hoc que usan `AsyncSessionLocal` en un proceso nuevo
+  necesitan importar todos los modelos relacionados (gotcha 4.3), o falla
+  con `InvalidRequestError: ... failed to locate a name 'Prestador'`.
+
 ### 4.6. Commits
 
 - Formato: `<tipo>(<scope>): <descripcion corta>` en el primer -m.

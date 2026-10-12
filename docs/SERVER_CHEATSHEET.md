@@ -410,3 +410,16 @@ Endpoints backend consumidos:
     3. Borrar el archivo temporal.
     Verificar SIEMPRE con `Select-String -Path archivo.md -Pattern 'acentuada'`
     despues de editar.
+
+
+19. **`sdkmanager` CLI (version nueva) tiene bug silencioso**: el comando
+    `android sdk install "<package>"` no descarga nada y no da error.
+    **Usar Android Studio GUI** (SDK Manager -> SDK Platforms -> tildar
+    "Show package details" -> buscar "Google Play Intel x86_64 Atom System
+    Image" bajo la version de Android).
+
+20. **Emulador con FCM requiere Play Store**: `tag.id=google_apis` NO tiene
+    Play Services (FCM no funciona). Necesario `tag.id=google_apis_playstore`.
+    Verificar con `Get-Content "$env:ANDROID_AVD_HOME\<nombre>.avd\config.ini"`.
+    El AVD con Play Store requiere **~5 GB libres en la particion** para
+    bootear (error `hasSufficientDiskSpace` si no alcanza).

@@ -57,6 +57,54 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 10) - FCM frontend Flutter + validacion end-to-end
+
+**FCM completo: backend + frontend, validado con push real en emulador.**
+
+- **Slice Flutter (commit `861702b`)**:
+  - `firebase_messaging: ^15.1.5` en `pubspec.yaml`.
+  - `AndroidManifest.xml`: permiso `POST_NOTIFICATIONS` + meta-data del canal
+    default `baqueano_default`.
+  - `lib/core/fcm/fcm_service.dart`: servicio transversal con
+    `inicializar()` (listeners foreground + background) y
+    `solicitarPermisoYObtenerToken()`.
+  - `lib/core/fcm/fcm_providers.dart`: provider Riverpod del servicio.
+  - `auth_repository.registrarFcmToken()`: POST al backend.
+  - `auth_notifier._registrarFcmAsync()`: fire-and-forget post-login y en
+    restoreSession.
+  - `main_client.dart`: inicializa FCM al arranque (listeners).
+
+- **Validacion end-to-end en emulador Pixel6_API34_Play**:
+  - Login Google OK -> token FCM obtenido -> POST `/usuarios/me/fcm-token`
+    -> 200.
+  - Worker de recordatorios disparado manualmente -> `pushes: 1`.
+  - **Notificacion recibida por el listener Flutter:**
+    `[FCM] foreground: title=Recordatorio de mantenimiento data={...}`
+
+- **Herramienta nueva: AVD `Pixel6_API34_Play`**:
+  - Imagen `system-images;android-34;google_apis_playstore;x86_64`.
+  - **Necesario para FCM** (sin Play Store, FCM no funciona).
+  - Arrancar con: `emulator -avd Pixel6_API34_Play -no-snapshot-load -gpu host`.
+  - Gotcha: requiere **~5 GB libres en D:** para arrancar (el error
+    `hasSufficientDiskSpace` bloquea el boot).
+
+- **Aprendizajes**:
+  - El SDK Manager CLI (`android sdk install`) tiene un bug en la version
+    nueva: no descarga nada silenciosamente. **Usar Android Studio GUI**
+    (SDK Manager -> SDK Platforms -> Show package details -> Google Play
+    Intel x86_64 Atom System Image).
+  - Los scripts ad-hoc con `AsyncSessionLocal` en un proceso Python nuevo
+    necesitan importar TODOS los modelos relacionados (gotcha 4.3). El
+    worker de produccion corre dentro del lifespan de FastAPI y ya los
+    tiene cargados, pero un `python -c` ad-hoc falla con
+    `InvalidRequestError: Mapper[...] failed to locate a name 'Prestador'`.
+  - Los pushes a una app en **foreground** NO muestran banner del sistema;
+    el listener `onMessage` los captura. Para banner en foreground se
+    necesita `flutter_local_notifications` (nice-to-have futuro).
+
+- **Suite backend: 337 tests verdes, 0 warnings.**
+- **M4 (garantias + recordatorios + worker + FCM) cerrado 100%.**
+
 ### 2026-10-12 (cont. 9) - Backend de FCM (push notifications) completo
 
 **Worker de recordatorios ahora manda push real. Cierra M4 al 100% (backend).**
