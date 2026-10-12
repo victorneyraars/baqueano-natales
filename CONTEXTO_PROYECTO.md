@@ -57,6 +57,44 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 13) - Panel admin de notificaciones (S5) - backend completo
+
+**Backend del sistema de notificaciones 100% completo. Solo queda Flutter.**
+
+- **S5 - Panel admin backend** (commit `7e81e6f`):
+  - `POST /api/v1/admin/notificaciones/enviar` - envio masivo con segmentos:
+    `{"tipo": "todos"}` | `{"tipo": "rol", "valor": "cliente"}` |
+    `{"tipo": "usuarios", "valor": [uuid, ...]}`.
+  - `GET /api/v1/admin/notificaciones` - historial con filtros
+    (tipo, estado, desde, hasta) + paginacion.
+  - `GET /api/v1/admin/notificaciones/stats` - dashboard con:
+    total/enviadas/entregadas/abiertas/fallidas/skipped,
+    delivery_rate, open_rate, por estado, por tipo, top 5.
+  - El envio masivo **respeta preferencias del usuario y quiet hours**
+    (los broadcasts no spamean a quien hizo opt-out).
+
+- **Fixes de la sesion**:
+  - `Field` import en `schemas.py` (crash al arrancar).
+  - `conftest.py` TRUNCATE: agregadas `notification_logs`, `fcm_tokens`,
+    `preferencias_notificacion` (aislamiento entre tests).
+
+- **Suite total: 364 passed, 0 warnings** (351 + 13 nuevos).
+
+- **Estado del sistema de notificaciones**:
+  - S1 (modelo multi-device) OK
+  - S2 (refactor push batch) OK
+  - S3 (tracking entrega/apertura) OK
+  - S4 (preferencias + quiet hours) OK
+  - S5 (panel admin backend) OK
+  - S6 (panel admin Flutter) PENDIENTE
+  - S7 (notificaciones in-app Flutter) PENDIENTE
+  - Flutter: centro de notificaciones + pantalla de preferencias PENDIENTE
+
+- **Pendiente para sesion futura**:
+  - Flutter: las 3 pantallas admin del panel (composer + historial + stats).
+  - Flutter: centro de notificaciones del usuario + pantalla de preferencias.
+  - Flutter: reporte de apertura al tocar notificacion push.
+
 ### 2026-10-12 (cont. 12) - Notificaciones: preferencias + tracking (S3+S4)
 
 **Backend del sistema de notificaciones: 100% completo.**
