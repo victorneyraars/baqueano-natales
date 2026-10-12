@@ -57,6 +57,34 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 19) - Deep linking + badge + filtro (WIP, cierre de sesion)
+
+**Deep linking desde notifs funcionando end-to-end + 2 mejoras UX. Pendiente: deduplicacion de taps en hot restart.**
+
+- **Deep linking** (commits `ded9c5e` + `7ca5e60`):
+  - Backend: `service.py` agrega `"tipo": tipo.value` al payload del push.
+  - Flutter: `FcmService._resolverRuta()` mapea tipo + data a ruta GoRouter.
+  - `main_client.dart` escucha `pendingNavigationProvider` y navega
+    post-auth (con guard para no disparar antes de que el JWT este listo).
+  - `pendingNavigationProvider` (Riverpod 3 `NotifierProvider`) para la
+    ruta pendiente. Migrado desde `StateProvider` (deprecado en v3).
+  - **Validado end-to-end** (log confirmado):
+    `[DeepLink] navegando a: /mis-vehiculos/74ae2fcb-.../recordatorios`
+
+- **Badge de no leidas en el Home**: card "Mis notificaciones" pasa a
+  `ConsumerWidget`. Badge numerico con count de estados
+  `{'enviada', 'entregada', 'impresa'}` (excluye `skipped` y `fallida`).
+
+- **Filtro "Solo no leidas"** en la lista (`FilterChip` en la AppBar).
+  La pantalla pasa de `ConsumerWidget` a `ConsumerStatefulWidget`.
+
+- **Suite backend: 373 passed, 0 warnings.**
+
+- **Pendiente para proxima sesion (WIP)**:
+  1. Deduplicar taps por `messageId` en `fcm_service.dart`.
+  2. Reset de notifs en la DB (todas quedaron en `abierta` tras las pruebas).
+  3. Re-test del deep link end-to-end sin hot restart.
+  4. Commit de esos fixes.
 ### 2026-10-12 (cont. 18) - Rate Limiting / Frequency Capping (S8) - sistema 8/8 features
 
 **Feature #8 de la industria. Sistema de notificaciones: 8/8 features nivel industria.**
