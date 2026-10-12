@@ -57,6 +57,55 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 16) - Panel admin Flutter (S6) - sistema de notificaciones 100% completo
+
+**Sistema de notificaciones nivel industria: 100% completo (backend + frontend + admin panel).**
+
+- **Panel admin Flutter** (commit `d1b5fd2`):
+  - `lib/features/notificaciones/` nueva:
+    - `domain/`: `NotificacionAdmin`, `Segmento` (+ `TipoSegmento`), `StatsNotificacion`.
+    - `data/`: `NotificacionesRepository` (enviar + listar + stats) + providers Riverpod.
+    - `presentation/screens/`:
+      - `admin_notificaciones_composer_screen.dart`: envio a segmentos con resultado en dialogo.
+      - `admin_notificaciones_historial_screen.dart`: filtros tipo/estado + cards coloreadas.
+      - `admin_notificaciones_stats_screen.dart`: dashboard (metricas + por estado/tipo + top 5).
+  - 3 rutas nuevas: `/admin/notificaciones{,/historial,/stats}`.
+  - 3 cards nuevas en AdminHome.
+- **Migraciones UI necesarias**:
+  - `RadioGroup` en vez de `groupValue`/`onChanged` (deprecado en Flutter 3.32+).
+  - `use_null_aware_elements` (Dart 3.8+): `'key': ?value` en vez de `if (v != null) 'key': v`.
+  - `flutter_local_notifications v22`: `initialize({settings: ...})` + `show({id:, ..., notificationDetails: ...})`.
+
+- **Validado end-to-end en emulador (flavor admin)**:
+  - Composer: `POST /enviar` -> 200 + dialogo con Total/Enviados/Fallidos/Skipped.
+  - Historial: multiples GETs con filtros tipo/estado -> todos 200.
+  - Stats: `GET /stats` -> 200.
+
+- **Gotcha nuevo (fix del emulador)**:
+  - 5 procesos `adb` zombies acumulados de sesiones anteriores causaban
+    timeouts y glitches. Fix: matar todo (emulator + qemu + adb),
+    limpiar locks, `adb start-server`.
+  - GPU `host` con Intel UHD 630 causa `Unable to match the desired
+    swap behavior`. Fix: `-gpu swiftshader_indirect` (mas lento pero
+    estable visualmente).
+
+- **Estado final del sistema de notificaciones (100%)**:
+  - S1 (modelo multi-device) OK
+  - S2 (refactor push batch + limpieza tokens) OK
+  - S3 (tracking entrega/apertura) OK
+  - S4 (preferencias + quiet hours) OK
+  - S5 (panel admin backend) OK
+  - S6 (panel admin Flutter) OK
+  - Analytics end-to-end OK (backend + Flutter)
+  - Banner en foreground OK
+
+- **Suite total: 364 tests verdes, 0 warnings.**
+
+- **Pendiente para sesion futura**:
+  - S7: centro de notificaciones Flutter (vista del usuario: lista + preferencias).
+  - Deuda cosmetica: `android:label` de la notif + icono monocromatico.
+  - M5 modulo oficios: fotos + reportes.
+
 ### 2026-10-12 (cont. 15) - Banner en foreground + sistema de notificaciones 100%
 
 **Sistema de notificaciones COMPLETO end-to-end (S1-S5 + analytics + foreground banner).**
