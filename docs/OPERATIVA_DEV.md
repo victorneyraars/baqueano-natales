@@ -241,6 +241,23 @@ mutador, no hace falta el refresh explicito.
 riesgoso en `routes.py`. Todos corregidos. Si agregas un endpoint nuevo,
 agrega el `await db.refresh` si sigue este patron.
 
+**AUDITORIA CROSS-MODULO (2026-10-12):** el mismo patron aparecio en
+**7 endpoints mas** de otros modulos (comercios, prestadores, social).
+Todos corregidos en commit `6800704`. Los mas criticos eran
+`actualizar_cuenta` y `actualizar_config` (social), porque son UPDATE
+(no zafan con RETURNING). Los `crear_*` los cubrimos defensivamente.
+
+**Regla global del proyecto (aplica a TODOS los modulos):**
+despues de un service mutador (`crear_*`, `actualizar_*`, `cambiar_*`,
+`rechazar_*`, `cancelar_*`, `agregar_*`), si el route handler va a
+serializar la entidad con `Model.model_validate(obj)` o un
+`_serializar_*(obj)`, **SIEMPRE** hacer `await db.refresh(obj)` antes.
+El refresh es no-op si el objeto ya esta cargado, asi que no rompe nada.
+
+**Excepcion:** si el service devuelve la entidad recargada con
+`selectinload + populate_existing`, o si el route handler vuelve a
+pedirla con un `services.obtener_*`, no hace falta el refresh explicito.
+
 Patron canonico:
 
     @router_algo.patch("/{id}")

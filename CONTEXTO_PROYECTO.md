@@ -57,6 +57,27 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 8) - Auditoria cross-modulo del patron MissingGreenlet
+
+**El bug MissingGreenlet no era solo de oficios: 7 endpoints mas en 3 modulos.**
+
+- **Auditoria cross-modulo** (commit `6800704`):
+  - El patron `await services.crear_*/actualizar_*` seguido de
+    `Model.model_validate(obj)` sin `await db.refresh(obj)` apareció en:
+    - `comercios/routes.py`: `crear_comercio`, `crear_categoria` (2)
+    - `prestadores/routes.py`: `crear_prestador`, `crear_categoria` (2)
+    - `social/routes.py`: `crear_cuenta`, `actualizar_cuenta`,
+      `actualizar_config` (3)
+  - Los mas criticos: `actualizar_cuenta` y `actualizar_config` (UPDATE,
+    no zafan con RETURNING).
+  - Fix: `await db.refresh(obj)` defensivo en los 7. Es no-op si el
+    objeto ya esta cargado, asi que no rompe nada.
+- **Regla global documentada** en OPERATIVA_DEV.md 4.2: aplica a TODOS
+  los modulos del proyecto.
+- **Total endpoints con refresh post-service:** 14 (oficios) + 7 (otros) = **21**.
+- **Suite total: 324 tests verdes** (sin cambios — el refresh es no-op
+  donde no hacia falta).
+
 ### 2026-10-12 (cont. 7) - Cobertura HTTP completa de M1-M4 + cierre de sesion
 
 **4to y ultimo archivo de tests HTTP de oficios. Cobertura M1-M4 al 100%.**
