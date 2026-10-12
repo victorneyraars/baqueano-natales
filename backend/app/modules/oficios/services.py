@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.auth.models import RolUsuario, Usuario
+from app.modules.prestadores.models import Prestador
 from app.modules.oficios.models import (
     EstadoOrden,
     Garantia,
@@ -434,6 +435,45 @@ async def _recalcular_totales(db: AsyncSession, orden: OrdenTrabajo) -> None:
     await db.flush()
 
 
+async def _notificar_orden(
+    db: AsyncSession,
+    *,
+    usuario_id: UUID,
+    titulo: str,
+    body: str,
+    orden_id: UUID,
+    tipo: str = "orden",
+    extra_data: dict | None = None,
+) -> None:
+    """Envia una notificacion in-app al usuario sobre una orden.
+
+    Best-effort: nunca propaga excepciones al caller. Si falla, loggea
+    y sigue (el flujo de la orden no debe romperse por una notif).
+    """
+    try:
+        from app.core.notifications.models import TipoNotificacion
+        from app.core.notifications.service import NotificationService
+
+        data = {"tipo": tipo, "orden_id": str(orden_id)}
+        if extra_data:
+            data.update(extra_data)
+
+        service = NotificationService()
+        await service.enviar_in_app(
+            db=db,
+            usuario_id=usuario_id,
+            titulo=titulo,
+            body=body,
+            tipo=TipoNotificacion.CAMPANA,
+            data=data,
+        )
+    except Exception:
+        logger.exception(
+            "Error enviando notif in-app (orden_id=%s usuario_id=%s)",
+            orden_id, usuario_id,
+        )
+
+
 async def _registrar_evento(
     db: AsyncSession,
     orden_id: UUID,
@@ -523,6 +563,16 @@ async def crear_orden(
         estado_anterior=None,
         estado_nuevo=EstadoOrden.INGRESADO.value,
         contenido={"mensaje": "Orden creada"},
+    )
+
+    # Notificar al cliente (best-effort)
+    await _notificar_orden(
+        db,
+        usuario_id=orden.cliente_id,
+        titulo=f"Nueva orden {orden.numero}",
+        body="Se creo una orden de trabajo para tu vehiculo.",
+        orden_id=orden.id,
+        extra_data={"estado": orden.estado.value},
     )
 
     return orden
@@ -763,6 +813,32 @@ async def cambiar_estado(
         contenido={"motivo": motivo} if motivo else None,
     )
 
+    # Notificar al "otro lado":
+    # - Si cambio el prestador -> notificar al cliente.
+    # - Si cambio el cliente -> notificar al prestador (via su usuario dueno).
+    if es_prestador:
+        destinatario_id = orden.cliente_id
+    else:
+        prestador = (
+            await db.execute(
+                select(Prestador).where(Prestador.id == orden.prestador_id)
+            )
+        ).scalar_one_or_none()
+        destinatario_id = prestador.usuario_id if prestador else None
+
+    if destinatario_id is not None:
+        await _notificar_orden(
+            db,
+            usuario_id=destinatario_id,
+            titulo=f"Orden {orden.numero}: {nuevo_estado.value}",
+            body=f"El estado cambio de '{estado_anterior}' a '{nuevo_estado.value}'.",
+            orden_id=orden.id,
+            extra_data={
+                "estado": nuevo_estado.value,
+                "estado_anterior": estado_anterior,
+            },
+        )
+
     return orden
 
 
@@ -836,6 +912,25 @@ async def aprobar_presupuesto(
             "total_aprobado": str(orden.total_aprobado),
         },
     )
+
+    # Notificar al prestador (best-effort)
+    prestador = (
+        await db.execute(
+            select(Prestador).where(Prestador.id == orden.prestador_id)
+        )
+    ).scalar_one_or_none()
+    if prestador is not None:
+        await _notificar_orden(
+            db,
+            usuario_id=prestador.usuario_id,
+            titulo=f"Orden {orden.numero}: {msg}",
+            body=f"Total aprobado: ${orden.total_aprobado}",
+            orden_id=orden.id,
+            extra_data={
+                "estado": orden.estado.value,
+                "total_aprobado": str(orden.total_aprobado),
+            },
+        )
 
     return orden
 

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import AsyncSessionLocal
 from app.core.notifications.models import (
+    CanalNotificacion,
     EstadoNotificacion,
     FcmToken,
     NotificationLog,
@@ -168,6 +169,81 @@ class NotificationService:
         except Exception:
             logger.exception("Error en enviar_legacy user_id=%s", usuario_id)
             return False
+
+    # ==================== In-app ====================
+
+    async def enviar_in_app(
+        self,
+        db: AsyncSession,
+        usuario_id: UUID,
+        titulo: str,
+        body: str,
+        tipo: TipoNotificacion = TipoNotificacion.SISTEMA,
+        data: dict | None = None,
+        analytics_label: str | None = None,
+        ignorar_preferencias: bool = False,
+        ignorar_quiet_hours: bool = False,
+    ) -> NotificationLog | None:
+        """Crea una notificacion in-app (sin FCM, sin tokens).
+
+        El log queda en estado ENVIADA directo (no hay provider que
+        confirme entrega). El usuario la ve en la campanita de la app.
+
+        Aplica el mismo pipeline de preferencias + quiet hours + rate
+        limit que `enviar_a_usuario`, pero NO requiere tokens FCM.
+
+        Returns:
+            El NotificationLog creado, o None si fue skipped.
+        """
+        # 1. Preferencias + quiet hours + rate limit
+        if not ignorar_preferencias:
+            prefs = await self._get_or_create_prefs(db, usuario_id)
+            if not self._tipo_habilitado(prefs, tipo):
+                await self._log_skipped(
+                    db, usuario_id, titulo, body, tipo,
+                    "preferencia_in_app", canal=CanalNotificacion.IN_APP,
+                )
+                await db.commit()
+                return None
+
+            if not ignorar_quiet_hours and self._en_quiet_hours(prefs):
+                await self._log_skipped(
+                    db, usuario_id, titulo, body, tipo,
+                    "quiet_hours_in_app", canal=CanalNotificacion.IN_APP,
+                )
+                await db.commit()
+                return None
+
+            permitido, razon = await self._check_rate_limit(db, usuario_id, tipo)
+            if not permitido:
+                await self._log_skipped(
+                    db, usuario_id, titulo, body, tipo,
+                    f"rate_limit:{razon}", canal=CanalNotificacion.IN_APP,
+                )
+                await db.commit()
+                return None
+
+        # 2. Crear log con canal=IN_APP y estado=ENVIADA directo
+        ahora = datetime.now(timezone.utc)
+        log = NotificationLog(
+            usuario_id=usuario_id,
+            tipo=tipo,
+            canal=CanalNotificacion.IN_APP,
+            titulo=titulo,
+            body=body,
+            data=data,
+            analytics_label=analytics_label,
+            estado=EstadoNotificacion.ENVIADA,
+            enviado_en=ahora,
+        )
+        db.add(log)
+        await db.flush()
+
+        logger.info(
+            "In-app enviada user_id=%s tipo=%s log_id=%s",
+            usuario_id, tipo.value, log.id,
+        )
+        return log
 
     # ==================== Helpers internos ====================
 
@@ -363,10 +439,12 @@ class NotificationService:
         body: str,
         tipo: TipoNotificacion,
         razon: str,
+        canal: CanalNotificacion = CanalNotificacion.FCM,
     ) -> None:
         log = NotificationLog(
             usuario_id=usuario_id,
             tipo=tipo,
+            canal=canal,
             titulo=titulo,
             body=body,
             estado=EstadoNotificacion.SKIPPED,
