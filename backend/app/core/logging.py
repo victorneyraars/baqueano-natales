@@ -5,7 +5,10 @@ Configuración de logging estructurado en JSON.
 import logging
 import sys
 
-from pythonjsonlogger import jsonlogger
+try:
+    from pythonjsonlogger.json import JsonFormatter  # v3+ (path canonico)
+except ImportError:
+    from pythonjsonlogger.jsonlogger import JsonFormatter  # v2.x fallback
 
 from app.core.config import settings
 
@@ -21,7 +24,7 @@ def setup_logging() -> None:
     root.setLevel(settings.LOG_LEVEL.upper())
 
     handler = logging.StreamHandler(sys.stdout)
-    formatter = jsonlogger.JsonFormatter(
+    formatter = JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s",
         timestamp=True,
     )
