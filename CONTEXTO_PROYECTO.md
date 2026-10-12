@@ -11,6 +11,30 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 20) - Cierre WIP deep linking: dedup FCM + back button
+
+**Los 3 bugs del WIP de deep linking resueltos + 4 gotchas nuevos.**
+
+- **Back button en deep link** (`main_client.dart`): `router.go(pending)` reemplazaba el stack -> no habia flecha atras. Cambiado a `router.push(pending)` (apila, preserva el back).
+- **Dedup FCM con 3 capas** (`fcm_service.dart`):
+  - **Capa 1**: `_procesadosEnSesion` como **`static final Set<String>`** (sobrevive hot restart, comparte estado entre instancias de FcmService).
+  - **Capa 2**: check + add **sincrono** (`_registrarEnSesionSync`) sin `await` intermedio para eliminar el race entre `onMessageOpenedApp` y `getInitialMessage`.
+  - **Capa 3**: persistencia en `SecureStorageService` (nuevos metodos `saveFcmTap`/`getFcmTap`) con ventana de 30s. Cubre **hot restart** (el plugin nativo cachea `getInitialMessage` y Dart pierde su estado).
+  - **Key canonica**: `log:<notification_log_id>` (identifica univocamente cada envio y esta disponible en los 3 paths). Fallback a `messageId` y luego a `tipo|sentTimeMs`.
+- **Bug real**: el callback de `flutter_local_notifications` (`onDidReceiveNotificationResponse`) llamaba directo a `_reportarAperturaPorId` sin pasar por el dedup. Ahora todos los paths (banner local + `onMessageOpenedApp` + `getInitialMessage`) convergen a `_yaProcesado('log:<uuid>')`. **El doble POST /abierta era 2 paths distintos, no 2 eventos del mismo path.**
+- **Validado end-to-end** en emulador Android 14 (cold start):
+  - `[FCM] dedup in-session: log:cae07c80-...` -> 2do path bloqueado.
+  - `[Dio] POST .../abierta` -> **1 sola** (antes: 2).
+  - `[DeepLink] navegando a: /mis-notificaciones` -> 1 sola.
+  - Flecha atras visible en `/mis-notificaciones`.
+  - Badge baja de 8 -> 6 despues del tap.
+- **Reset de notifs en la DB**: todas estaban en `abierta` tras el smoke anterior -> UPDATE a `enviada` + `abierto_en = NULL` para volver al estado base.
+- **Gotchas nuevos documentados** (cheatsheet #24-27):
+  1. `<<'SQL'` heredoc dentro de `bash -s` se come stdin de `docker compose exec -T` -> `syntax error at or near "SQL"`. Usar `-c "..."` o llamadas SSH separadas.
+  2. `docker compose exec -T` consume stdin cuando se usa dentro de `bash -s` multi-linea -> el resto del script no se ejecuta. Fix: separar en llamadas SSH distintas.
+  3. En Windows, `< /dev/null` en el contenido de un here-string enviado por `bash -s` **se pierde** (PowerShell no lo interpreta). Usar comandos de una linea por SSH.
+  4. Hot reload NO recicla los listeners de FCM (`onMessageOpenedApp` queda registrado con el closure viejo). Hot restart tampoco recicla el plugin nativo de `flutter_local_notifications` -> requiere **cold start** (`q` + `flutter run`) para estado limpio.
+
 ### 2026-10-12 (cont. 3) - M4 frontend verificado end-to-end + fix crítico ObjetoServicio
 
 **Smoke test visual de M4 + bug encontrado en producción.**

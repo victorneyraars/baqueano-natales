@@ -447,3 +447,32 @@ Endpoints backend consumidos:
     llamar `show()` desde `FirebaseMessaging.onMessage` (el listener del
     FCM). El payload (log_id) se pasa al plugin para poder reportar la
     apertura al tocar el banner (`onDidReceiveNotificationResponse`).
+
+24. **`<<'SQL'` heredoc dentro de `bash -s` se come stdin**: cuando se manda
+    un script multi-linea por `bash -s` que incluye `docker compose exec -T
+    db psql ... <<'SQL'`, el heredoc NO cierra (Docker Compose se come el
+    delimitador). Sintoma: `syntax error at or near "SQL"` + las queries
+    corren a medias. Fix: usar `docker compose exec -T ... -c "..."` con
+    comillas bash, o separar en llamadas SSH distintas.
+
+25. **`docker compose exec -T` consume stdin dentro de `bash -s` multi-linea**:
+    el resto del script NO se ejecuta despues del primer `docker exec`
+    (Docker lee hasta EOF). Sintoma: solo corre el primer comando y el resto
+    desaparece. Fix: separar cada `docker exec` en su propia llamada SSH.
+
+26. **En Windows, `< /dev/null` se pierde al mandar por `bash -s`**: PowerShell/
+    OpenSSH no interpretan la redireccion dentro del here-string.
+    Sintoma: `: No such file or directory`. Fix: usar el patron de comando
+    simple de una linea (SSH + string) cuando sea un solo `docker exec`.
+
+27. **FCM + `flutter_local_notifications`: hot reload/restart no reciclan
+    listeners**:
+    - Hot reload **no** vuelve a ejecutar `inicializar()`, los listeners
+      viejos de FCM quedan activos con el closure viejo.
+    - Hot restart **no** destruye el plugin nativo de
+      `flutter_local_notifications`: `getInitialMessage` sigue devolviendo
+      el ultimo tap.
+    - Por eso el estado in-session debe ser `static` (comparte entre
+      instancias Dart vivas) y ademas persistir en disco (SecureStorage)
+      con ventana temporal.
+    - Para un estado 100% limpio, **cold start** (`q` + `flutter run`).
