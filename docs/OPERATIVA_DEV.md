@@ -201,6 +201,27 @@ statement:
     )
 
 Bug clasico (ya arreglado en M2): aprobar_presupuesto veia items=[] stale
+
+**Refresh post-flush (bug detectado 2026-10-12):** despues de
+`await db.flush()` en un service, los objetos ORM quedan **expirados**.
+Cualquier acceso a un atributo (incluido `updated_at`, `created_at`, o
+relaciones lazy) dispara IO sincronico -> `MissingGreenlet`.
+
+Fix: `await db.refresh(obj)` antes de serializar.
+
+Patron:
+
+    async def actualizar_vehiculo(db, usuario, objeto_id, data):
+        obj, veh = await _obtener_objeto_propietario(db, usuario, objeto_id)
+        # ... modificar campos ...
+        await db.flush()
+        # Refrescar antes de serializar (evita MissingGreenlet)
+        await db.refresh(obj)
+        await db.refresh(veh)
+        return _vehiculo_a_response(obj, veh)
+
+Detectado por `test_routes_vehiculos.py::test_actualizar_vehiculo` (PATCH
+/mis-vehiculos fallaba con 500 en produccion).
 y marcaba la orden como RECHAZADA. Los tests lo detectaron.
 
 ### 4.3. Tests con DB (pytest)
@@ -350,6 +371,21 @@ El usuario luego pega el CONTEXTO_PROYECTO.md completo en el proximo chat.
   **Ojo:** el `RecordatorioCreate` del modulo oficios requiere
   `objeto_servicio_id` en el body (aunque tambien este en el path). Los
   tests deben mandarlo.
+
+- **Fixture hierarchy en oficios:** `ObjetoServicio` es la tabla base y
+  `Vehiculo` extiende (FK a `objeto_servicio_id`). Los services que
+  devuelven "vehiculo completo" (detalle, actualizar, eliminar) llaman a
+  `_obtener_objeto_propietario`, que espera que existan **ambos**.
+
+  Regla:
+  - Tests que solo tocan el `ObjetoServicio` -> usar fixture
+    `objeto_servicio_test`.
+  - Tests que tocan el "vehiculo completo" -> usar fixture `vehiculo_test`
+    (que crea ambos) y pasar `vehiculo_test.objeto_servicio_id` al endpoint.
+
+  Mira el service antes de elegir el fixture. Si llama a
+  `_obtener_objeto_propietario` (devuelve tupla `(obj, veh)`), necesita
+  `vehiculo_test`.
 
 **Tests con DB:** importar modelos relacionados antes.
 9. **Flutter:** flutter analyze despues de cada cambio.

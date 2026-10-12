@@ -57,6 +57,54 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 5) - BUG DE SEGURIDAD en endpoints de ordenes + tests HTTP
+
+**Hallazgo critico: bug de autorizacion en 6 endpoints de ordenes.**
+
+- **Test file nuevo** `backend/tests/modules/oficios/test_routes_ordenes.py`
+  (commit `fa0df3d`):
+  - 18 tests HTTP: state machine (transiciones validas/invalidas), aprobacion
+    total/parcial/rechazo, historial, ownership en los 6 endpoints del router
+    de prestador.
+- **Bug CRITICO de autorizacion** (commit `238bfb8`):
+  - Los 6 endpoints de `/mis-prestadores/{pid}/ordenes` (detalle, actualizar,
+    agregar_item, editar_item, eliminar_item, cambiar_estado) validaban que
+    `orden.prestador_id == prestador_id` pero **NO que el usuario fuera dueno
+    del prestador**.
+  - Cualquier usuario autenticado podia cambiar el estado de cualquier orden
+    conociendo los IDs (cambiar a entregado, agregar items, etc).
+  - Fix: llamar `_validar_prestador_del_usuario` (que ya existia) al inicio
+    de los 6 endpoints. Devuelve 403 si no es dueno ni admin.
+  - **Impacto en produccion**: alto. Bug de seguridad real.
+- **Test file nuevo** `backend/tests/modules/oficios/test_routes_vehiculos.py`
+  (commit `dbeb062`): 10 tests HTTP.
+- **Bug real** `MissingGreenlet` en `actualizar_vehiculo` (commit `58f94a1`):
+  - `services.actualizar_vehiculo` hacia `db.flush()` y despues
+    `_vehiculo_a_response(obj, veh)`, que accede a `obj.updated_at`. Post-flush
+    el objeto queda expirado -> acceso lazy dispara IO sincronico ->
+    `MissingGreenlet`.
+  - Fix: `await db.refresh(obj)` + `await db.refresh(veh)` antes de serializar.
+  - **Impacto en produccion**: PATCH /mis-vehiculos fallaba con 500.
+
+- **Suite total: 305 tests verdes** (272 + 5 + 10 + 18).
+- **Leccion**: los smoke tests visuales NO detectan bugs de autorizacion ni
+  errores de serializacion. Los tests HTTP los detectaron en el primer intento.
+  Los 3 archivos de tests HTTP agregados hoy encontraron **3 bugs reales**
+  (2 de produccion + 1 de seguridad).
+
+- **Aprendizajes operativos**:
+  - Bloque `$py | ssh python3 -` con contenido largo puede fallar
+    silenciosamente. Verificar SIEMPRE con `grep -c`. Ya documentado en
+    OPERATIVA_DEV.md 3.7.
+  - Los tests HTTP con `ASGITransport` requieren override de `get_db`
+    ademas de `get_current_user`. Ya documentado en OPERATIVA_DEV.md 4.3.
+  - **Nuevo**: en oficios, `ObjetoServicio` es base y `Vehiculo` extiende.
+    Los services que devuelven "vehiculo completo" esperan ambos. Usar
+    fixture `vehiculo_test` (crea ambos), no `objeto_servicio_test`.
+  - **Nuevo**: SQLAlchemy post-flush deja objetos expirados. Antes de
+    serializar con acceso a `updated_at`/`created_at`, hacer
+    `await db.refresh(obj)` o usar `populate_existing`.
+
 ### 2026-10-12 (cont. 4) - Tests HTTP de oficios + suite 277 + aprendizajes
 
 **Paso B: cerrado el gap que dejo pasar el bug ObjetoServicio.**
