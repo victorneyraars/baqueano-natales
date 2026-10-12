@@ -8,15 +8,16 @@ from app.modules.promocion import services, svg_service as svg, templates
 
 # ------------------------------------------------------------ plantillas
 
-def test_5_plantillas_registradas():
+def test_6_plantillas_registradas():
     assert set(templates.TEMPLATES.keys()) == {
         "nuevo_servicio", "oferta", "destacado", "evento", "profesional",
+        "lanzamiento",
     }
 
 
 def test_listar_plantillas_metadata():
     items = services.listar_plantillas()
-    assert len(items) == 5
+    assert len(items) == 6
     for p in items:
         assert "id" in p
         assert "nombre" in p
@@ -32,6 +33,7 @@ def test_listar_plantillas_metadata():
     ("destacado", {"prestador": "Taller", "categoria": "Mecanica"}),
     ("evento", {"titulo": "Feria", "fecha": "Sab 2 nov"}),
     ("profesional", {"prestador": "Taller", "oficio": "Mecanico", "frase": "Confia"}),
+    ("lanzamiento", {"titulo": "Nueva Sucursal"}),
 ])
 def test_render_basico_ok(plantilla, params):
     result = services.generar_afiche(plantilla, "ig_feed", params)

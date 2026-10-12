@@ -105,6 +105,7 @@ def _init_schema(test_engine):
     async def _recrear():
         from app.modules.auth import models as _auth  # noqa: F401
         from app.modules.comercios import models as _comercios  # noqa: F401
+        from app.modules.oficios import models as _oficios  # noqa: F401
         from app.modules.prestadores import models as _prestadores  # noqa: F401
         from app.modules.social import models as _social  # noqa: F401
 
@@ -138,7 +139,10 @@ async def db(test_engine, _init_schema) -> AsyncSession:
             text(
                 "TRUNCATE TABLE "
                 "publicaciones_sociales, tokens_sociales, "
-                "cuentas_sociales, config_social "
+                "cuentas_sociales, config_social, "
+                "orden_historial, orden_items, ordenes_trabajo, "
+                "vehiculos, objetos_servicio, "
+                "mecanica_repuestos, mecanica_categorias_servicio "
                 "RESTART IDENTITY CASCADE"
             )
         )

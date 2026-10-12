@@ -554,6 +554,7 @@ async def obtener_orden(
             selectinload(OrdenTrabajo.items),
             selectinload(OrdenTrabajo.historial),
         )
+        .execution_options(populate_existing=True)
     )
     orden = (await db.execute(stmt)).scalar_one_or_none()
     if orden is None:
