@@ -57,6 +57,36 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 11) - Sistema de notificaciones nivel industria
+
+**Base arquitectonica completa para FCM + futuros providers (APNs/SMS/email).**
+
+- **Modulo nuevo** `app/core/notifications/` (commit `944d989`):
+  - `models.py`: `FcmToken` (multi-device + limpieza automatica),
+    `PreferenciaNotificacion` (opt-in/out por tipo + quiet hours),
+    `NotificationLog` (historial + analytics).
+  - `providers/base.py`: ABC `NotificationProvider` + `SendResult`.
+  - `providers/fcm.py`: `FcmProvider` con `send` y `send_batch`
+    (`send_each_for_multicast`), prioridad, TTL, collapse_key,
+    analytics_label.
+  - `service.py`: `NotificationService` con pipeline completo
+    (preferencias -> quiet hours -> tokens -> provider -> log).
+    Auto-migracion on-the-fly de tokens legacy.
+    Limpieza automatica de tokens `UNREGISTERED`.
+  - `push.py` refactorizado como **thin wrapper** -> worker no cambio.
+
+- **Migracion `a8b9c0d1e2f3`**: 3 tablas + 4 enums + backfill de
+  `usuarios.fcm_token` -> `fcm_tokens` (1 token migrado en prod).
+
+- **Validado end-to-end**: `STATS: pushes: 1` + `LOG: estado=enviada`
+  + notificacion recibida por el listener Flutter.
+
+- **Roadmap pendiente**:
+  - S3: analytics (tracking de apertura desde Flutter -> backend).
+  - S4: endpoints de preferencias + UI Flutter.
+  - S5-S6: panel admin (composer + historial + stats).
+  - S7: notificaciones in-app (centro de notificaciones en la app).
+
 ### 2026-10-12 (cont. 10) - FCM frontend Flutter + validacion end-to-end
 
 **FCM completo: backend + frontend, validado con push real en emulador.**

@@ -360,6 +360,58 @@ re-dispara. Esto es intencional: mejor perder 1 push que spamear al user.
   necesitan importar todos los modelos relacionados (gotcha 4.3), o falla
   con `InvalidRequestError: ... failed to locate a name 'Prestador'`.
 
+### 4.8. Arquitectura de notificaciones (app/core/notifications)
+
+**Estructura:**
+
+    app/core/notifications/
+    ├── models.py            # FcmToken, PreferenciaNotificacion, NotificationLog
+    ├── service.py           # NotificationService (orquestador)
+    └── providers/
+        ├── base.py          # ABC NotificationProvider + SendResult
+        └── fcm.py           # FcmProvider (send + send_batch)
+
+**Como agregar un provider nuevo (APNs, SMS, email):**
+
+1. Crear `providers/<nombre>.py` que herede de `NotificationProvider`.
+2. Implementar `send` y `send_batch` devolviendo `SendResult`.
+3. Registrar en `providers/__init__.py`.
+4. Inyectar en `NotificationService.__init__(provider=TuProvider())`.
+
+Cero cambios al service ni a los callers.
+
+**Pipeline de `enviar_a_usuario`:**
+
+1. Chequea preferencias del usuario (`PreferenciaNotificacion`).
+2. Chequea quiet hours (con timezone del usuario).
+3. Busca tokens activos (con auto-migracion legacy).
+4. Crea `NotificationLog` en estado PENDIENTE.
+5. Envia via provider.
+6. Actualiza log (enviada/fallida) + limpia tokens invalidos.
+
+**API principal:**
+- `service.enviar_a_usuario(db, usuario_id, titulo, body, tipo, ...)` -
+  pipeline completo. Usar para notificaciones nuevas.
+- `service.enviar_legacy(usuario_id, titulo, body, data, db)` -
+  wrapper sin chequeos. Usado por `push.py` (worker).
+
+**Feature flags:**
+- `FCM_ENABLED=false` desactiva todo el envio (util en tests + fallback).
+
+**Reglas de diseno:**
+- **Nunca propaga excepciones** desde el provider. Siempre devuelve
+  `SendResult`.
+- Los `NotificationLog` con `estado=SKIPPED` documentan por que no se
+  envio (preferencia/quiet_hours/sin_tokens).
+- La limpieza de tokens es automatica: `UNREGISTERED`, `SENDER_ID_MISMATCH`
+  y `INVALID_ARGUMENT` marcan `FcmToken.activo=False`.
+
+**Roadmap pendiente del sistema:**
+- Analytics: tracking de apertura desde Flutter (`POST /notificaciones/{id}/abierta`).
+- Preferencias: endpoints `GET/PUT /usuarios/me/preferencias-notificacion`.
+- Panel admin: composer + historial + stats.
+- Notificaciones in-app: `canal=in_app` ya esta en el enum.
+
 ### 4.6. Commits
 
 - Formato: `<tipo>(<scope>): <descripcion corta>` en el primer -m.
