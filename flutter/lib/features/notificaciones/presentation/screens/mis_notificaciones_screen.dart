@@ -8,11 +8,20 @@ import 'package:go_router/go_router.dart';
 import 'package:baqueano_natales/features/notificaciones/data/notificaciones_providers.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/notificacion.dart';
 
-class MisNotificacionesScreen extends ConsumerWidget {
+class MisNotificacionesScreen extends ConsumerStatefulWidget {
   const MisNotificacionesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MisNotificacionesScreen> createState() =>
+      _MisNotificacionesScreenState();
+}
+
+class _MisNotificacionesScreenState
+    extends ConsumerState<MisNotificacionesScreen> {
+  bool _soloNoLeidas = false;
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(misNotificacionesProvider);
 
     return Scaffold(
@@ -31,36 +40,64 @@ class MisNotificacionesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: async.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'No tenes notificaciones todavia.',
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
+      body: Column(
+        children: [
+          // Filtros
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Solo no leidas'),
+                  selected: _soloNoLeidas,
+                  onSelected: (v) => setState(() => _soloNoLeidas = v),
+                ),
+              ],
+            ),
+          ),
+          // Lista
+          Expanded(
+            child: async.when(
+              data: (items) {
+                final visibles = _soloNoLeidas
+                    ? items.where((n) => n.estado != 'abierta').toList()
+                    : items;
+
+                if (visibles.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        _soloNoLeidas
+                            ? 'No tenes notificaciones sin leer.'
+                            : 'No tenes notificaciones todavia.',
+                        style: const TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(misNotificacionesProvider),
+                  child: ListView.builder(
+                    itemCount: visibles.length,
+                    itemBuilder: (ctx, i) =>
+                        _NotifCard(notif: visibles[i], ref: ref),
+                  ),
+                );
+              },
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('Error: $e'),
                 ),
               ),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(misNotificacionesProvider),
-            child: ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (ctx, i) => _NotifCard(notif: items[i], ref: ref),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Error: $e'),
           ),
-        ),
+        ],
       ),
     );
   }

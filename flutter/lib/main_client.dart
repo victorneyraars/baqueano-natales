@@ -1,9 +1,4 @@
-/// Entry point de la app Cliente (Baqueano Natales).
-///
-/// Este main:
-/// 1. Configura el tipo de app (client) y entorno (dev).
-/// 2. Inicializa Firebase.
-/// 3. Arranca la app con ProviderScope (Riverpod).
+/// Entry point de la app Cliente.
 library;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -11,27 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
-import 'package:baqueano_natales/core/fcm/fcm_service.dart';
+import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
+import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
 
 Future<void> main() async {
-  // 1. Configuración ANTES que nada
   AppConfig.init(
     type: AppType.client,
-    env: Environment.dev, // TODO: cambiar a prod cuando hagamos cutover
+    env: Environment.dev,
   );
 
-  // 2. Inicializar Flutter bindings (necesario para Firebase)
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 3. Inicializar Firebase
   await Firebase.initializeApp();
 
-  // 3.b Inicializar FCM (listeners). El token se registra post-login.
-  await FcmService().inicializar();
-
-  // 4. Arrancar la app
   runApp(
     const ProviderScope(
       child: BaqueanoClientApp(),
@@ -39,12 +27,46 @@ Future<void> main() async {
   );
 }
 
-class BaqueanoClientApp extends ConsumerWidget {
+class BaqueanoClientApp extends ConsumerStatefulWidget {
   const BaqueanoClientApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BaqueanoClientApp> createState() =>
+      _BaqueanoClientAppState();
+}
+
+class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
+  bool _navScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final fcm = ref.read(fcmServiceProvider);
+      await fcm.inicializar();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final pending = ref.watch(pendingNavigationProvider);
+    final authState = ref.watch(authNotifierProvider);
+
+    // Deep link: esperar a que la sesion este autenticada antes de navegar.
+    // Si no, el router (que tiene guard de auth) redirige a /home y se pierde.
+    final listoParaNavegar =
+        pending != null && pending.isNotEmpty && authState.isAuthenticated;
+
+    if (listoParaNavegar && !_navScheduled) {
+      _navScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        debugPrint('[DeepLink] navegando a: $pending');
+        router.go(pending);
+        ref.read(pendingNavigationProvider.notifier).set(null);
+        _navScheduled = false;
+      });
+    }
 
     return MaterialApp.router(
       title: AppConfig.appName,

@@ -1,11 +1,4 @@
 /// Servicio de Firebase Cloud Messaging (FCM).
-///
-/// Encapsula:
-/// - Inicializacion (listeners foreground + background).
-/// - Solicitud de permiso runtime (Android 13+).
-/// - Obtencion del token FCM del dispositivo.
-/// - Banner en foreground (flutter_local_notifications).
-/// - Reporte de apertura al backend (analytics).
 library;
 
 import 'package:dio/dio.dart';
@@ -15,25 +8,26 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:baqueano_natales/core/network/dio_client.dart';
 
-/// ID del canal Android. Debe matchear el meta-data del AndroidManifest
-/// (com.google.firebase.messaging.default_notification_channel_id).
 const _canalId = 'baqueano_default';
 const _canalNombre = 'Notificaciones de Baqueano';
 const _canalDescripcion = 'Recordatorios, promociones y avisos';
 
 class FcmService {
-  FcmService({FirebaseMessaging? messaging, Dio? dio})
-      : _messaging = messaging ?? FirebaseMessaging.instance,
-        _dio = dio ?? DioClient.instance;
+  FcmService({
+    FirebaseMessaging? messaging,
+    Dio? dio,
+    void Function(String path)? onDeepLink,
+  })  : _messaging = messaging ?? FirebaseMessaging.instance,
+        _dio = dio ?? DioClient.instance,
+        // ignore: prefer_initializing_formals
+        _onDeepLink = onDeepLink;
 
   final FirebaseMessaging _messaging;
   final Dio _dio;
+  final void Function(String path)? _onDeepLink;
   final _localNotif = FlutterLocalNotificationsPlugin();
 
-  /// Inicializa FCM + el plugin de notificaciones locales.
-  /// Llamar UNA VEZ al arranque de la app (en main).
   Future<void> inicializar() async {
-    // === Setup flutter_local_notifications ===
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
 
@@ -47,7 +41,6 @@ class FcmService {
       },
     );
 
-    // Canal Android (obligatorio en Android 8+)
     const channel = AndroidNotificationChannel(
       _canalId,
       _canalNombre,
@@ -59,7 +52,6 @@ class FcmService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
-    // === FCM listeners ===
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint(
         '[FCM] foreground: title=${message.notification?.title} '
@@ -70,19 +62,13 @@ class FcmService {
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('[FCM] tap (background): data=${message.data}');
-      final logId = message.data['notification_log_id'];
-      if (logId != null) {
-        _reportarAperturaPorId(logId.toString());
-      }
+      _procesarTap(message);
     });
 
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint('[FCM] tap (terminated): data=${initialMessage.data}');
-      final logId = initialMessage.data['notification_log_id'];
-      if (logId != null) {
-        _reportarAperturaPorId(logId.toString());
-      }
+      _procesarTap(initialMessage);
     }
 
     await _messaging.setForegroundNotificationPresentationOptions(
@@ -98,12 +84,10 @@ class FcmService {
       badge: true,
       sound: true,
     );
-
     if (settings.authorizationStatus != AuthorizationStatus.authorized) {
       debugPrint('[FCM] permiso no otorgado: ${settings.authorizationStatus}');
       return null;
     }
-
     final token = await _messaging.getToken();
     debugPrint('[FCM] token obtenido: ${token?.substring(0, 20)}...');
     return token;
@@ -111,9 +95,7 @@ class FcmService {
 
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) {
-      return;
-    }
+    if (notification == null) return;
     final logId = message.data['notification_log_id']?.toString();
 
     await _localNotif.show(
@@ -132,6 +114,41 @@ class FcmService {
       ),
       payload: logId,
     );
+  }
+
+  Future<void> _procesarTap(RemoteMessage message) async {
+    final logId = message.data['notification_log_id']?.toString();
+    if (logId != null && logId.isNotEmpty) {
+      await _reportarAperturaPorId(logId);
+    }
+    final path = _resolverRuta(message);
+    if (path != null && _onDeepLink != null) {
+      _onDeepLink(path);
+    }
+  }
+
+  String? _resolverRuta(RemoteMessage message) {
+    final tipo = message.data['tipo'] as String?;
+    if (tipo == null) return null;
+
+    switch (tipo) {
+      case 'recordatorio':
+        final objId = message.data['objeto_servicio_id']?.toString();
+        if (objId != null && objId.isNotEmpty) {
+          return '/mis-vehiculos/$objId/recordatorios';
+        }
+        return '/mis-vehiculos';
+      case 'campana':
+        final ordenId = message.data['orden_id']?.toString();
+        if (ordenId != null && ordenId.isNotEmpty) {
+          return '/mis-ordenes/$ordenId';
+        }
+        return '/mis-notificaciones';
+      case 'sistema':
+      case 'promocion':
+      default:
+        return '/mis-notificaciones';
+    }
   }
 
   Future<void> _reportarAperturaPorId(String logId) async {

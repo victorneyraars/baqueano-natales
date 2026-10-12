@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
+import 'package:baqueano_natales/features/notificaciones/data/notificaciones_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -168,12 +169,7 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/mis-turnos'),
             ),
 
-            _FeatureCard(
-              icon: Icons.notifications_outlined,
-              title: 'Mis notificaciones',
-              subtitle: 'Recordatorios y avisos recientes',
-              onTap: () => context.push('/mis-notificaciones'),
-            ),
+            const _NotificacionesHomeCard(),
 
             const SizedBox(height: 24),
 
@@ -284,6 +280,54 @@ class _FeatureCard extends StatelessWidget {
                 const SnackBar(content: Text('Próximamente')),
               );
             },
+      ),
+    );
+  }
+}
+
+
+/// Card "Mis notificaciones" en el Home con badge de no leidas.
+class _NotificacionesHomeCard extends ConsumerWidget {
+  const _NotificacionesHomeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final async = ref.watch(misNotificacionesProvider);
+
+    // Solo cuenta notifs que fueron enviadas/entregadas y el user NO abrio.
+    // Excluye skipped (preferencia/quiet_hours/rate_limit) y fallidas.
+    const estadosNoLeidos = {'enviada', 'entregada', 'impresa'};
+    final noLeidas = async.maybeWhen(
+      data: (items) =>
+          items.where((n) => estadosNoLeidos.contains(n.estado)).length,
+      orElse: () => 0,
+    );
+
+    final hasBadge = noLeidas > 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Badge(
+          isLabelVisible: hasBadge,
+          label: hasBadge ? Text('$noLeidas') : null,
+          child: Icon(
+            Icons.notifications_outlined,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        title: const Text(
+          'Mis notificaciones',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          hasBadge
+              ? '$noLeidas sin leer'
+              : 'Recordatorios y avisos recientes',
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+        onTap: () => context.push('/mis-notificaciones'),
       ),
     );
   }
