@@ -57,6 +57,32 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 4) - Tests HTTP de oficios + suite 277 + aprendizajes
+
+**Paso B: cerrado el gap que dejo pasar el bug ObjetoServicio.**
+
+- **Test file nuevo** `backend/tests/modules/oficios/test_routes_recordatorios.py`
+  (commit `368b11e`):
+  - 5 tests HTTP que ejercitan los endpoints de recordatorios (GET vacio,
+    GET con enviados, POST km, POST validacion, POST objeto ajeno).
+  - Override de `get_current_user` Y `get_db` para compartir la sesion async
+    del fixture (sin esto: `RuntimeError: Event loop is closed`).
+  - **Hubieran detectado el bug `3a5941b`** al primer request.
+- **Suite total: 277 tests verdes** (272 previos + 5 nuevos).
+- **Aprendizajes de la sesion**:
+  - Los tests HTTP con `ASGITransport` requieren override de `get_db`
+    ademas de `get_current_user`. Documentado en `OPERATIVA_DEV.md` 4.3.
+  - El patron `$py | ssh python3 -` con bloques largos puede fallar
+    **silenciosamente** (el archivo no cambia y no hay error). Verificar
+    SIEMPRE con `grep -c`. Documentado en `OPERATIVA_DEV.md` 3.7.
+  - `docker compose up -d backend` no recrea el container si el hash no
+    cambio -> usar `restart`. Documentado en `SERVER_CHEATSHEET.md` 16.
+  - `touch app/main.py` no siempre dispara hot reload de uvicorn.
+    Documentado en `SERVER_CHEATSHEET.md` 17.
+  - Editar archivos con acentos/emojis: **NO** usar Python via stdin en
+    Windows (rompe encoding). Usar `[System.IO.File]::WriteAllText` a un
+    temporal. Documentado en `SERVER_CHEATSHEET.md` 18.
+
 ### 2026-10-11 (cont.) - Etapa 9b: Publicar afiches SVG end-to-end
 - Backend completo para generar PNG + publicar afiches en redes:
   - svg_service.svg_a_png() via cairosvg (libs de sistema: libcairo2, libpango)

@@ -134,6 +134,36 @@ y el resto se interpreta como comandos de PowerShell.
 - Alternativa: usar bloques de AppendAllText para escribir por partes.
 ---
 
+
+### 3.7. Verificar SIEMPRE que la edicion se aplico
+
+**Regla de oro:** despues de cualquier edicion por Python via stdin o por
+`[System.IO.File]::WriteAllText`, **verificar con `grep -c`** que una marca
+unica del nuevo contenido esta presente en el archivo.
+
+**Por que:** el patron `$py = @'...'@ ; $py | ssh python3 -` puede fallar
+**silenciosamente** con bloques largos (>100 lineas o >5 KB):
+
+- Windows PowerShell 5.1 trunca heredocs largos en algunos casos.
+- El heredoc se cierra prematuramente si el contenido tiene un `'@` al
+  inicio de linea (ver seccion 3.6).
+- La consola puede comerse parte del bloque al copiar/pegar.
+
+**Sintoma:** el comando termina sin error, pero el archivo NO cambio.
+
+**Mitigacion (patron canonico):**
+
+1. Escribir el script Python a un archivo temporal con
+   `[System.IO.File]::WriteAllText($path, $pyContent, (New-Object System.Text.UTF8Encoding($false)))`.
+2. Ejecutar `python archivo_temporal.py`.
+3. **Verificar con `grep -c '<marca_unica>' archivo_editado`** — debe
+   devolver al menos `1`.
+4. Borrar el temporal.
+
+Si `grep -c` devuelve `0`, el bloque no se aplico: reejecutar.
+
+---
+
 ## 4. Reglas por dominio
 
 ### 4.1. Migraciones Alembic
@@ -292,7 +322,36 @@ El usuario luego pega el CONTEXTO_PROYECTO.md completo en el proximo chat.
 5. **Siempre reemplazar CRLF por LF en here-strings SSH.**
 6. **Migraciones Alembic:** limpiar los usuarios.* a mano.
 7. **SQLAlchemy con relaciones:** .execution_options(populate_existing=True).
-8. **Tests con DB:** importar modelos relacionados antes.
+8. 
+- **Tests HTTP con `ASGITransport`:** ademas de overridear
+  `get_current_user`, **SIEMPRE overridear `get_db`** para que la app use
+  la MISMA sesion async que el fixture. Sin el override, la app abre su
+  propia sesion en otro event loop y SQLAlchemy/asyncpg falla con
+  `RuntimeError: Event loop is closed`.
+
+  Patron:
+
+      from app.core.db import get_db
+
+      @pytest_asyncio.fixture
+      async def client(db, usuario_cliente):
+          async def _override_user():
+              return usuario_cliente
+          async def _override_db():
+              yield db
+          app.dependency_overrides[get_current_user] = _override_user
+          app.dependency_overrides[get_db] = _override_db
+          async with AsyncClient(
+              transport=ASGITransport(app=app), base_url="http://test"
+          ) as c:
+              yield c
+          app.dependency_overrides.clear()
+
+  **Ojo:** el `RecordatorioCreate` del modulo oficios requiere
+  `objeto_servicio_id` en el body (aunque tambien este en el path). Los
+  tests deben mandarlo.
+
+**Tests con DB:** importar modelos relacionados antes.
 9. **Flutter:** flutter analyze despues de cada cambio.
 10. **Cierre de sesion:** actualizar CONTEXTO_PROYECTO.md.
 11. **Here-strings:** no poner el cierre al inicio de linea dentro del contenido.
