@@ -222,6 +222,32 @@ Patron:
 
 Detectado por `test_routes_vehiculos.py::test_actualizar_vehiculo` (PATCH
 /mis-vehiculos fallaba con 500 en produccion).
+
+
+**REGLA GENERAL (auditoria 2026-10-12):** en el modulo oficios, **TODO
+endpoint** que serialice una entidad ORM despues de un service mutador
+(`crear_*`, `actualizar_*`, `cambiar_*`, `rechazar_*`, `cancelar_*`,
+`agregar_*`) DEBE hacer `await db.refresh(entidad)` antes de
+`Model.model_validate(entidad)` o `_serializar_*`. Sin el refresh, el
+objeto queda expirado post-flush y cualquier acceso a `created_at`,
+`updated_at` o relaciones lazy dispara `MissingGreenlet`.
+
+**Excepcion segura:** si el service devuelve la entidad recargada con
+`selectinload + populate_existing` (patron de `obtener_orden`), o si el
+route handler vuelve a llamar a un `services.obtener_*` despues del
+mutador, no hace falta el refresh explicito.
+
+**Auditoria 2026-10-12:** se encontraron 14 endpoints con el patron
+riesgoso en `routes.py`. Todos corregidos. Si agregas un endpoint nuevo,
+agrega el `await db.refresh` si sigue este patron.
+
+Patron canonico:
+
+    @router_algo.patch("/{id}")
+    async def actualizar_x(id, data, user, db):
+        obj = await services.actualizar_x(db, id, user, data)
+        await db.refresh(obj)   # <-- evita MissingGreenlet
+        return XResponse.model_validate(obj)
 y marcaba la orden como RECHAZADA. Los tests lo detectaron.
 
 ### 4.3. Tests con DB (pytest)

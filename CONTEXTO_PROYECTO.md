@@ -57,6 +57,47 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 6) - Tests HTTP de turnos + auditoria MissingGreenlet
+
+**3er archivo de tests HTTP de oficios. Bug real + auditoria defensiva.**
+
+- **Test file nuevo** `backend/tests/modules/oficios/test_routes_turnos.py`
+  (commit `99830a8`): 13 tests HTTP.
+  - State machine (pendiente -> confirmado valido, pendiente -> completado
+    invalido 409).
+  - Editar/cancelar por cliente.
+  - Agenda del taller.
+  - Cambiar estado/rechazar por prestador.
+  - Ownership en 4 endpoints.
+- **Bug real** `MissingGreenlet` en 4 endpoints de turnos (commit `ba1d185`):
+  - `PATCH /mis-turnos/{id}`, `POST /mis-turnos/{id}/cancelar`,
+    `POST /mis-prestadores/{pid}/turnos/{id}/estado`,
+    `POST /mis-prestadores/{pid}/turnos/{id}/rechazar`.
+  - Causa: el service hacia `db.flush()` y despues el route handler hacia
+    `TurnoResponse.model_validate(turno)` sin `await db.refresh(turno)`.
+    Post-flush, `turno.updated_at` dispara IO lazy -> MissingGreenlet.
+  - **Impacto en produccion**: 500 en cualquier edicion/cancelacion de turno.
+- **Auditoria del patron** (misma commit): 10 endpoints mas tenian el mismo
+  riesgo. Agregado `await db.refresh(obj)` en:
+  - `crear_categoria_mecanica`, `actualizar_categoria_mecanica`
+  - `crear_repuesto`, `actualizar_repuesto`
+  - `agregar_item`, `actualizar_item`
+  - `crear_turno`
+  - `actualizar_garantia`, `crear_garantia`
+  - `crear_recordatorio`
+- **Patron seguro confirmado:** los endpoints de ordenes que ya usan
+  `orden = await services.obtener_orden(db, orden.id)` despues de cada
+  mutacion estan bien (porque `obtener_orden` usa `selectinload` +
+  `populate_existing`).
+
+- **Suite total: 318 tests verdes** (305 + 13).
+- **3 archivos de tests HTTP agregados hoy**, **4 bugs reales encontrados**:
+  1. `NameError: ObjetoServicio` (recordatorios) - 3a5941b
+  2. `MissingGreenlet` en actualizar_vehiculo - 58f94a1
+  3. Bug de seguridad: 6 endpoints de ordenes sin validar owner - 238bfb8
+  4. `MissingGreenlet` en 4 endpoints de turnos + 10 endpoints mas con el
+     mismo riesgo - ba1d185
+
 ### 2026-10-12 (cont. 5) - BUG DE SEGURIDAD en endpoints de ordenes + tests HTTP
 
 **Hallazgo critico: bug de autorizacion en 6 endpoints de ordenes.**
