@@ -57,6 +57,46 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 7) - Cobertura HTTP completa de M1-M4 + cierre de sesion
+
+**4to y ultimo archivo de tests HTTP de oficios. Cobertura M1-M4 al 100%.**
+
+- **Test file nuevo** `backend/tests/modules/oficios/test_routes_garantias.py`
+  (commit `fc2d48f`): 6 tests HTTP.
+  - GET cliente (con/sin garantia).
+  - **Test de integracion del wire** `cambiar_estado -> generar_garantia_automatica`
+    al pasar a ENTREGADO (nada mas cubria este wire end-to-end).
+  - GET/POST prestador.
+  - Ownership (cliente y prestador ajenos).
+- **Sin bugs nuevos** — garantias ya validaba ownership correctamente.
+
+**Suite total del proyecto: 324 tests verdes** (era 272 al inicio de la sesion).
+
+**Estado final de tests HTTP por modulo:**
+| Modulo | Archivo | Tests |
+|---|---|---|
+| Recordatorios | test_routes_recordatorios.py | 5 |
+| Vehiculos | test_routes_vehiculos.py | 10 |
+| Ordenes | test_routes_ordenes.py | 18 |
+| Turnos | test_routes_turnos.py | 13 |
+| Garantias | test_routes_garantias.py | 6 |
+| **Total oficios** | | **52** |
+
+**Bugs reales encontrados en la sesion (4):**
+1. `NameError: ObjetoServicio` (3 endpoints de recordatorios) - 3a5941b
+2. `MissingGreenlet` en actualizar_vehiculo - 58f94a1
+3. **Bug de seguridad**: 6 endpoints de ordenes sin validar owner - 238bfb8
+4. `MissingGreenlet` en 4 endpoints de turnos + 10 endpoints mas con el
+   mismo riesgo (auditoria) - ba1d185
+
+**Cobertura HTTP de M1-M4 del modulo oficios: CERRADA.**
+- M5 (fotos + notificaciones + reportes) queda pendiente, con su propia
+  tanda de tests HTTP al cerrarse.
+
+**Proximos pasos:**
+1. Push FCM real en worker de recordatorios (hoy solo loguea).
+2. M5: fotos + notificaciones in-app + reportes.
+
 ### 2026-10-12 (cont. 6) - Tests HTTP de turnos + auditoria MissingGreenlet
 
 **3er archivo de tests HTTP de oficios. Bug real + auditoria defensiva.**
