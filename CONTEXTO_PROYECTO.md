@@ -24,6 +24,45 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-12 (cont.) - Modulo oficios Fase M4 backend (garantias + recordatorios)
+
+**Backend M4 completo. Total oficios: 131 tests verdes.**
+
+- **Tabla `garantias`**: tipo (mano_obra/repuesto/completo), duracion_dias,
+  fecha_inicio/fin, cobertura, condiciones. Asociada a orden entregada.
+- **Tabla `recordatorios`**: tipo (km/fecha/evento), condicion JSONB, mensaje,
+  enviado, fecha_envio. Asociada a objeto_servicio (vehiculo).
+- **Auto-generacion de garantia al entregar orden**: wired en
+  `services.cambiar_estado()`. Cuando la orden pasa a ENTREGADO, se genera
+  automaticamente una garantia COMPLETO de 30 dias. Idempotente (si ya existe,
+  la retorna). Configurable a futuro (por categoria de servicio).
+- **6 services de garantias**: crear, obtener por orden (activa), actualizar
+  (con recalculo de fecha_fin), generar_garantia_automatica (idempotente).
+- **6 services de recordatorios**: crear, listar por objeto, eliminar (soft),
+  marcar como enviado, buscar pendientes (para worker), crear batch.
+- **Endpoints (~9 nuevos)**:
+  - Cliente: `GET /mis-ordenes/{id}/garantia`,
+    CRUD `/mis-vehiculos/{oid}/recordatorios` (listar, crear, actualizar,
+    eliminar).
+  - Prestador: `GET /mis-prestadores/{id}/ordenes/{oid}/garantia`,
+    `POST .../garantia` (crear/actualizar garantia manual).
+- **Migracion** `de89315a2610`.
+- **12 tests nuevos** (`test_services_garantias.py`): auto-generacion,
+  idempotencia, 409 en no-entregada, actualizacion con recalculo, CRUD
+  recordatorios, busqueda de pendientes.
+- **Pendiente M4**: worker APScheduler que revisa recordatorios cada X horas
+  y los envia (no implementado aun), frontend de garantias + recordatorios.
+
+**Roadmap del modulo oficios:**
+- M1 (objetos_servicio + vehiculos): ✅ COMPLETA
+- M2 (ordenes + state machine): ✅ COMPLETA
+- M3 (turnos + agenda): ✅ COMPLETA
+- M4 (garantias + recordatorios): ✅ Backend completo — worker + frontend pendientes
+- M5 (fotos + notificaciones + reportes): ⏳
+
+**Commits recientes:**
+- `6a2b7eb` feat(oficios): M4 backend - garantias + recordatorios
+- `b4288cf` test: conftest actualizado con turnos + garantias + recordatorios
 ### 2026-10-12 - Modulo oficios Fases M3 (turnos) + mejora UX formulario de ordenes
 
 **Estado del modulo oficios: M1 + M2 + M3 completas (backend + frontend + tests).**
