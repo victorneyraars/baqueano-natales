@@ -92,15 +92,23 @@ class _NotifCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: InkWell(
         onTap: () async {
-          if (notif.estado != 'abierta') {
-            try {
-              await ref
-                  .read(notificacionesRepositoryProvider)
-                  .marcarAbierta(notif.id);
-              ref.invalidate(misNotificacionesProvider);
-            } catch (_) {
-              // Best-effort
-            }
+          if (notif.estado == 'abierta') return;
+          // Capturar el messenger ANTES del await/invalidate
+          // (el context puede desmontarse despues del rebuild).
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            await ref
+                .read(notificacionesRepositoryProvider)
+                .marcarAbierta(notif.id);
+            ref.invalidate(misNotificacionesProvider);
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('Notificacion marcada como leida'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          } catch (_) {
+            // Best-effort: no rompe el flujo si falla
           }
         },
         child: Padding(
