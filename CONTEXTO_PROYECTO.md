@@ -3,6 +3,10 @@
 > **Última actualización:** 2026-10-10
 > **Propósito:** Documento maestro que resume el estado completo del proyecto para retomar el trabajo en cualquier momento sin perder contexto.
 
+> **Ver también:**
+> - `docs/OPERATIVA_DEV.md` — metodología de trabajo, patrones canónicos de comandos, reglas por dominio, workflow dual-repo y reglas de oro.
+> - `docs/SERVER_CHEATSHEET.md` — comandos rápidos, credenciales, gotchas del server.
+
 ---
 
 ## 📋 Changelog reciente
