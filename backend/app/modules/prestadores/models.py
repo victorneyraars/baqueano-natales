@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum as SQLEnum,
     ForeignKey,
@@ -369,6 +370,12 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         lazy="selectin",
         order_by="PrestadorServicio.orden, PrestadorServicio.nombre",
     )
+    reviews: Mapped[list["Review"]] = relationship(
+        back_populates="prestador",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="Review.created_at.desc()",
+    )
     fotos_trabajos: Mapped[list["FotoTrabajo"]] = relationship(
         back_populates="prestador",
         cascade="all, delete-orphan",
@@ -534,4 +541,81 @@ class FotoTrabajo(TimestampMixin, Base):
         return (
             f"<FotoTrabajo(prestador_id={self.prestador_id}, "
             f"orden={self.orden})>"
+        )
+
+# =========================================================
+# M6: Reviews (calificaciones del cliente al prestador)
+# =========================================================
+class Review(TimestampMixin, SoftDeleteMixin, Base):
+    """Calificacion de un cliente a un prestador, ligada a UNA orden.
+
+    Reglas de negocio:
+    - Una sola review por orden (UniqueConstraint en orden_id).
+    - Solo el cliente dueno de la orden puede calificar.
+    - Solo se puede calificar si la orden esta ENTREGADO.
+    - Rating 1-5 (CheckConstraint).
+    - El prestador puede responder una vez (respuesta_prestador +
+      respuesta_en). No editable despues.
+    - Los denormalizados calificacion_promedio + total_resenas del
+      Prestador se recalculan en el service al crear/editar/borrar.
+    """
+
+    __tablename__ = "reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "rating >= 1 AND rating <= 5",
+            name="ck_review_rating",
+        ),
+        UniqueConstraint("orden_id", name="uq_review_orden"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    cliente_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    orden_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Una sola review por orden (UNIQUE)",
+    )
+
+    rating: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="1 a 5 estrellas",
+    )
+    comentario: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Respuesta del prestador (una sola, no editable)
+    respuesta_prestador: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    respuesta_en: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relaciones
+    prestador: Mapped[Prestador] = relationship(back_populates="reviews")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Review(prestador_id={self.prestador_id}, "
+            f"rating={self.rating})>"
         )

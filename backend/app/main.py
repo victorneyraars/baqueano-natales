@@ -28,6 +28,11 @@ from app.modules.comercios.routes import (
 from app.modules.comercios.routes import (
     router_publico as comercios_publico_router,
 )
+from app.modules.prestadores.routes_reviews import (
+    router_reviews_cliente as prestadores_reviews_cliente_router,
+    router_reviews_prestador as prestadores_reviews_prestador_router,
+    router_reviews_publico as prestadores_reviews_publico_router,
+)
 from app.modules.prestadores.routes import (
     router_admin_categorias as prestadores_admin_categorias_router,
 )
@@ -170,6 +175,9 @@ app.include_router(oficios_fotos_cliente_router, prefix="/api/v1")
 app.include_router(oficios_fotos_prestador_router, prefix="/api/v1")
 app.include_router(oficios_fotos_archivo_router, prefix="/api/v1")
 app.include_router(oficios_reportes_prestador_router, prefix="/api/v1")
+app.include_router(prestadores_reviews_cliente_router, prefix="/api/v1")
+app.include_router(prestadores_reviews_prestador_router, prefix="/api/v1")
+app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
