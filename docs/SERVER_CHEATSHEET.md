@@ -390,3 +390,23 @@ Endpoints backend consumidos:
 13. **CRLF rompe git log -3**: usar 'git log --oneline' o Python via stdin.
 14. **CRLF rompe git diff --cached --name-only**: usar 'git status' o 'git diff --cached' sin flags.
 15. **Set-Content de PowerShell 5.1 escribe en Windows-1252**: rompe emojis y acentos al editar .md. Usar [System.IO.File]::WriteAllText con UTF8Encoding($false).
+
+16. **`docker compose up -d backend` no siempre recrea el container**: si el
+    hash del Dockerfile/compose no cambio y solo se edito un archivo montado
+    como volumen, Docker deja el container como "Running" en vez de "Recreated"
+    -> el codigo nuevo NO se carga. En ese caso usar
+    `docker compose restart backend` (mata el proceso y lo reinicia limpio).
+17. **`touch app/main.py` no siempre dispara hot reload de uvicorn**: aunque
+    uvicorn corre con `--reload`, hay casos (mount de volumen + editor que
+    escribe de forma atomica) en que inotify no detecta el cambio. No confiar
+    en el hot reload: reiniciar el backend con `docker compose restart backend`.
+18. **Editar archivos con acentos/emojis desde PowerShell: NO usar Python via
+    stdin**: PowerShell 5.1 lee stdin en Windows-1252 y rompe los caracteres
+    no-ASCII silenciosamente (el archivo queda con `?` en lugar de `á`, `é`,
+    `ñ`, `📋`, etc.). El patron correcto es:
+    1. Escribir el script Python a un archivo temporal con
+       `[System.IO.File]::WriteAllText($path, $pyContent, (New-Object System.Text.UTF8Encoding($false)))`.
+    2. Ejecutar `python archivo_temporal.py` (Python lee el archivo como UTF-8).
+    3. Borrar el archivo temporal.
+    Verificar SIEMPRE con `Select-String -Path archivo.md -Pattern 'acentuada'`
+    despues de editar.

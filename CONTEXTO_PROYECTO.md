@@ -1,6 +1,6 @@
 # Baqueano Natales — Contexto Completo del Proyecto
 
-> **Última actualización:** 2026-10-10
+> **Última actualización:** 2026-10-12
 > **Propósito:** Documento maestro que resume el estado completo del proyecto para retomar el trabajo en cualquier momento sin perder contexto.
 
 > **Ver también:**
@@ -10,6 +10,52 @@
 ---
 
 ## 📋 Changelog reciente
+
+### 2026-10-12 (cont. 3) - M4 frontend verificado end-to-end + fix crítico ObjetoServicio
+
+**Smoke test visual de M4 + bug encontrado en producción.**
+
+- **Bug crítico encontrado y arreglado** (`3a5941b`):
+  - `routes.py` usaba `ObjetoServicio` en `_validar_objeto_del_usuario` sin
+    importarlo -> los 3 endpoints de recordatorios (GET x2 + POST) fallaban
+    con `NameError`.
+  - Fix: agregar `ObjetoServicio` al import de `models`.
+  - **No lo detectaron los 272 tests** porque no hay tests HTTP que ejerciten
+    `routes._validar_objeto_del_usuario`. Deuda: agregar tests de integración.
+
+- **Smoke test M4 verificado visualmente en emulador Android 14**:
+  - `MisRecordatoriosScreen` carga correctamente (GET sin filtro y con
+    `incluir_enviados=true`).
+  - Crear recordatorio desde el FAB -> 201 -> aparece en la lista con
+    SnackBar "Recordatorio creado".
+  - Badge "Enviado 12/10/2026" se muestra en el recordatorio procesado por
+    el worker APScheduler -> **worker M4 end-to-end funcionando** (no solo
+    loguea: persiste `enviado=True` + `fecha_envio`).
+  - `GarantiaCard` renderiza perfecto en el detalle de la orden entregada
+    (tipo, vigencia, duración, cobertura, condiciones).
+  - `DetalleMiOrdenScreen` con 3 items + totales ($87.000) + timeline de
+    8 eventos, todo OK.
+
+- **Seed de smoke test en DB de producción** (para retomar):
+  - ObjetoServicio `74ae2fcb-4e9d-42b1-a04f-6d92f34a3af7` (alias
+    "Auto de prueba smoke M4").
+  - Vehiculo `b408e708-5a27-4812-bdd2-e5e4fd74e23a` (patente SMOKE01).
+  - Orden `494b063f-99fc-424c-a6df-87689fcc0c45` / `OT-2026-9999` en
+    estado `entregado` (3 items + 8 eventos de historial + garantía).
+  - 2 recordatorios (uno ya procesado por el worker, uno nuevo de prueba).
+
+- **Gotcha nuevo documentado**: `docker compose restart backend` es más
+  confiable que `docker compose up -d backend` cuando el hash del container
+  no cambia (el `up -d` muestra "Running" en vez de "Recreated" y no recarga
+  el código). El `touch app/main.py` **tampoco** disparó hot reload de
+  uvicorn en este caso.
+
+- **Estado final del módulo oficios**:
+  - M1, M2, M3: completas (backend + frontend + tests)
+  - M4: **backend + frontend + worker, todos verificados end-to-end**
+  - M5: fotos + notificaciones in-app + reportes
+  - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
+    `enviado=True` y loguea, pero no manda push al usuario).
 
 ### 2026-10-11 (cont.) - Etapa 9b: Publicar afiches SVG end-to-end
 - Backend completo para generar PNG + publicar afiches en redes:
