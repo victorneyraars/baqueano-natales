@@ -141,6 +141,7 @@ async def db(test_engine, _init_schema) -> AsyncSession:
                 "publicaciones_sociales, tokens_sociales, "
                 "cuentas_sociales, config_social, "
                 "orden_historial, orden_items, ordenes_trabajo, "
+                "turnos, garantias, recordatorios, "
                 "vehiculos, objetos_servicio, "
                 "mecanica_repuestos, mecanica_categorias_servicio "
                 "RESTART IDENTITY CASCADE"
