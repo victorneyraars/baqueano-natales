@@ -11,6 +11,8 @@ from app.modules.notificaciones.schemas import (
     EnvioMasivoResponse,
     NotificacionAdminCreate,
     NotificacionAdminResponse,
+    RateLimitConfigResponse,
+    RateLimitConfigUpdate,
     StatsResponse,
 )
 
@@ -76,3 +78,33 @@ async def stats_notificaciones(
     """Dashboard agregado: tasas de entrega y apertura, top 5, por tipo."""
     result = await services.stats_dashboard(db, desde=desde, hasta=hasta)
     return StatsResponse(**result)
+
+
+@router.get(
+    "/rate-limits",
+    response_model=list[RateLimitConfigResponse],
+    summary="Listar configs de rate limit",
+)
+async def listar_rate_limits_endpoint(
+    admin: AdminUser,
+    db: DbSession,
+) -> list[RateLimitConfigResponse]:
+    """Devuelve la config actual de rate limit por tipo."""
+    rows = await services.listar_rate_limits(db)
+    return [RateLimitConfigResponse.model_validate(r) for r in rows]
+
+
+@router.patch(
+    "/rate-limits/{tipo}",
+    response_model=RateLimitConfigResponse,
+    summary="Actualizar rate limit de un tipo",
+)
+async def actualizar_rate_limit_endpoint(
+    tipo: str,
+    data: RateLimitConfigUpdate,
+    admin: AdminUser,
+    db: DbSession,
+) -> RateLimitConfigResponse:
+    """Actualiza la config de rate limit de un tipo."""
+    config = await services.actualizar_rate_limit(db, tipo, data)
+    return RateLimitConfigResponse.model_validate(config)

@@ -110,3 +110,29 @@ class StatsResponse(BaseModel):
     por_estado: list[EstadoCount]
     por_tipo: list[TipoCount]
     top_5: list[TopNotificacion]
+
+
+# ==================== Rate limit ====================
+
+
+class RateLimitConfigResponse(BaseModel):
+    """Config de rate limit de un tipo."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    tipo: str
+    max_por_hora: int | None
+    max_por_dia: int | None
+    max_por_semana: int | None
+    min_intervalo_seg: int | None
+    strict: bool
+
+
+class RateLimitConfigUpdate(BaseModel):
+    """Update parcial de la config."""
+
+    max_por_hora: int | None = None
+    max_por_dia: int | None = None
+    max_por_semana: int | None = None
+    min_intervalo_seg: int | None = None
+    strict: bool | None = None

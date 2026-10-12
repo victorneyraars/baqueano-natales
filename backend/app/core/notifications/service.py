@@ -6,11 +6,11 @@ Es el punto de entrada recomendado. Los providers se inyectan, lo que
 permite agregar APNs/SMS/email sin cambiar este archivo.
 """
 import logging
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import AsyncSessionLocal
@@ -20,6 +20,7 @@ from app.core.notifications.models import (
     NotificationLog,
     Plataforma,
     PreferenciaNotificacion,
+    RateLimitConfig,
     TipoNotificacion,
 )
 from app.core.notifications.providers.base import NotificationProvider, SendResult
@@ -83,6 +84,16 @@ class NotificationService:
                 await self._log_skipped(db, usuario_id, titulo, body, tipo, "quiet_hours")
                 await db.commit()
                 return SendResult(success=False, error_code="QUIET_HOURS")
+
+            # 1c. Rate limiting (anti-fatiga). No aplica a tipos criticos
+            # (sistema, campana) salvo que la config tenga strict=True.
+            permitido, razon = await self._check_rate_limit(db, usuario_id, tipo)
+            if not permitido:
+                await self._log_skipped(
+                    db, usuario_id, titulo, body, tipo, f"rate_limit:{razon}",
+                )
+                await db.commit()
+                return SendResult(success=False, error_code="RATE_LIMITED")
 
         # 2. Tokens activos
         tokens = await self._get_tokens_activos(db, usuario_id)
@@ -153,6 +164,88 @@ class NotificationService:
             return False
 
     # ==================== Helpers internos ====================
+
+    # ==================== Rate limiting ====================
+
+    # Tipos considerados criticos: no se rate-limitean salvo strict=True.
+    _TIPOS_CRITICOS = frozenset({
+        TipoNotificacion.SISTEMA,
+        TipoNotificacion.CAMPANA,
+    })
+
+    async def _get_rate_limit_config(
+        self, db: AsyncSession, tipo: TipoNotificacion
+    ) -> RateLimitConfig | None:
+        stmt = select(RateLimitConfig).where(RateLimitConfig.tipo == tipo.value)
+        return (await db.execute(stmt)).scalar_one_or_none()
+
+    async def _check_rate_limit(
+        self, db: AsyncSession, usuario_id: UUID, tipo: TipoNotificacion
+    ) -> tuple[bool, str | None]:
+        """Devuelve (permitido, razon_si_no).
+
+        Reglas:
+        - Sin config para el tipo -> permitido.
+        - Tipo critico (sistema/campana) + config.strict=False -> permitido.
+        - min_intervalo_seg: si la ultima notif del mismo tipo fue hace menos, bloquea.
+        - max_por_hora/dia/semana: si ya se enviaron N en la ventana, bloquea.
+        - Los logs con estado=SKIPPED no cuentan (no fueron enviados).
+        """
+        config = await self._get_rate_limit_config(db, tipo)
+        if config is None:
+            return True, None
+
+        if tipo in self._TIPOS_CRITICOS and not config.strict:
+            return True, None
+
+        ahora = datetime.now(timezone.utc)
+
+        # min_intervalo_seg: chequear la ultima notif enviada del mismo tipo
+        if config.min_intervalo_seg is not None:
+            stmt = (
+                select(NotificationLog.creado_en)
+                .where(
+                    NotificationLog.usuario_id == usuario_id,
+                    NotificationLog.tipo == tipo,
+                    NotificationLog.estado != EstadoNotificacion.SKIPPED,
+                )
+                .order_by(NotificationLog.creado_en.desc())
+                .limit(1)
+            )
+            ultima = (await db.execute(stmt)).scalar_one_or_none()
+            if ultima is not None:
+                delta = (ahora - ultima).total_seconds()
+                if delta < config.min_intervalo_seg:
+                    return False, "min_intervalo"
+
+        # Helper para contar en una ventana
+        async def _contar(ventana_horas: int) -> int:
+            desde = ahora - timedelta(hours=ventana_horas)
+            stmt = (
+                select(func.count())
+                .select_from(NotificationLog)
+                .where(
+                    NotificationLog.usuario_id == usuario_id,
+                    NotificationLog.tipo == tipo,
+                    NotificationLog.creado_en >= desde,
+                    NotificationLog.estado != EstadoNotificacion.SKIPPED,
+                )
+            )
+            return (await db.execute(stmt)).scalar_one()
+
+        if config.max_por_hora is not None:
+            if await _contar(1) >= config.max_por_hora:
+                return False, "max_por_hora"
+
+        if config.max_por_dia is not None:
+            if await _contar(24) >= config.max_por_dia:
+                return False, "max_por_dia"
+
+        if config.max_por_semana is not None:
+            if await _contar(24 * 7) >= config.max_por_semana:
+                return False, "max_por_semana"
+
+        return True, None
 
     async def _get_or_create_prefs(
         self, db: AsyncSession, usuario_id: UUID

@@ -298,3 +298,36 @@ async def stats_dashboard(db: AsyncSession, desde=None, hasta=None) -> dict:
         "por_tipo": por_tipo,
         "top_5": top_5,
     }
+
+
+# ==================== Rate limit (admin) ====================
+
+
+async def listar_rate_limits(db: AsyncSession) -> list:
+    """Lista todas las configs de rate limit."""
+    from app.core.notifications.models import RateLimitConfig
+    from sqlalchemy import select
+
+    stmt = select(RateLimitConfig).order_by(RateLimitConfig.tipo)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def actualizar_rate_limit(db: AsyncSession, tipo: str, data) -> object:
+    """Actualiza la config de un tipo. Lanza 404 si no existe."""
+    from fastapi import HTTPException, status
+    from app.core.notifications.models import RateLimitConfig
+    from sqlalchemy import select
+
+    stmt = select(RateLimitConfig).where(RateLimitConfig.tipo == tipo)
+    config = (await db.execute(stmt)).scalar_one_or_none()
+    if config is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No hay config de rate limit para tipo={tipo}",
+        )
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(config, key, value)
+    await db.flush()
+    await db.refresh(config)
+    return config

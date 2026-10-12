@@ -140,3 +140,35 @@ class NotificationLog(Base):
     )
     enviado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     abierto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RateLimitConfig(Base):
+    """Rate limiting por tipo de notificacion (anti-fatiga del usuario).
+
+    Cada fila configura los limites para UN tipo. Si un tipo no tiene
+    fila, no se aplica limite.
+
+    Convenciones:
+    - max_por_hora/dia/semana: limite de notifs en la ventana. NULL = sin limite.
+    - min_intervalo_seg: minimo de segundos entre notifs consecutivas del mismo tipo. NULL = sin limite.
+    - strict: si True, aplica los limites TAMBIEN a tipos criticos (sistema, confirmaciones).
+    """
+    __tablename__ = "rate_limit_config"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    tipo: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+
+    max_por_hora: Mapped[int | None] = mapped_column(nullable=True)
+    max_por_dia: Mapped[int | None] = mapped_column(nullable=True)
+    max_por_semana: Mapped[int | None] = mapped_column(nullable=True)
+    min_intervalo_seg: Mapped[int | None] = mapped_column(nullable=True)
+
+    strict: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        server_default=func.now(), onupdate=func.now(),
+    )
