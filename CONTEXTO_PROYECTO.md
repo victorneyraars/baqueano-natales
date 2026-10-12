@@ -11,6 +11,57 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 21) - M5.1 fotos de ordenes (backend completo)
+
+**Primer slice de M5 del modulo oficios: fotos con estandares de industria.**
+
+- **Modelo `OrdenFoto`** content-addressable (SHA-256 del contenido):
+  - 3 variantes server-side: `original` (2048px), `medium` (1024px), `thumb` (256px).
+  - `blurhash` (placeholder visual en cliente).
+  - `storage_backend` + `storage_key` (forward compat S3/R2 sin migrar).
+  - `subido_por_id` + `subido_por_rol` (snapshot).
+  - `item_id` opcional (foto asociada a un item del presupuesto).
+  - `fecha_captura` (EXIF) + `metadata_extra` JSONB.
+  - Soft delete + GC futuro.
+- **Storage abstracto** `FotoStorage` (ABC) + `LocalFotoStorage`:
+  - Mismo patron que `AvatarStorage`.
+  - Reusa las excepciones de `base.py` (evita duplicacion que rompia el `except`).
+  - EXIF stripping + orientation transpose.
+  - MIME por magic bytes (`filetype`), no por extension.
+  - MAX_SIZE: 15 MB. Formatos: JPEG, PNG, WebP.
+- **Service** (`services_fotos.py`):
+  - `subir_foto`: valida ownership + rate limit + procesa + dedup logico por hash (misma orden) + inserta + registra en historial.
+  - Rate limit: 30/h por orden + 100/h por usuario (SQL directo, sin slowapi).
+  - `listar_fotos`, `obtener_foto_para_servir`, `leer_variante`, `eliminar_foto`.
+- **Endpoints** (5):
+  - `POST /api/v1/mis-ordenes/{oid}/fotos` (cliente)
+  - `GET  /api/v1/mis-ordenes/{oid}/fotos?momento=...` (cliente)
+  - `DELETE /api/v1/mis-ordenes/{oid}/fotos/{fid}` (cliente)
+  - `POST/GET/DELETE /api/v1/mis-prestadores/{pid}/ordenes/{oid}/fotos` (prestador)
+  - `GET /api/v1/ordenes/fotos/{fid}/archivo/{variante}` (autenticado, valida ownership)
+  - **NO se sirve por nginx** (privacidad): todo pasa por endpoint autenticado.
+- **Migraciones**: `ee4752206777` (tabla + enum `momento_foto`) + `a1b2c3d4e5f6` (drop unique constraint redundante que impedia subir la misma foto a 2 ordenes).
+- **Fix critico `env.py`**: faltaba import de `app.core.notifications.models` -> Alembic queria dropear `fcm_tokens`, `notification_logs`, `preferencias_notificacion`, `rate_limit_config` en cada autogenerate. Ahora importa.
+- **12 tests HTTP** (`test_routes_fotos.py`):
+  - Upload png/jpeg OK, MIME invalido, momento invalido, sin archivo.
+  - Dedup por hash (mismo contenido -> mismo row).
+  - Listar con/sin filtro por momento.
+  - Servir variante thumb (verifica magic bytes JPEG) + variante invalida + foto inexistente.
+  - Tercero no sube a orden ajena (403).
+- **Bug real detectado por tests**: dos definiciones de `StorageError` (en `base.py` y `foto_base.py`) -> el `except StorageError` no capturaba. Fix: `foto_base.py` reusa de `base.py`.
+- **Suite total: 385 passed, 0 warnings.**
+
+**Pendiente de M5:**
+- M5.1 frontend Flutter: galeria + upload (`image_picker`).
+- M5.2: notificaciones in-app en cambio de estado (reusar `NotificationService` con `canal=in_app`).
+- M5.3: reportes del taller.
+
+**Gotchas nuevos documentados:**
+- `$py | ssh "cat > /tmp/file.py"` en PowerShell 5.1 **no es confiable** para contenido > 1 KB (se trunca silenciosamente). **Fix: base64**. Documentado en OPERATIVA_DEV 3.7.
+- Alembic autogenerate: si un modulo nuevo no esta importado en `env.py`, va a querer dropear sus tablas. **Siempre verificar que no aparezca `Detected removed` antes de aplicar**.
+
+
+
 ### 2026-10-12 (cont. 20) - Cierre WIP deep linking: dedup FCM + back button
 
 **Los 3 bugs del WIP de deep linking resueltos + 4 gotchas nuevos.**

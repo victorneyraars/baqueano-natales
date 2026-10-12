@@ -151,12 +151,32 @@ unica del nuevo contenido esta presente en el archivo.
 
 **Sintoma:** el comando termina sin error, pero el archivo NO cambio.
 
-**Mitigacion (patron canonico):**
+**Mitigacion (patron canonico - ACTUALIZADO 2026-10-12):**
+
+**Regla de oro: para scripts Python > 1 KB, SIEMPRE usar base64.** El
+pipe `$py | ssh "cat > /tmp/x.py"` se trunca silenciosamente con
+contenido largo (>1 KB), y ademas puede romperse por CRLF o por
+caracteres especiales. Base64 es a prueba de balas.
+
+Patron canonico (Windows PowerShell):
+
+    $py = @'
+    # script python aqui
+    '@
+    $py = $py -replace "`r`n", "`n"
+    $b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($py))
+    ssh deploy@104.129.59.151 "echo '$b64' | base64 -d > /tmp/m.py && python3 /tmp/m.py; rm -f /tmp/m.py"
+
+Para correr **dentro del container** (con sus deps, ej. blurhash):
+
+    ssh deploy@104.129.59.151 "echo '$b64' | base64 -d > /tmp/m.py && cd ~/baqueano-natales && docker compose exec -T backend python3 - < /tmp/m.py; rm -f /tmp/m.py"
+
+Patron viejo (funcionaba solo con scripts cortos):
 
 1. Escribir el script Python a un archivo temporal con
    `[System.IO.File]::WriteAllText($path, $pyContent, (New-Object System.Text.UTF8Encoding($false)))`.
 2. Ejecutar `python archivo_temporal.py`.
-3. **Verificar con `grep -c '<marca_unica>' archivo_editado`** — debe
+3. **Verificar con `grep -c '<marca_unica>' archivo_editado'`** — debe
    devolver al menos `1`.
 4. Borrar el temporal.
 
