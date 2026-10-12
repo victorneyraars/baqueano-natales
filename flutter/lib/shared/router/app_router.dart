@@ -29,6 +29,8 @@ import 'package:baqueano_natales/features/promocion/presentation/screens/admin_p
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_composer_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_historial_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_stats_screen.dart';
+import 'package:baqueano_natales/features/notificaciones/presentation/screens/mis_notificaciones_screen.dart';
+import 'package:baqueano_natales/features/notificaciones/presentation/screens/preferencias_notificacion_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -365,6 +367,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             final id = state.pathParameters['id']!;
             return DetalleMiTurnoScreen(turnoId: id);
           },
+        ),
+
+        // Notificaciones del usuario
+        GoRoute(
+          path: '/mis-notificaciones',
+          name: 'mis-notificaciones',
+          builder: (context, state) => const MisNotificacionesScreen(),
+        ),
+        GoRoute(
+          path: '/mis-notificaciones/preferencias',
+          name: 'mis-notificaciones-preferencias',
+          builder: (context, state) =>
+              const PreferenciasNotificacionScreen(),
         ),
         GoRoute(
           path: '/mis-prestadores/:id/turnos',

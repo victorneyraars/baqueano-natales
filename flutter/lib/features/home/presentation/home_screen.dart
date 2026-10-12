@@ -168,6 +168,13 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/mis-turnos'),
             ),
 
+            _FeatureCard(
+              icon: Icons.notifications_outlined,
+              title: 'Mis notificaciones',
+              subtitle: 'Recordatorios y avisos recientes',
+              onTap: () => context.push('/mis-notificaciones'),
+            ),
+
             const SizedBox(height: 24),
 
             // --- Descubrí ---

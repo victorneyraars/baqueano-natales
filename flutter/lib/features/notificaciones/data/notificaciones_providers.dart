@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/notificaciones/data/notificaciones_repository.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/notificacion.dart';
+import 'package:baqueano_natales/features/notificaciones/domain/preferencia_notificacion.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/stats.dart';
 
 /// Provider del repositorio (inyectable para tests).
@@ -59,5 +60,26 @@ final statsNotificacionesProvider = FutureProvider<StatsNotificacion>(
   (ref) async {
     final repo = ref.read(notificacionesRepositoryProvider);
     return repo.stats();
+  },
+);
+
+
+// ==================== Endpoints del usuario ====================
+
+
+/// Notificaciones del usuario autenticado.
+final misNotificacionesProvider = FutureProvider<List<NotificacionAdmin>>(
+  (ref) async {
+    final repo = ref.read(notificacionesRepositoryProvider);
+    return repo.misNotificaciones();
+  },
+);
+
+
+/// Preferencias de notificacion del usuario.
+final misPreferenciasProvider = FutureProvider<PreferenciaNotificacion>(
+  (ref) async {
+    final repo = ref.read(notificacionesRepositoryProvider);
+    return repo.misPreferencias();
   },
 );

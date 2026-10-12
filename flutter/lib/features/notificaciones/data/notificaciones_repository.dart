@@ -15,6 +15,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/notificacion.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/segmento.dart';
+import 'package:baqueano_natales/features/notificaciones/domain/preferencia_notificacion.dart';
 import 'package:baqueano_natales/features/notificaciones/domain/stats.dart';
 
 class EnvioMasivoResult {
@@ -124,6 +125,106 @@ class NotificacionesRepository {
         },
       );
       return StatsNotificacion.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // ==================== Endpoints del usuario (no admin) ====================
+
+  /// Lista las notificaciones del usuario autenticado.
+  Future<List<NotificacionAdmin>> misNotificaciones({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/notificaciones',
+        queryParameters: {
+          'limit': limit,
+          'offset': offset,
+        },
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((e) => NotificacionAdmin.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Marca una notificacion como abierta/leida.
+  Future<void> marcarAbierta(String notifId) async {
+    try {
+      await _dio.post('/api/v1/notificaciones/$notifId/abierta');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Devuelve las preferencias de notificacion del usuario.
+  Future<PreferenciaNotificacion> misPreferencias() async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/usuarios/me/preferencias-notificacion',
+      );
+      return PreferenciaNotificacion.fromJson(
+        res.data as Map<String, dynamic>,
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Actualiza las preferencias (parcial). Devuelve las actualizadas.
+  Future<PreferenciaNotificacion> actualizarPreferencias({
+    bool? recordatorios,
+    bool? promociones,
+    bool? confirmaciones,
+    bool? sistema,
+    bool? quietHoursEnabled,
+    String? quietHoursInicio,
+    String? quietHoursFin,
+    String? timezone,
+  }) async {
+    try {
+      final res = await _dio.put(
+        '/api/v1/usuarios/me/preferencias-notificacion',
+        data: {
+          'recordatorios': ?recordatorios,
+          'promociones': ?promociones,
+          'confirmaciones': ?confirmaciones,
+          'sistema': ?sistema,
+          'quiet_hours_enabled': ?quietHoursEnabled,
+          'quiet_hours_inicio': ?quietHoursInicio,
+          'quiet_hours_fin': ?quietHoursFin,
+          'timezone': ?timezone,
+        },
+      );
+      return PreferenciaNotificacion.fromJson(
+        res.data as Map<String, dynamic>,
+      );
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
