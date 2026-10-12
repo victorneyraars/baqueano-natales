@@ -46,6 +46,7 @@ import 'package:baqueano_natales/features/oficios/presentation/screens/mis_recor
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_vehiculo_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_ordenes_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_orden_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/galeria_fotos_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/ordenes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_orden_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_orden_screen.dart';
@@ -432,6 +433,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
         GoRoute(
+          path: '/mis-ordenes/:id/fotos',
+          name: 'mi-orden-fotos',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return GaleriaFotosScreen(ordenId: id);
+          },
+        ),
+        GoRoute(
           path: '/mis-prestadores/:id/ordenes',
           name: 'ordenes-taller',
           builder: (context, state) {
@@ -454,6 +463,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             final id = state.pathParameters['id']!;
             final oid = state.pathParameters['oid']!;
             return DetalleOrdenTallerScreen(prestadorId: id, ordenId: oid);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/ordenes/:oid/fotos',
+          name: 'orden-taller-fotos',
+          builder: (context, state) {
+            final pid = state.pathParameters['id']!;
+            final oid = state.pathParameters['oid']!;
+            return GaleriaFotosScreen(ordenId: oid, prestadorId: pid);
           },
         ),
       GoRoute(

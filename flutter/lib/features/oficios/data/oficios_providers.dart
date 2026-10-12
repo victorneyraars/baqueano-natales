@@ -13,6 +13,7 @@ import 'package:baqueano_natales/features/oficios/domain/garantia.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
 import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
 import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
+import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
@@ -323,5 +324,67 @@ final recordatoriosProvider =
   return repo.listarRecordatorios(
     params.objetoId,
     incluirEnviados: params.incluirEnviados,
+  );
+});
+
+// =========================================================
+// M5.1: Fotos de orden
+// =========================================================
+class FotosDeMiOrdenParams {
+  const FotosDeMiOrdenParams({required this.ordenId, this.momento});
+
+  final String ordenId;
+  final MomentoFoto? momento;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FotosDeMiOrdenParams &&
+      other.ordenId == ordenId &&
+      other.momento == momento;
+
+  @override
+  int get hashCode => Object.hash(ordenId, momento);
+}
+
+final fotosDeMiOrdenProvider =
+    FutureProvider.family<List<OrdenFoto>, FotosDeMiOrdenParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarFotosDeMiOrden(
+    params.ordenId,
+    momento: params.momento,
+  );
+});
+
+class FotosDeOrdenPrestadorParams {
+  const FotosDeOrdenPrestadorParams({
+    required this.prestadorId,
+    required this.ordenId,
+    this.momento,
+  });
+
+  final String prestadorId;
+  final String ordenId;
+  final MomentoFoto? momento;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FotosDeOrdenPrestadorParams &&
+      other.prestadorId == prestadorId &&
+      other.ordenId == ordenId &&
+      other.momento == momento;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, ordenId, momento);
+}
+
+final fotosDeOrdenPrestadorProvider =
+    FutureProvider.family<List<OrdenFoto>, FotosDeOrdenPrestadorParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarFotosDeOrdenPrestador(
+    params.prestadorId,
+    params.ordenId,
+    momento: params.momento,
   );
 });

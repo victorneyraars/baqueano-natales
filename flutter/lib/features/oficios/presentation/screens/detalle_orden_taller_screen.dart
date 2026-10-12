@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
@@ -43,6 +44,13 @@ class _DetalleOrdenTallerScreenState
       appBar: AppBar(
         title: const Text('Orden'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined),
+            tooltip: 'Ver fotos',
+            onPressed: () => context.push(
+              '/mis-prestadores/${widget.prestadorId}/ordenes/${widget.ordenId}/fotos',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () =>

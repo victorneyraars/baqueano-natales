@@ -3,6 +3,8 @@
 /// Encapsula las llamadas HTTP al backend. No maneja estado.
 library;
 
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -11,6 +13,7 @@ import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/garantia.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
 import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
+import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
@@ -738,6 +741,161 @@ class OficiosRepository {
     try {
       await _dio.delete(
         '/api/v1/mis-vehiculos/$objetoId/recordatorios/$recId',
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+  // =========================================================
+  // M5.1: Fotos de orden
+  // =========================================================
+
+  /// Sube una foto a una orden (cliente dueno o admin).
+  Future<OrdenFoto> subirFoto({
+    required String ordenId,
+    required Uint8List bytes,
+    required String nombreArchivo,
+    required MomentoFoto momento,
+    String? itemId,
+    String? descripcion,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'archivo': MultipartFile.fromBytes(bytes, filename: nombreArchivo),
+        'momento': momento.value,
+        'item_id': ?itemId,
+        if (descripcion != null && descripcion.isNotEmpty)
+          'descripcion': descripcion,
+      });
+      final res = await _dio.post(
+        '/api/v1/mis-ordenes/$ordenId/fotos',
+        data: form,
+      );
+      return OrdenFoto.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Sube una foto a una orden (prestador dueno o admin).
+  Future<OrdenFoto> subirFotoPrestador({
+    required String prestadorId,
+    required String ordenId,
+    required Uint8List bytes,
+    required String nombreArchivo,
+    required MomentoFoto momento,
+    String? itemId,
+    String? descripcion,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'archivo': MultipartFile.fromBytes(bytes, filename: nombreArchivo),
+        'momento': momento.value,
+        'item_id': ?itemId,
+        if (descripcion != null && descripcion.isNotEmpty)
+          'descripcion': descripcion,
+      });
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/fotos',
+        data: form,
+      );
+      return OrdenFoto.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Lista las fotos de una orden (cliente dueno o admin).
+  Future<List<OrdenFoto>> listarFotosDeMiOrden(
+    String ordenId, {
+    MomentoFoto? momento,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-ordenes/$ordenId/fotos',
+        queryParameters: {
+          if (momento != null) 'momento': momento.value,
+        },
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((f) => OrdenFoto.fromJson(f as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Lista las fotos de una orden (prestador dueno o admin).
+  Future<List<OrdenFoto>> listarFotosDeOrdenPrestador(
+    String prestadorId,
+    String ordenId, {
+    MomentoFoto? momento,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/fotos',
+        queryParameters: {
+          if (momento != null) 'momento': momento.value,
+        },
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((f) => OrdenFoto.fromJson(f as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina (soft) una foto de una orden propia (cliente).
+  Future<void> eliminarFotoDeMiOrden(String ordenId, String fotoId) async {
+    try {
+      await _dio.delete('/api/v1/mis-ordenes/$ordenId/fotos/$fotoId');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina (soft) una foto de una orden (prestador).
+  Future<void> eliminarFotoDeOrdenPrestador(
+    String prestadorId,
+    String ordenId,
+    String fotoId,
+  ) async {
+    try {
+      await _dio.delete(
+        '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/fotos/$fotoId',
       );
     } on ApiException {
       rethrow;
