@@ -24,6 +24,40 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-12 (cont. 2) - M4 worker de recordatorios (APScheduler) + M4 backend 100%
+
+**M4 backend completo: garantias + recordatorios + worker automatico.**
+
+- **Worker in-process** (`oficios/worker.py`) con APScheduler (mismo patron
+  que el social worker):
+  - Revisa la tabla `recordatorios` cada 1 hora (configurable).
+  - Evalua condiciones:
+    - **KM**: compara `Vehiculo.kilometraje_actual` >= `km_umbral` (solo vehiculos).
+    - **FECHA**: compara `date.today()` >= `fecha`.
+    - **EVENTO**: siempre se envia (el evento lo dispara el sistema).
+  - Marca enviados los que cumplen; deja pendientes los que no.
+  - Nunca crashea el scheduler: cada error se loggea y aisla.
+- **2 settings nuevas** en `config.py`:
+  - `RECORDATORIOS_WORKER_ENABLED: bool = True`
+  - `RECORDATORIOS_WORKER_INTERVAL_SEC: int = 3600`
+- **Wire en `main.py` lifespan**: arranca/detiene junto al worker social.
+- **Test manual end-to-end validado**: 4 escenarios (KM sobre/bajo umbral,
+  fecha pasada/futura) -> 2 ENVIADOS + 2 PENDIENTES, sin errores.
+- **Commit** `822e145`.
+
+**Estado final del modulo oficios:**
+- M1 (objetos_servicio + vehiculos): ✅ COMPLETA (backend + frontend + tests)
+- M2 (ordenes + state machine): ✅ COMPLETA (backend + frontend + tests)
+- M3 (turnos + agenda): ✅ COMPLETA (backend + frontend + tests)
+- M4 (garantias + recordatorios + worker): ✅ **Backend completo** — frontend pendiente
+- M5 (fotos + notificaciones + reportes): ⏳
+
+**Pendiente para proxima sesion:**
+1. Frontend de M4 (garantias + recordatorios): ~4 pantallas + integraciones.
+2. Notificaciones push (FCM) para el worker de recordatorios (hoy solo loggea).
+3. Smoke test visual completo de M3 (reservar turno -> confirmar -> completar)
+   en emulador.
+4. M5 del roadmap: fotos + notificaciones + reportes.
 ### 2026-10-12 (cont.) - Modulo oficios Fase M4 backend (garantias + recordatorios)
 
 **Backend M4 completo. Total oficios: 131 tests verdes.**
