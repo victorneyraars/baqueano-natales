@@ -57,6 +57,36 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 12) - Notificaciones: preferencias + tracking (S3+S4)
+
+**Backend del sistema de notificaciones: 100% completo.**
+
+- **S4 - Preferencias del usuario** (commit `644feae`):
+  - `GET /api/v1/usuarios/me/preferencias-notificacion` (crea defaults).
+  - `PUT /api/v1/usuarios/me/preferencias-notificacion` (parcial).
+  - Schemas: `PreferenciaNotificacionResponse` + `PreferenciaNotificacionUpdate`.
+  - Validacion de `quiet_hours_*` con regex `HH:MM`.
+  - 7 tests.
+- **S3 - Tracking de entrega/apertura** (misma commit):
+  - Modulo nuevo `app/modules/notificaciones/`.
+  - `GET /api/v1/notificaciones` (historial del usuario).
+  - `POST /api/v1/notificaciones/{id}/recibida` (device confirma entrega).
+  - `POST /api/v1/notificaciones/{id}/abierta` (idempotente).
+  - Ownership validado (404 si notif ajena).
+  - `ORDER BY creado_en DESC, id DESC` (tie-breaker estable).
+  - 7 tests.
+- **Fix de deuda** (commit `38840d5`): mocks de `test_push_service.py`
+  actualizados al wrapper (los mocks viejos apuntaban a `app.core.push.messaging.send`,
+  ahora viven en `app.core.notifications.providers.fcm`).
+
+- **Suite total: 351 passed, 0 warnings** (337 + 14 nuevos).
+
+- **Roadmap pendiente del sistema**:
+  - S5-S6: panel admin (composer + historial + stats).
+  - S7: notificaciones in-app (centro de notificaciones en la app Flutter).
+  - Flutter: pantalla de preferencias (usa el endpoint ya listo).
+  - Flutter: reporte de apertura desde el tap de la notificacion.
+
 ### 2026-10-12 (cont. 11) - Sistema de notificaciones nivel industria
 
 **Base arquitectonica completa para FCM + futuros providers (APNs/SMS/email).**
