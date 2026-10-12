@@ -57,6 +57,42 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 18) - Rate Limiting / Frequency Capping (S8) - sistema 8/8 features
+
+**Feature #8 de la industria. Sistema de notificaciones: 8/8 features nivel industria.**
+
+- **Tabla `rate_limit_config`** (migracion `b9c0d1e2f3a4`):
+  - Limites configurables por tipo: `max_por_hora`, `max_por_dia`,
+    `max_por_semana`, `min_intervalo_seg`, `strict`.
+  - 5 configs seedeadas:
+    - `sistema` / `confirmaciones`: sin limite (criticos).
+    - `recordatorio`: 2/h, 3/d, 7/sem, min 1h.
+    - `promocion`: 1/h, 1/d, 2/sem.
+    - `campana`: 1/h, 1/d, 3/sem.
+
+- **Logica en `NotificationService._check_rate_limit()`**:
+  - Se ejecuta ANTES de crear el log (despues de preferencias + quiet hours).
+  - Si excede: registra `SKIPPED` con `razon=rate_limit:X`.
+  - Tipos criticos (`sistema`, `campana`) bypassan el limite salvo `strict=True`.
+  - Los logs `SKIPPED` NO cuentan para el conteo (solo los enviados).
+
+- **2 endpoints admin**:
+  - `GET  /api/v1/admin/notificaciones/rate-limits`.
+  - `PATCH /api/v1/admin/notificaciones/rate-limits/{tipo}`.
+
+- **9 tests nuevos** (7 de logica + 2 de endpoints).
+- **Suite total: 373 passed, 0 warnings.**
+
+- **Sistema de notificaciones 8/8 features**:
+  1. Multi-device + limpieza automatica OK
+  2. Prioridad + TTL + collapse_key OK
+  3. Analytics end-to-end (enviada -> entregada -> abierta) OK
+  4. Preferencias por tipo + quiet hours OK
+  5. Panel admin (composer + historial + stats) OK
+  6. Centro de notificaciones del usuario OK
+  7. **Frequency capping / rate limiting OK**
+  8. Arquitectura extensible (ABC provider) OK
+
 ### 2026-10-12 (cont. 17) - Centro de notificaciones del usuario (S7) - sistema 100% end-to-end
 
 **Sistema de notificaciones nivel industria: 100% completo (backend + admin + usuario).**
