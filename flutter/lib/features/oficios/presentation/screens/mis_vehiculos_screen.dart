@@ -65,6 +65,9 @@ class MisVehiculosScreen extends ConsumerWidget {
                   ref,
                   vehiculos[i],
                 ),
+                onRecordatorios: () => context.push(
+                  '/mis-vehiculos/${vehiculos[i].objetoId}/recordatorios',
+                ),
               ),
             ),
           );
@@ -122,11 +125,13 @@ class _VehiculoCard extends StatelessWidget {
     required this.vehiculo,
     required this.onTap,
     required this.onDelete,
+    required this.onRecordatorios,
   });
 
   final Vehiculo vehiculo;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback onRecordatorios;
 
   IconData get _icono {
     switch (vehiculo.tipoVehiculo) {
@@ -196,6 +201,11 @@ class _VehiculoCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                tooltip: 'Recordatorios',
+                onPressed: onRecordatorios,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),

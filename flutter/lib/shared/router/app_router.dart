@@ -37,6 +37,7 @@ import 'package:baqueano_natales/features/comercios/presentation/screens/lista_c
 import 'package:baqueano_natales/features/comercios/presentation/screens/mis_comercios_screen.dart';
 import 'package:baqueano_natales/features/home/presentation/home_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_vehiculos_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/mis_recordatorios_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_vehiculo_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_ordenes_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_orden_screen.dart';
@@ -315,6 +316,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) => const FormularioVehiculoScreen(),
         ),
         GoRoute(
+          path: '/mis-vehiculos/:id/recordatorios',
+          name: 'mis-recordatorios',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return MisRecordatoriosScreen(objetoId: id);
+          },
+        ),        GoRoute(
           path: '/mis-vehiculos/:id/editar',
           name: 'mi-vehiculo-editar',
           builder: (context, state) {

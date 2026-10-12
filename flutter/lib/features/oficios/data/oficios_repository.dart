@@ -8,7 +8,9 @@ import 'package:dio/dio.dart';
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
+import 'package:baqueano_natales/features/oficios/domain/garantia.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
+import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
@@ -603,6 +605,140 @@ class OficiosRepository {
         data: {'orden_id': ordenId},
       );
       return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // M4: Garantias
+  // =========================================================
+
+  /// Obtiene la garantia activa de una orden (cliente).
+  /// Devuelve null si no hay garantia.
+  Future<Garantia?> obtenerGarantiaDeMiOrden(String ordenId) async {
+    try {
+      final res = await _dio.get('/api/v1/mis-ordenes/$ordenId/garantia');
+      if (res.data == null) return null;
+      return Garantia.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Obtiene la garantia de una orden (prestador).
+  Future<Garantia?> obtenerGarantiaDeOrdenPrestador(
+    String prestadorId,
+    String ordenId,
+  ) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/garantia',
+      );
+      if (res.data == null) return null;
+      return Garantia.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Crea o actualiza la garantia de una orden (prestador).
+  Future<Garantia> crearGarantiaDeOrden(
+    String prestadorId,
+    String ordenId, {
+    required String tipo,
+    required int duracionDias,
+    String? cobertura,
+    String? condiciones,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/garantia',
+        data: {
+          'tipo': tipo,
+          'duracion_dias': duracionDias,
+          'cobertura': ?cobertura,
+          'condiciones': ?condiciones,
+        },
+      );
+      return Garantia.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // M4: Recordatorios (por objeto_servicio)
+  // =========================================================
+
+  /// Lista los recordatorios de un objeto_servicio.
+  Future<List<Recordatorio>> listarRecordatorios(
+    String objetoId, {
+    bool incluirEnviados = false,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-vehiculos/$objetoId/recordatorios',
+        queryParameters: {'incluir_enviados': incluirEnviados},
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((r) => Recordatorio.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Crea un recordatorio.
+  Future<Recordatorio> crearRecordatorio(Recordatorio r) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-vehiculos/${r.objetoId}/recordatorios',
+        data: r.toCreateJson(),
+      );
+      return Recordatorio.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina un recordatorio (soft delete).
+  Future<void> eliminarRecordatorio(String objetoId, String recId) async {
+    try {
+      await _dio.delete(
+        '/api/v1/mis-vehiculos/$objetoId/recordatorios/$recId',
+      );
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

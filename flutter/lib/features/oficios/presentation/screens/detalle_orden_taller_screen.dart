@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
+import 'package:baqueano_natales/features/oficios/domain/garantia.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_historial.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/garantia_card.dart';
 
 class DetalleOrdenTallerScreen extends ConsumerStatefulWidget {
   const DetalleOrdenTallerScreen({
@@ -57,10 +59,12 @@ class _DetalleOrdenTallerScreenState
         ),
         data: (orden) => _Contenido(
           orden: orden,
+          prestadorId: widget.prestadorId,
           procesando: _procesando,
           onAgregarItem: () => _agregarItem(orden),
           onEliminarItem: (itemId) => _eliminarItem(orden, itemId),
           onCambiarEstado: (estado) => _cambiarEstado(orden, estado),
+          onAbrirModalGarantia: _abrirModalGarantia,
         ),
       ),
     );
@@ -138,6 +142,58 @@ class _DetalleOrdenTallerScreenState
     }
   }
 
+  Future<void> _abrirModalGarantia(OrdenTrabajo orden) async {
+    // Obtener garantia existente si hay
+    Garantia? existente;
+    try {
+      final repo = ref.read(oficiosRepositoryProvider);
+      existente = await repo.obtenerGarantiaDeOrdenPrestador(
+        widget.prestadorId,
+        orden.id,
+      );
+    } catch (_) {
+      existente = null;
+    }
+    if (!mounted) return;
+
+    final result = await showModalBottomSheet<_GarantiaFormResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ModalGarantiaForm(existente: existente),
+    );
+    if (result == null) return;
+
+    setState(() => _procesando = true);
+    try {
+      final repo = ref.read(oficiosRepositoryProvider);
+      await repo.crearGarantiaDeOrden(
+        widget.prestadorId,
+        orden.id,
+        tipo: result.tipo.value,
+        duracionDias: result.duracionDias,
+        cobertura: result.cobertura,
+        condiciones: result.condiciones,
+      );
+      ref.invalidate(garantiaPrestadorProvider(
+        GarantiaPrestadorParams(
+          prestadorId: widget.prestadorId,
+          ordenId: orden.id,
+        ),
+      ));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Garantia guardada')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.message}')),
+      );
+    } finally {
+      if (mounted) setState(() => _procesando = false);
+    }
+  }
+
   Future<void> _cambiarEstado(OrdenTrabajo orden, EstadoOrden nuevo) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -193,17 +249,21 @@ class _DetalleOrdenTallerScreenState
 class _Contenido extends StatelessWidget {
   const _Contenido({
     required this.orden,
+    required this.prestadorId,
     required this.procesando,
     required this.onAgregarItem,
     required this.onEliminarItem,
     required this.onCambiarEstado,
+    required this.onAbrirModalGarantia,
   });
 
   final OrdenTrabajo orden;
+  final String prestadorId;
   final bool procesando;
   final VoidCallback onAgregarItem;
   final void Function(String itemId) onEliminarItem;
   final void Function(EstadoOrden nuevo) onCambiarEstado;
+  final void Function(OrdenTrabajo orden) onAbrirModalGarantia;
 
   bool get _puedeEditarItems =>
       orden.estado == EstadoOrden.ingresado ||
@@ -365,6 +425,16 @@ class _Contenido extends StatelessWidget {
             ],
 
             const SizedBox(height: 24),
+
+            // Garantia (si la orden esta entregada)
+            if (orden.estado == EstadoOrden.entregado) ...[
+              const SizedBox(height: 16),
+              _GarantiaPrestadorWrapper(
+                prestadorId: prestadorId,
+                ordenId: orden.id,
+                onCrearEditar: () => onAbrirModalGarantia(orden),
+              ),
+            ],
 
             // Timeline
             if (orden.historial.isNotEmpty) ...[
@@ -720,3 +790,192 @@ String _formatCLP(double valor) {
 
 String _formatFechaHora(DateTime d) =>
     '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+// =========================================================
+// Garantia (prestador)
+// =========================================================
+class _GarantiaPrestadorWrapper extends ConsumerWidget {
+  const _GarantiaPrestadorWrapper({
+    required this.prestadorId,
+    required this.ordenId,
+    required this.onCrearEditar,
+  });
+
+  final String prestadorId;
+  final String ordenId;
+  final VoidCallback onCrearEditar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final params = GarantiaPrestadorParams(
+      prestadorId: prestadorId,
+      ordenId: ordenId,
+    );
+    final async = ref.watch(garantiaPrestadorProvider(params));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (g) {
+        if (g == null) {
+          return GarantiaCard(
+            garantia: null,
+            onCrear: onCrearEditar,
+          );
+        }
+        return GarantiaCard(
+          garantia: g,
+          onEditar: onCrearEditar,
+        );
+      },
+    );
+  }
+}
+
+
+// =========================================================
+// Modal para crear/editar garantia
+// =========================================================
+class _ModalGarantiaForm extends StatefulWidget {
+  const _ModalGarantiaForm({this.existente});
+  final Garantia? existente;
+
+  @override
+  State<_ModalGarantiaForm> createState() => _ModalGarantiaFormState();
+}
+
+class _ModalGarantiaFormState extends State<_ModalGarantiaForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _diasCtrl = TextEditingController();
+  final _coberturaCtrl = TextEditingController();
+  final _condicionesCtrl = TextEditingController();
+  TipoGarantia _tipo = TipoGarantia.completo;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existente != null) {
+      _diasCtrl.text = widget.existente!.duracionDias.toString();
+      _coberturaCtrl.text = widget.existente!.cobertura ?? '';
+      _condicionesCtrl.text = widget.existente!.condiciones ?? '';
+      _tipo = widget.existente!.tipo;
+    } else {
+      _diasCtrl.text = '30';
+    }
+  }
+
+  @override
+  void dispose() {
+    _diasCtrl.dispose();
+    _coberturaCtrl.dispose();
+    _condicionesCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final insets = MediaQuery.of(context).viewInsets;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + insets.bottom),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.existente == null ? 'Crear garantia' : 'Editar garantia',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<TipoGarantia>(
+              initialValue: _tipo,
+              decoration: const InputDecoration(
+                labelText: 'Tipo',
+                border: OutlineInputBorder(),
+              ),
+              items: TipoGarantia.values
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t.label),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) setState(() => _tipo = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _diasCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Duracion (dias)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                final n = int.tryParse(v?.trim() ?? '');
+                if (n == null || n < 1) return 'Invalido';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _coberturaCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Cobertura (opcional)',
+                hintText: 'Que cubre la garantia',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _condicionesCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Condiciones (opcional)',
+                hintText: 'Que NO cubre',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _guardar,
+              child: Text(widget.existente == null ? 'Crear' : 'Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _guardar() {
+    if (!_formKey.currentState!.validate()) return;
+    final result = _GarantiaFormResult(
+      tipo: _tipo,
+      duracionDias: int.parse(_diasCtrl.text.trim()),
+      cobertura: _coberturaCtrl.text.trim().isEmpty
+          ? null
+          : _coberturaCtrl.text.trim(),
+      condiciones: _condicionesCtrl.text.trim().isEmpty
+          ? null
+          : _condicionesCtrl.text.trim(),
+    );
+    Navigator.of(context).pop(result);
+  }
+}
+
+class _GarantiaFormResult {
+  const _GarantiaFormResult({
+    required this.tipo,
+    required this.duracionDias,
+    this.cobertura,
+    this.condiciones,
+  });
+  final TipoGarantia tipo;
+  final int duracionDias;
+  final String? cobertura;
+  final String? condiciones;
+}

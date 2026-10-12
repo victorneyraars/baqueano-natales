@@ -9,7 +9,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/oficios/data/oficios_repository.dart';
+import 'package:baqueano_natales/features/oficios/domain/garantia.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
+import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
 import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
@@ -252,4 +254,74 @@ final turnoPrestadorDetalleProvider =
         (ref, params) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.detalleTurnoPrestador(params.prestadorId, params.turnoId);
+});
+
+// =========================================================
+// M4: Garantias
+// =========================================================
+final garantiaDeMiOrdenProvider =
+    FutureProvider.family<Garantia?, String>((ref, ordenId) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.obtenerGarantiaDeMiOrden(ordenId);
+});
+
+class GarantiaPrestadorParams {
+  const GarantiaPrestadorParams({
+    required this.prestadorId,
+    required this.ordenId,
+  });
+
+  final String prestadorId;
+  final String ordenId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GarantiaPrestadorParams &&
+      other.prestadorId == prestadorId &&
+      other.ordenId == ordenId;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, ordenId);
+}
+
+final garantiaPrestadorProvider =
+    FutureProvider.family<Garantia?, GarantiaPrestadorParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.obtenerGarantiaDeOrdenPrestador(
+    params.prestadorId,
+    params.ordenId,
+  );
+});
+
+// =========================================================
+// M4: Recordatorios
+// =========================================================
+class RecordatoriosParams {
+  const RecordatoriosParams({
+    required this.objetoId,
+    this.incluirEnviados = false,
+  });
+
+  final String objetoId;
+  final bool incluirEnviados;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RecordatoriosParams &&
+      other.objetoId == objetoId &&
+      other.incluirEnviados == incluirEnviados;
+
+  @override
+  int get hashCode => Object.hash(objetoId, incluirEnviados);
+}
+
+final recordatoriosProvider =
+    FutureProvider.family<List<Recordatorio>, RecordatoriosParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarRecordatorios(
+    params.objetoId,
+    incluirEnviados: params.incluirEnviados,
+  );
 });

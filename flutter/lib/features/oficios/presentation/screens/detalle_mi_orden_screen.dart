@@ -9,6 +9,7 @@ import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_historial.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/garantia_card.dart';
 
 class DetalleMiOrdenScreen extends ConsumerStatefulWidget {
   const DetalleMiOrdenScreen({super.key, required this.ordenId});
@@ -263,6 +264,12 @@ class _Contenido extends StatelessWidget {
 
         const SizedBox(height: 24),
 
+        // Garantia (si la orden esta entregada)
+        if (orden.estado == EstadoOrden.entregado) ...[
+          const SizedBox(height: 16),
+          _GarantiaSectionWrapper(ordenId: orden.id),
+        ],
+
         // Timeline
         if (orden.historial.isNotEmpty) ...[
           Text(
@@ -494,3 +501,27 @@ String _formatFecha(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
 String _formatFechaHora(DateTime d) =>
     '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+// =========================================================
+// Wrapper que carga la garantia del provider
+// =========================================================
+class _GarantiaSectionWrapper extends ConsumerWidget {
+  const _GarantiaSectionWrapper({required this.ordenId});
+  final String ordenId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(garantiaDeMiOrdenProvider(ordenId));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (g) {
+        if (g == null) return const SizedBox.shrink();
+        return GarantiaCard(garantia: g);
+      },
+    );
+  }
+}
