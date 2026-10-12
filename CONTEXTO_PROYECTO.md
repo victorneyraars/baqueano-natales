@@ -11,6 +11,31 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 25) - M5.3 reportes del taller (backend completo)
+
+**Ultimo slice de M5 backend. Metricas de industria basadas en Jobber / ServiceTitan / TallerPro.**
+
+- **Nuevos modulos**:
+  - `schemas_reportes.py`: ReportePrestador + ReporteKPIs + ReporteSerieMes + ReporteTopServicio + ReporteTopCliente.
+  - `services_reportes.py`: SQL agregado directo (GROUP BY + func.sum/count/avg) sin vistas materializadas (optimizar cuando haya volumen real >10k ordenes/taller).
+  - `routes_reportes.py`: 2 endpoints.
+- **Metricas** (KPIs + rankings):
+  - KPIs: total_ordenes, ordenes_por_estado, ingresos_totales (solo ENTREGADO), ticket_promedio, tasa_aprobacion_items, duracion_promedio_dias (ingreso -> entrega_real).
+  - Serie mensual (12 meses): ordenes + ingresos por mes (YYYY-MM).
+  - Top 10 servicios: agrupado por `descripcion` del item, ordenado por cantidad.
+  - Top 10 clientes: agrupado por `cliente_id`, con nombre resuelto en 1 query IN.
+- **Endpoints**:
+  - `GET /api/v1/mis-prestadores/{pid}/reportes` (JSON).
+  - `GET /api/v1/mis-prestadores/{pid}/reportes.csv` (descarga con `Content-Disposition`).
+  - Filtros `desde` / `hasta` (defaults a ultimos 12 meses).
+  - Ownership: 403 si no eres dueno del prestador (o admin).
+- **6 tests HTTP** (`test_routes_reportes.py`): reporte con datos, reporte vacio, filtro de fechas, CSV con headers, ownership (403), prestador inexistente (404).
+- **Smoke test manual**: reporte del Taller Mecanico del Sur -> 2 ordenes, $87.000 ingresos, ticket $87.000, tasa 100%, duracion 1.96 dias. CSV completo.
+- **Suite total: 396 passed, 0 warnings.**
+
+**Pendiente de M5:**
+- **M5.3 frontend Flutter**: pantalla de reportes del taller (graficos + descarga CSV). Es la ultima pieza del modulo oficios M5.
+
 ### 2026-10-12 (cont. 24) - M5.2 tests HTTP del wire de notificaciones in-app
 
 **Deuda de tests de M5.2 cerrada.**
