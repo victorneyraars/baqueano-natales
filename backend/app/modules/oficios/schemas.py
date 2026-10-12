@@ -454,3 +454,45 @@ class RecordatorioResponse(BaseModel):
     fecha_envio: datetime | None
     activo: bool
     created_at: datetime
+
+# =========================================================
+# M5.1: Fotos de orden
+# =========================================================
+class OrdenFotoVarianteResponse(BaseModel):
+    """Metadata de una variante generada (original/medium/thumb)."""
+
+    ancho: int
+    alto: int
+    tamano_bytes: int
+    url: str
+
+
+class OrdenFotoResponse(BaseModel):
+    """Foto de una orden con sus variantes y metadata."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    orden_id: UUID
+    item_id: UUID | None
+    momento: str
+
+    subido_por_id: UUID
+    subido_por_rol: str
+
+    hash_sha256: str
+    storage_backend: str
+    storage_key: str
+    variantes: dict  # {nombre: variante_dict}
+    mime_type: str
+    tamano_bytes: int
+    ancho: int
+    alto: int
+    blurhash: str | None
+
+    descripcion: str | None
+    fecha_captura: datetime | None
+
+    activo: bool
+    created_at: datetime
+
