@@ -108,6 +108,39 @@ class _NotifCard extends StatelessWidget {
   final NotificacionAdmin notif;
   final WidgetRef ref;
 
+  /// Resuelve la ruta de navegacion segun el `data` de la notif.
+  ///
+  /// El backend inyecta `data = {"tipo": "...", ...ids}` para deep link.
+  /// Si no hay data o el tipo es desconocido, devuelve null (solo se
+  /// marca como leida, sin navegar).
+  String? _resolverRuta() {
+    final data = notif.data;
+    if (data == null) return null;
+    final tipo = data['tipo'] as String?;
+    switch (tipo) {
+      case 'orden':
+        final ordenId = data['orden_id']?.toString();
+        if (ordenId != null && ordenId.isNotEmpty) {
+          return '/mis-ordenes/$ordenId';
+        }
+        return '/mis-ordenes';
+      case 'turno':
+        final turnoId = data['turno_id']?.toString();
+        if (turnoId != null && turnoId.isNotEmpty) {
+          return '/mis-turnos/$turnoId';
+        }
+        return '/mis-turnos';
+      case 'recordatorio':
+        final objId = data['objeto_servicio_id']?.toString();
+        if (objId != null && objId.isNotEmpty) {
+          return '/mis-vehiculos/$objId/recordatorios';
+        }
+        return '/mis-vehiculos';
+      default:
+        return null;
+    }
+  }
+
   Color _colorEstado() {
     switch (notif.estado) {
       case 'abierta':
@@ -129,23 +162,36 @@ class _NotifCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: InkWell(
         onTap: () async {
-          if (notif.estado == 'abierta') return;
-          // Capturar el messenger ANTES del await/invalidate
-          // (el context puede desmontarse despues del rebuild).
           final messenger = ScaffoldMessenger.of(context);
-          try {
-            await ref
-                .read(notificacionesRepositoryProvider)
-                .marcarAbierta(notif.id);
-            ref.invalidate(misNotificacionesProvider);
+          final router = GoRouter.of(context);
+
+          // 1. Marcar como abierta (best-effort, no bloquea la navegacion)
+          if (notif.estado != 'abierta') {
+            try {
+              await ref
+                  .read(notificacionesRepositoryProvider)
+                  .marcarAbierta(notif.id);
+              ref.invalidate(misNotificacionesProvider);
+            } catch (_) {
+              // Best-effort
+            }
+          }
+
+          // 2. Navegar segun el data (deep link)
+          final ruta = _resolverRuta();
+          if (ruta != null) {
+            router.push(ruta);
+          } else if (notif.estado == 'abierta') {
+            // Ya estaba abierta y sin ruta -> no hacemos nada
+            return;
+          } else {
+            // Sin ruta conocida -> solo feedback visual
             messenger.showSnackBar(
               const SnackBar(
                 content: Text('Notificacion marcada como leida'),
                 duration: Duration(seconds: 2),
               ),
             );
-          } catch (_) {
-            // Best-effort: no rompe el flujo si falla
           }
         },
         child: Padding(
