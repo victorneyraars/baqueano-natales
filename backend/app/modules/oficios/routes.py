@@ -1,5 +1,6 @@
 """Endpoints HTTP del modulo oficios (M1)."""
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -10,9 +11,17 @@ from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.oficios import services
 from app.modules.oficios.deps import CategoriaMecanica, OrdenDelUsuario, Repuesto
-from app.modules.oficios.models import EstadoOrden
+from app.modules.oficios.models import EstadoOrden, EstadoTurno
 from app.modules.oficios.schemas import (
     ClienteBusquedaResponse,
+    TurnoCambiarEstadoRequest,
+    TurnoCancelarRequest,
+    TurnoCreate,
+    TurnoListItemResponse,
+    TurnoRechazarRequest,
+    TurnoResponse,
+    TurnoUpdate,
+    TurnoVincularOrdenRequest,
     MecanicaCategoriaCreate,
     MecanicaCategoriaResponse,
     MecanicaCategoriaUpdate,
@@ -593,3 +602,212 @@ async def listar_vehiculos_de_cliente(
 
     rows = await services.listar_vehiculos_de_cliente(db, cliente_id)
     return [VehiculoResponse(**r) for r in rows]
+
+
+# =========================================================
+# M3: Turnos - Cliente
+# =========================================================
+router_turnos_cliente = APIRouter(
+    prefix="/mis-turnos",
+    tags=["oficios-turnos-cliente"],
+)
+
+
+@router_turnos_cliente.get(
+    "",
+    response_model=list[TurnoListItemResponse],
+    summary="Listar mis turnos (cliente)",
+)
+async def listar_mis_turnos(
+    user: CurrentUser,
+    db: DbSession,
+    estado: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    turnos = await services.listar_turnos_cliente(
+        db, user.id, estado=estado, limit=limit
+    )
+    return [TurnoListItemResponse.model_validate(t) for t in turnos]
+
+
+@router_turnos_cliente.post(
+    "",
+    response_model=TurnoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Reservar un turno",
+)
+async def crear_turno(
+    data: TurnoCreate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    turno = await services.crear_turno(db, user.id, data)
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_cliente.get(
+    "/{turno_id}",
+    response_model=TurnoResponse,
+    summary="Ver detalle de un turno",
+)
+async def detalle_mi_turno(
+    turno_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    turno = await services.obtener_turno(db, turno_id)
+    if turno.cliente_id != user.id and user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_cliente.patch(
+    "/{turno_id}",
+    response_model=TurnoResponse,
+    summary="Editar un turno (solo pendientes)",
+)
+async def editar_mi_turno(
+    turno_id: UUID,
+    data: TurnoUpdate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    turno = await services.actualizar_turno(db, turno_id, user.id, data)
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_cliente.post(
+    "/{turno_id}/cancelar",
+    response_model=TurnoResponse,
+    summary="Cancelar un turno (cliente)",
+)
+async def cancelar_mi_turno(
+    turno_id: UUID,
+    data: TurnoCancelarRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    turno = await services.cancelar_turno(
+        db, turno_id, user.id, es_prestador=False, motivo=data.motivo
+    )
+    return TurnoResponse.model_validate(turno)
+
+
+# =========================================================
+# M3: Turnos - Prestador
+# =========================================================
+router_turnos_prestador = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/turnos",
+    tags=["oficios-turnos-prestador"],
+)
+
+
+async def _validar_prestador_dueno(db, prestador_id: UUID, user):
+    from app.modules.prestadores.models import Prestador
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return prestador
+
+
+@router_turnos_prestador.get(
+    "",
+    response_model=list[TurnoListItemResponse],
+    summary="Listar turnos del taller (agenda)",
+)
+async def listar_turnos_prestador(
+    prestador_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    estado: str | None = Query(None),
+    desde: datetime | None = Query(None),
+    hasta: datetime | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turnos = await services.listar_turnos_prestador(
+        db, prestador_id, estado=estado, desde=desde, hasta=hasta, limit=limit
+    )
+    return [TurnoListItemResponse.model_validate(t) for t in turnos]
+
+
+@router_turnos_prestador.get(
+    "/{turno_id}",
+    response_model=TurnoResponse,
+    summary="Ver detalle de un turno (prestador)",
+)
+async def detalle_turno_prestador(
+    prestador_id: UUID,
+    turno_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno = await services.obtener_turno(db, turno_id)
+    if turno.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_prestador.post(
+    "/{turno_id}/estado",
+    response_model=TurnoResponse,
+    summary="Cambiar estado (prestador)",
+)
+async def cambiar_estado_turno(
+    prestador_id: UUID,
+    turno_id: UUID,
+    data: TurnoCambiarEstadoRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno = await services.obtener_turno(db, turno_id)
+    if turno.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    turno = await services.cambiar_estado_turno(
+        db, turno_id, data.nuevo_estado, user.id, es_prestador=True
+    )
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_prestador.post(
+    "/{turno_id}/rechazar",
+    response_model=TurnoResponse,
+    summary="Rechazar un turno (prestador)",
+)
+async def rechazar_turno(
+    prestador_id: UUID,
+    turno_id: UUID,
+    data: TurnoRechazarRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno = await services.rechazar_turno(
+        db, turno_id, prestador_id, motivo=data.motivo
+    )
+    return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_prestador.post(
+    "/{turno_id}/vincular-orden",
+    response_model=TurnoResponse,
+    summary="Vincular una orden existente al turno",
+)
+async def vincular_orden(
+    prestador_id: UUID,
+    turno_id: UUID,
+    data: TurnoVincularOrdenRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno = await services.vincular_orden_a_turno(
+        db, turno_id, data.orden_id, prestador_id
+    )
+    return TurnoResponse.model_validate(turno)

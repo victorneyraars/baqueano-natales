@@ -645,3 +645,115 @@ class OrdenHistorial(TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<OrdenHistorial(orden_id={self.orden_id}, tipo={self.tipo.value})>"
+
+
+# =========================================================
+# M3: Turnos (agenda cliente-prestador)
+# =========================================================
+class EstadoTurno(str, Enum):
+    """Ciclo de vida de un turno agendado.
+
+    Flujo principal:
+        pendiente -> confirmado -> en_curso -> completado
+
+    Ramas:
+        pendiente -> cancelado (cliente o prestador cancela)
+        pendiente -> rechazado (prestador rechaza)
+        confirmado -> no_asistio (cliente no se presento)
+        confirmado -> cancelado (cancelacion tardia)
+    """
+
+    PENDIENTE = "pendiente"
+    CONFIRMADO = "confirmado"
+    EN_CURSO = "en_curso"
+    COMPLETADO = "completado"
+    CANCELADO = "cancelado"
+    RECHAZADO = "rechazado"
+    NO_ASISTIO = "no_asistio"
+
+
+class Turno(TimestampMixin, Base):
+    """Turno agendado entre un cliente y un prestador.
+
+    El cliente reserva un horario con un prestador para atender un
+    objeto_servicio (vehiculo). El prestador confirma o rechaza.
+    Cuando se atiende, puede generar una orden de trabajo vinculada
+    (campo `orden_id`).
+    """
+
+    __tablename__ = "turnos"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    cliente_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    objeto_servicio_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("objetos_servicio.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    fecha_inicio: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+    duracion_min: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=30,
+        server_default="30",
+        comment="Duracion estimada en minutos",
+    )
+
+    estado: Mapped[EstadoTurno] = mapped_column(
+        SQLEnum(
+            EstadoTurno,
+            name="estado_turno",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=EstadoTurno.PENDIENTE,
+        server_default=EstadoTurno.PENDIENTE.value,
+        index=True,
+    )
+
+    motivo: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Motivo de la visita (ej: 'Cambio de aceite')",
+    )
+    notas_cliente: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notas_prestador: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    orden_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Orden generada al atender el turno (opcional)",
+    )
+
+    # Relaciones (opcionales, para hidratar)
+    objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")
+    orden: Mapped["OrdenTrabajo | None"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Turno(id={self.id}, estado={self.estado.value}, "
+            f"fecha={self.fecha_inicio})>"
+        )

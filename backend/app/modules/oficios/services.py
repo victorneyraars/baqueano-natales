@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.modules.auth.models import RolUsuario, Usuario
 from app.modules.oficios.models import (
     EstadoOrden,
+    EstadoTurno,
     MecanicaCategoriaServicio,
     MecanicaRepuesto,
     ObjetoServicio,
@@ -23,6 +24,7 @@ from app.modules.oficios.models import (
     TipoItemOrden,
     TipoObjetoServicio,
     TipoVehiculo,
+    Turno,
     Vehiculo,
 )
 from app.modules.oficios.schemas import (
@@ -913,3 +915,322 @@ async def listar_vehiculos_de_cliente(
     )
     rows = (await db.execute(stmt)).all()
     return [_vehiculo_a_response(obj, veh) for obj, veh in rows]
+
+
+# =========================================================
+# M3: Turnos (agenda cliente-prestador)
+# =========================================================
+# Transiciones validas por rol.
+TRANSICIONES_TURNO_PRESTADOR = {
+    EstadoTurno.PENDIENTE: {EstadoTurno.CONFIRMADO, EstadoTurno.RECHAZADO},
+    EstadoTurno.CONFIRMADO: {
+        EstadoTurno.EN_CURSO,
+        EstadoTurno.CANCELADO,
+        EstadoTurno.NO_ASISTIO,
+    },
+    EstadoTurno.EN_CURSO: {EstadoTurno.COMPLETADO, EstadoTurno.CANCELADO},
+}
+
+TRANSICIONES_TURNO_CLIENTE = {
+    EstadoTurno.PENDIENTE: {EstadoTurno.CANCELADO},
+    EstadoTurno.CONFIRMADO: {EstadoTurno.CANCELADO},
+}
+
+
+def _transicion_turno_valida(
+    actual: EstadoTurno,
+    nuevo: EstadoTurno,
+    es_prestador: bool,
+) -> bool:
+    """Valida si una transicion de turno esta permitida por rol."""
+    if es_prestador:
+        return nuevo in TRANSICIONES_TURNO_PRESTADOR.get(actual, set())
+    return nuevo in TRANSICIONES_TURNO_CLIENTE.get(actual, set())
+
+
+async def crear_turno(
+    db: AsyncSession,
+    cliente_id: UUID,
+    data,
+) -> Turno:
+    """Crea un turno nuevo en estado PENDIENTE."""
+    # Validar que el prestador exista
+    from app.modules.prestadores.models import Prestador
+    prestador = (
+        await db.execute(
+            select(Prestador).where(Prestador.id == data.prestador_id)
+        )
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prestador no encontrado",
+        )
+
+    # Validar que el objeto_servicio exista y sea del cliente
+    obj = (
+        await db.execute(
+            select(ObjetoServicio).where(ObjetoServicio.id == data.objeto_servicio_id)
+        )
+    ).scalar_one_or_none()
+    if obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Objeto de servicio no encontrado",
+        )
+    if obj.propietario_id != cliente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El objeto de servicio no es tuyo",
+        )
+
+    turno = Turno(
+        cliente_id=cliente_id,
+        prestador_id=data.prestador_id,
+        objeto_servicio_id=data.objeto_servicio_id,
+        fecha_inicio=data.fecha_inicio,
+        duracion_min=data.duracion_min,
+        estado=EstadoTurno.PENDIENTE,
+        motivo=data.motivo,
+        notas_cliente=data.notas_cliente,
+    )
+    db.add(turno)
+    await db.flush()
+    return turno
+
+
+async def listar_turnos_cliente(
+    db: AsyncSession,
+    cliente_id: UUID,
+    estado: str | None = None,
+    desde: datetime | None = None,
+    limit: int = 100,
+) -> list[Turno]:
+    """Lista turnos de un cliente."""
+    stmt = (
+        select(Turno)
+        .where(Turno.cliente_id == cliente_id)
+        .order_by(Turno.fecha_inicio.desc())
+        .limit(limit)
+    )
+    if estado:
+        try:
+            stmt = stmt.where(Turno.estado == EstadoTurno(estado))
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Estado invalido: {estado}",
+            )
+    if desde:
+        stmt = stmt.where(Turno.fecha_inicio >= desde)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def listar_turnos_prestador(
+    db: AsyncSession,
+    prestador_id: UUID,
+    estado: str | None = None,
+    desde: datetime | None = None,
+    hasta: datetime | None = None,
+    limit: int = 100,
+) -> list[Turno]:
+    """Lista turnos de un prestador (agenda del taller)."""
+    stmt = (
+        select(Turno)
+        .where(Turno.prestador_id == prestador_id)
+        .order_by(Turno.fecha_inicio.asc())
+        .limit(limit)
+    )
+    if estado:
+        try:
+            stmt = stmt.where(Turno.estado == EstadoTurno(estado))
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Estado invalido: {estado}",
+            )
+    if desde:
+        stmt = stmt.where(Turno.fecha_inicio >= desde)
+    if hasta:
+        stmt = stmt.where(Turno.fecha_inicio <= hasta)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def obtener_turno(db: AsyncSession, turno_id: UUID) -> Turno:
+    """Carga un turno o lanza 404."""
+    turno = (
+        await db.execute(select(Turno).where(Turno.id == turno_id))
+    ).scalar_one_or_none()
+    if turno is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Turno no encontrado",
+        )
+    return turno
+
+
+async def actualizar_turno(
+    db: AsyncSession,
+    turno_id: UUID,
+    cliente_id: UUID,
+    data,
+) -> Turno:
+    """Actualiza un turno (solo cliente dueno y solo en estado pendiente)."""
+    turno = await obtener_turno(db, turno_id)
+    if turno.cliente_id != cliente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenes permiso sobre este turno",
+        )
+    if turno.estado != EstadoTurno.PENDIENTE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Solo se puede editar un turno pendiente. Estado actual: {turno.estado.value}",
+        )
+    for k, v in data.model_dump(exclude_unset=True).items():
+        setattr(turno, k, v)
+    await db.flush()
+    return turno
+
+
+async def cambiar_estado_turno(
+    db: AsyncSession,
+    turno_id: UUID,
+    nuevo_estado_str: str,
+    usuario_id: UUID,
+    es_prestador: bool,
+) -> Turno:
+    """Cambia el estado de un turno validando la transicion por rol."""
+    turno = await obtener_turno(db, turno_id)
+
+    try:
+        nuevo_estado = EstadoTurno(nuevo_estado_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Estado invalido: {nuevo_estado_str}",
+        )
+
+    if not _transicion_turno_valida(turno.estado, nuevo_estado, es_prestador):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Transicion invalida: {turno.estado.value} -> {nuevo_estado.value}. "
+                f"Rol: {'prestador' if es_prestador else 'cliente'}."
+            ),
+        )
+
+    turno.estado = nuevo_estado
+    await db.flush()
+    return turno
+
+
+async def rechazar_turno(
+    db: AsyncSession,
+    turno_id: UUID,
+    prestador_id: UUID,
+    motivo: str | None = None,
+) -> Turno:
+    """Rechaza un turno pendiente (prestador)."""
+    turno = await obtener_turno(db, turno_id)
+    if turno.prestador_id != prestador_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenes permiso",
+        )
+    if turno.estado != EstadoTurno.PENDIENTE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Solo se puede rechazar un turno pendiente. Actual: {turno.estado.value}",
+        )
+    turno.estado = EstadoTurno.RECHAZADO
+    if motivo:
+        turno.notas_prestador = motivo
+    await db.flush()
+    return turno
+
+
+async def cancelar_turno(
+    db: AsyncSession,
+    turno_id: UUID,
+    usuario_id: UUID,
+    es_prestador: bool,
+    motivo: str | None = None,
+) -> Turno:
+    """Cancela un turno (cliente o prestador)."""
+    turno = await obtener_turno(db, turno_id)
+
+    # Validar pertenencia
+    if es_prestador:
+        # El caller debe ser dueno del prestador
+        from app.modules.prestadores.models import Prestador
+        prestador = (
+            await db.execute(
+                select(Prestador).where(Prestador.id == turno.prestador_id)
+            )
+        ).scalar_one_or_none()
+        if prestador is None or prestador.usuario_id != usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tenes permiso",
+            )
+    else:
+        if turno.cliente_id != usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tenes permiso",
+            )
+
+    if turno.estado in (
+        EstadoTurno.CANCELADO,
+        EstadoTurno.RECHAZADO,
+        EstadoTurno.COMPLETADO,
+        EstadoTurno.NO_ASISTIO,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No se puede cancelar un turno en estado {turno.estado.value}",
+        )
+
+    turno.estado = EstadoTurno.CANCELADO
+    if motivo:
+        if es_prestador:
+            turno.notas_prestador = motivo
+        else:
+            turno.notas_cliente = motivo
+    await db.flush()
+    return turno
+
+
+async def vincular_orden_a_turno(
+    db: AsyncSession,
+    turno_id: UUID,
+    orden_id: UUID,
+    prestador_id: UUID,
+) -> Turno:
+    """Vincula una orden existente al turno (prestador)."""
+    turno = await obtener_turno(db, turno_id)
+    if turno.prestador_id != prestador_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenes permiso",
+        )
+    # Validar que la orden exista y sea del mismo prestador
+    orden = (
+        await db.execute(
+            select(OrdenTrabajo).where(OrdenTrabajo.id == orden_id)
+        )
+    ).scalar_one_or_none()
+    if orden is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Orden no encontrada",
+        )
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La orden no pertenece a este taller",
+        )
+    turno.orden_id = orden_id
+    await db.flush()
+    return turno

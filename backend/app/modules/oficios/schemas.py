@@ -304,3 +304,87 @@ class ClienteBusquedaResponse(BaseModel):
     nombre: str | None
     apellido: str | None
     email: str | None
+
+
+# =========================================================
+# M3: Turnos (agenda cliente-prestador)
+# =========================================================
+class TurnoCreate(BaseModel):
+    """Crear un turno (cliente reserva con un prestador)."""
+
+    prestador_id: UUID
+    objeto_servicio_id: UUID
+    fecha_inicio: datetime
+    duracion_min: int = Field(30, ge=15, le=480)
+    motivo: str | None = Field(None, max_length=255)
+    notas_cliente: str | None = None
+
+
+class TurnoUpdate(BaseModel):
+    """Actualizar un turno (parcial, solo en estado pendiente)."""
+
+    fecha_inicio: datetime | None = None
+    duracion_min: int | None = Field(None, ge=15, le=480)
+    motivo: str | None = Field(None, max_length=255)
+    notas_cliente: str | None = None
+
+
+class TurnoRechazarRequest(BaseModel):
+    """Rechazar un turno (prestador)."""
+
+    motivo: str | None = Field(None, max_length=500)
+
+
+class TurnoCancelarRequest(BaseModel):
+    """Cancelar un turno."""
+
+    motivo: str | None = Field(None, max_length=500)
+
+
+class TurnoCambiarEstadoRequest(BaseModel):
+    """Cambiar estado de un turno."""
+
+    nuevo_estado: str
+    motivo: str | None = Field(None, max_length=500)
+
+
+class TurnoVincularOrdenRequest(BaseModel):
+    """Vincular una orden existente al turno."""
+
+    orden_id: UUID
+
+
+class TurnoResponse(BaseModel):
+    """Vista completa de un turno."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    cliente_id: UUID
+    prestador_id: UUID
+    objeto_servicio_id: UUID
+    fecha_inicio: datetime
+    duracion_min: int
+    estado: str
+    motivo: str | None
+    notas_cliente: str | None
+    notas_prestador: str | None
+    orden_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TurnoListItemResponse(BaseModel):
+    """Item resumido para listados."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    cliente_id: UUID
+    prestador_id: UUID
+    objeto_servicio_id: UUID
+    fecha_inicio: datetime
+    duracion_min: int
+    estado: str
+    motivo: str | None
+    orden_id: UUID | None

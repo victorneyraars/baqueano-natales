@@ -102,3 +102,23 @@ async def categoria_mecanica(db):
     db.add(c)
     await db.flush()
     return c
+
+
+@pytest_asyncio.fixture
+async def turno_test(db, usuario_cliente, prestador_test, objeto_servicio_test):
+    """Turno pendiente en el futuro."""
+    from datetime import datetime, timedelta, timezone
+    from app.modules.oficios.models import EstadoTurno, Turno
+
+    t = Turno(
+        cliente_id=usuario_cliente.id,
+        prestador_id=prestador_test.id,
+        objeto_servicio_id=objeto_servicio_test.id,
+        fecha_inicio=datetime.now(timezone.utc) + timedelta(days=2),
+        duracion_min=30,
+        estado=EstadoTurno.PENDIENTE,
+        motivo="Cambio de aceite",
+    )
+    db.add(t)
+    await db.flush()
+    return t
