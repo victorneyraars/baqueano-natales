@@ -423,3 +423,27 @@ Endpoints backend consumidos:
     Verificar con `Get-Content "$env:ANDROID_AVD_HOME\<nombre>.avd\config.ini"`.
     El AVD con Play Store requiere **~5 GB libres en la particion** para
     bootear (error `hasSufficientDiskSpace` si no alcanza).
+
+
+21. **Emulador con `-gpu host` puede tener glitches visuales** (Intel UHD 630):
+    warnings `Unable to match the desired swap behavior` + banners sin
+    animacion. Fix: usar `-gpu swiftshader_indirect` (software rendering,
+    mas lento pero estable visualmente). Alternar segun necesidad:
+    - Desarrollo rapido -> `-gpu host`.
+    - Screenshots / validacion visual -> `-gpu swiftshader_indirect`.
+
+22. **`flutter_local_notifications` v22**: requiere
+    `coreLibraryDesugaring` en `build.gradle.kts`:
+    - En `compileOptions`: `isCoreLibraryDesugaringEnabled = true`.
+    - En `dependencies`: `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`.
+    Sin esto, el build falla con `requires core library desugaring`.
+    Ademas, la API v22 usa **named params** en `initialize()` y `show()`:
+    - `initialize({settings: ..., onDidReceiveNotificationResponse: ...})`.
+    - `show({id:, title:, body:, notificationDetails:, payload:})`.
+    (Los params `details:` y positional de v17 ya NO funcionan.)
+
+23. **Banner en foreground**: por default Android NO muestra banner cuando
+    la app esta abierta. Se resuelve con `flutter_local_notifications` +
+    llamar `show()` desde `FirebaseMessaging.onMessage` (el listener del
+    FCM). El payload (log_id) se pasa al plugin para poder reportar la
+    apertura al tocar el banner (`onDidReceiveNotificationResponse`).

@@ -57,6 +57,72 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 15) - Banner en foreground + sistema de notificaciones 100%
+
+**Sistema de notificaciones COMPLETO end-to-end (S1-S5 + analytics + foreground banner).**
+
+- **Banner en foreground** (commit `ebdfb90`):
+  - `flutter_local_notifications ^22.3.2` agregado.
+  - `coreLibraryDesugaring` habilitado en `build.gradle.kts` + dep
+    `desugar_jdk_libs:2.1.4` (requerido por el plugin).
+  - `FcmService` muestra el banner a mano desde `onMessage` (Android por
+    default NO muestra notifs con la app en foreground).
+  - `onDidReceiveNotificationResponse` reporta la apertura al backend.
+  - Canal Android `baqueano_default` (matchea el meta-data del manifest).
+
+- **API v22 de flutter_local_notifications**:
+  - `initialize({settings: ...})` (named param, no positional).
+  - `show({id:, title:, body:, notificationDetails:, payload:})`
+    (todos named).
+  - Gotcha documentado en CHEATSHEET #22.
+
+- **Validado end-to-end**:
+  - Push llegado al emulador con la app en foreground.
+  - Banner visible con titulo + body.
+  - Tap -> `[FCM] tap (background)` + `[FCM] tap (terminated)`.
+  - POST `/notificaciones/{id}/abierta` -> 200.
+  - DB: `estado=abierta, abierto_en=2026-10-12 13:42:59`.
+
+- **Deuda cosmetica menor (backlog)**:
+  - El titulo de la notif muestra `baqueano_natales` en vez de
+    `Baqueano Natales`. Fix en `AndroidManifest` (`android:label`).
+  - Icono cuadrado en vez de icono monocromatico. Fix con
+    `ic_notification` vectorial.
+
+- **Estado del sistema de notificaciones**:
+  - S1 (modelo multi-device) OK
+  - S2 (refactor push batch) OK
+  - S3 (tracking entrega/apertura) OK
+  - S4 (preferencias + quiet hours) OK
+  - S5 (panel admin backend) OK
+  - Analytics end-to-end OK (backend + Flutter)
+  - Banner en foreground OK
+  - S6 (panel admin Flutter) PENDIENTE
+  - S7 (notificaciones in-app Flutter) PENDIENTE
+
+- **Suite total: 364 passed, 0 warnings.**
+
+### 2026-10-12 (cont. 14) - Pipeline de analytics cerrado end-to-end
+
+**El ciclo enviada -> entregada -> abierta funciona completo (backend + Flutter).**
+
+- **Backend** (commit `d3452a9`):
+  - `NotificationService.enviar_a_usuario()` inyecta el `notification_log_id`
+    en el payload del push FCM.
+  - La app Flutter lo recibe en `message.data["notification_log_id"]`.
+- **Flutter** (commit `db4a324`):
+  - `FcmService` reporta la apertura al tocar la notificacion
+    (`onMessageOpenedApp` para background + `getInitialMessage` para terminated).
+  - POST a `/api/v1/notificaciones/{id}/abierta` (best-effort, no rompe el flujo).
+
+- **Validado end-to-end**:
+  - Worker dispara push con `notification_log_id: 98a11412-...`.
+  - App Flutter lo recibe (`[FCM] foreground: ... notification_log_id: ...`).
+  - `marcar_abierta` persiste: `estado=abierta, abierto_en=2026-10-12 13:15:26`.
+  - Confirmado con `CHECK: estado=abierta abierto_en=...` en la DB.
+
+- **Suite total: 364 passed, 0 warnings.**
+
 ### 2026-10-12 (cont. 13) - Panel admin de notificaciones (S5) - backend completo
 
 **Backend del sistema de notificaciones 100% completo. Solo queda Flutter.**
