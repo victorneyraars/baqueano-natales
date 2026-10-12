@@ -183,6 +183,7 @@ async def admin_crear_categoria(
     data: MecanicaCategoriaCreate, admin: AdminUser, db: DbSession
 ) -> MecanicaCategoriaResponse:
     obj = await services.crear_categoria_mecanica(db, data)
+    await db.refresh(obj)
     return MecanicaCategoriaResponse.model_validate(obj)
 
 
@@ -198,6 +199,7 @@ async def admin_actualizar_categoria(
     db: DbSession,
 ) -> MecanicaCategoriaResponse:
     obj = await services.actualizar_categoria_mecanica(db, categoria.id, data)
+    await db.refresh(obj)
     return MecanicaCategoriaResponse.model_validate(obj)
 
 
@@ -237,6 +239,7 @@ async def admin_crear_repuesto(
     data: MecanicaRepuestoCreate, admin: AdminUser, db: DbSession
 ) -> MecanicaRepuestoResponse:
     obj = await services.crear_repuesto(db, data)
+    await db.refresh(obj)
     return MecanicaRepuestoResponse.model_validate(obj)
 
 
@@ -252,6 +255,7 @@ async def admin_actualizar_repuesto(
     db: DbSession,
 ) -> MecanicaRepuestoResponse:
     obj = await services.actualizar_repuesto(db, repuesto.id, data)
+    await db.refresh(obj)
     return MecanicaRepuestoResponse.model_validate(obj)
 
 
@@ -429,6 +433,7 @@ async def agregar_item(
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     item = await services.agregar_item(db, orden_id, data, user.id)
+    await db.refresh(item)
     return OrdenItemResponse.model_validate(item)
 
 
@@ -451,6 +456,7 @@ async def editar_item(
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     item = await services.actualizar_item(db, orden_id, item_id, data)
+    await db.refresh(item)
     return OrdenItemResponse.model_validate(item)
 
 
@@ -660,6 +666,7 @@ async def crear_turno(
     db: DbSession,
 ):
     turno = await services.crear_turno(db, user.id, data)
+    await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
 
 
@@ -691,6 +698,7 @@ async def editar_mi_turno(
     db: DbSession,
 ):
     turno = await services.actualizar_turno(db, turno_id, user.id, data)
+    await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
 
 
@@ -708,6 +716,7 @@ async def cancelar_mi_turno(
     turno = await services.cancelar_turno(
         db, turno_id, user.id, es_prestador=False, motivo=data.motivo
     )
+    await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
 
 
@@ -790,6 +799,7 @@ async def cambiar_estado_turno(
     turno = await services.cambiar_estado_turno(
         db, turno_id, data.nuevo_estado, user.id, es_prestador=True
     )
+    await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
 
 
@@ -809,6 +819,7 @@ async def rechazar_turno(
     turno = await services.rechazar_turno(
         db, turno_id, prestador_id, motivo=data.motivo
     )
+    await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
 
 
@@ -922,9 +933,11 @@ async def crear_garantia_orden(
             condiciones=data.condiciones,
         )
         g = await services.actualizar_garantia(db, existente.id, upd)
+        await db.refresh(g)
         return GarantiaResponse.model_validate(g)
 
     g = await services.crear_garantia(db, orden_id, data)
+    await db.refresh(g)
     return GarantiaResponse.model_validate(g)
 
 
@@ -1002,6 +1015,7 @@ async def crear_recordatorio_endpoint(
             detail="objeto_servicio_id no coincide con el path",
         )
     rec = await services.crear_recordatorio(db, data)
+    await db.refresh(rec)
     return RecordatorioResponse.model_validate(rec)
 
 
