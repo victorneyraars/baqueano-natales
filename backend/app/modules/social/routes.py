@@ -129,6 +129,7 @@ async def crear_cuenta(
     _admin: AdminUser,
 ) -> CuentaSocialResponse:
     cuenta = await services.crear_cuenta(db, datos)
+    await db.refresh(cuenta)
     return CuentaSocialResponse.model_validate(cuenta)
 
 
@@ -151,6 +152,7 @@ async def actualizar_cuenta(
             detail="Cuenta social no encontrada",
         )
     cuenta = await services.actualizar_cuenta(db, cuenta, datos)
+    await db.refresh(cuenta)
     return CuentaSocialResponse.model_validate(cuenta)
 
 
@@ -208,6 +210,7 @@ async def actualizar_config(
 ) -> ConfigSocialResponse:
     cfg = await services.obtener_o_crear_config_global(db)
     cfg = await services.actualizar_config(db, cfg, datos)
+    await db.refresh(cfg)
     return ConfigSocialResponse.model_validate(cfg)
 
 

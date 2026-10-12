@@ -149,6 +149,7 @@ async def crear_mi_prestador(
     db: DbSession,
 ) -> PrestadorPrivadoResponse:
     prestador = await services.crear_prestador(db, user, data)
+    await db.refresh(prestador)
     return PrestadorPrivadoResponse.model_validate(prestador)
 
 
@@ -396,6 +397,7 @@ async def admin_crear_categoria(
     db: DbSession,
 ) -> CategoriaOficioResponse:
     cat = await services.crear_categoria(db, data)
+    await db.refresh(cat)
     return CategoriaOficioResponse.model_validate(cat)
 
 

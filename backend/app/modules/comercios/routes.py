@@ -135,6 +135,7 @@ async def crear_mi_comercio(
     db: DbSession,
 ) -> ComercioPrivadoResponse:
     comercio = await services.crear_comercio(db, user, data)
+    await db.refresh(comercio)
     return ComercioPrivadoResponse.model_validate(comercio)
 
 
@@ -268,6 +269,7 @@ async def admin_crear_categoria(
     db: DbSession,
 ) -> CategoriaComercioResponse:
     cat = await services.crear_categoria(db, data)
+    await db.refresh(cat)
     return CategoriaComercioResponse.model_validate(cat)
 
 
