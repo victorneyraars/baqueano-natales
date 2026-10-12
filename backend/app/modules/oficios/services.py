@@ -1,6 +1,6 @@
 """Services del modulo oficios (M1: objetos_servicio + vehiculos + catalogos)."""
 import logging
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.modules.auth.models import RolUsuario, Usuario
 from app.modules.oficios.models import (
     EstadoOrden,
+    Garantia,
     EstadoTurno,
     MecanicaCategoriaServicio,
     MecanicaRepuesto,
@@ -23,7 +24,10 @@ from app.modules.oficios.models import (
     TipoEventoHistorial,
     TipoItemOrden,
     TipoObjetoServicio,
+    TipoGarantia,
+    TipoRecordatorio,
     TipoVehiculo,
+    Recordatorio,
     Turno,
     Vehiculo,
 )
@@ -736,10 +740,12 @@ async def cambiar_estado(
     estado_anterior = orden.estado.value
     orden.estado = nuevo_estado
 
-    # Registrar fecha_entrega_real cuando pasa a entregado
+    # Registrar fecha_entrega_real + generar garantia automatica al entregar
     if nuevo_estado == EstadoOrden.ENTREGADO:
         from datetime import timezone
         orden.fecha_entrega_real = datetime.now(timezone.utc)
+        # Auto-generar garantia de 30 dias (idempotente)
+        await generar_garantia_automatica(db, orden.id, duracion_dias=30)
 
     await db.flush()
 
@@ -1234,3 +1240,250 @@ async def vincular_orden_a_turno(
     turno.orden_id = orden_id
     await db.flush()
     return turno
+
+
+# =========================================================
+# M4: Garantias
+# =========================================================
+async def crear_garantia(
+    db: AsyncSession,
+    orden_id: UUID,
+    data,
+) -> Garantia:
+    """Crea una garantia para una orden (prestador)."""
+    # Validar orden existe
+    orden = (
+        await db.execute(select(OrdenTrabajo).where(OrdenTrabajo.id == orden_id))
+    ).scalar_one_or_none()
+    if orden is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Orden no encontrada",
+        )
+
+    # Solo se puede garantizar una orden entregada
+    if orden.estado != EstadoOrden.ENTREGADO:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Solo se puede garantizar una orden entregada. Actual: {orden.estado.value}",
+        )
+
+    try:
+        tipo = TipoGarantia(data.tipo)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Tipo invalido: {data.tipo}",
+        )
+
+    hoy = date.today()
+    garantia = Garantia(
+        orden_id=orden_id,
+        tipo=tipo,
+        duracion_dias=data.duracion_dias,
+        fecha_inicio=hoy,
+        fecha_fin=hoy + timedelta(days=data.duracion_dias),
+        cobertura=data.cobertura,
+        condiciones=data.condiciones,
+    )
+    db.add(garantia)
+    await db.flush()
+    return garantia
+
+
+async def obtener_garantia_de_orden(
+    db: AsyncSession,
+    orden_id: UUID,
+) -> Garantia | None:
+    """Devuelve la garantia activa de una orden, o None."""
+    stmt = (
+        select(Garantia)
+        .where(
+            Garantia.orden_id == orden_id,
+            Garantia.activo.is_(True),
+        )
+        .order_by(Garantia.created_at.desc())
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def actualizar_garantia(
+    db: AsyncSession,
+    garantia_id: UUID,
+    data,
+) -> Garantia:
+    """Actualiza una garantia (parcial)."""
+    g = (
+        await db.execute(select(Garantia).where(Garantia.id == garantia_id))
+    ).scalar_one_or_none()
+    if g is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Garantia no encontrada",
+        )
+
+    cambios = data.model_dump(exclude_unset=True)
+    if "tipo" in cambios and cambios["tipo"] is not None:
+        try:
+            g.tipo = TipoGarantia(cambios["tipo"])
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tipo invalido: {cambios['tipo']}",
+            )
+    if "duracion_dias" in cambios and cambios["duracion_dias"] is not None:
+        g.duracion_dias = cambios["duracion_dias"]
+        # Recalcular fecha_fin desde fecha_inicio
+        g.fecha_fin = g.fecha_inicio + timedelta(days=cambios["duracion_dias"])
+    if "cobertura" in cambios:
+        g.cobertura = cambios["cobertura"]
+    if "condiciones" in cambios:
+        g.condiciones = cambios["condiciones"]
+
+    await db.flush()
+    return g
+
+
+async def generar_garantia_automatica(
+    db: AsyncSession,
+    orden_id: UUID,
+    duracion_dias: int = 30,
+) -> Garantia:
+    """Genera una garantia automatica al entregar una orden.
+
+    Se llama desde cambiar_estado() al pasar a ENTREGADO.
+    Idempotente: si ya existe una garantia activa para la orden, la retorna.
+    """
+    existente = await obtener_garantia_de_orden(db, orden_id)
+    if existente is not None:
+        return existente
+
+    hoy = date.today()
+    garantia = Garantia(
+        orden_id=orden_id,
+        tipo=TipoGarantia.COMPLETO,
+        duracion_dias=duracion_dias,
+        fecha_inicio=hoy,
+        fecha_fin=hoy + timedelta(days=duracion_dias),
+        cobertura="Garantia general sobre mano de obra y repuestos.",
+        condiciones="No cubre danios por uso indebido o accidentes.",
+    )
+    db.add(garantia)
+    await db.flush()
+    return garantia
+
+
+# =========================================================
+# M4: Recordatorios
+# =========================================================
+async def crear_recordatorio(
+    db: AsyncSession,
+    data,
+) -> Recordatorio:
+    """Crea un recordatorio para un objeto_servicio."""
+    # Validar objeto_servicio existe
+    obj = (
+        await db.execute(
+            select(ObjetoServicio).where(ObjetoServicio.id == data.objeto_servicio_id)
+        )
+    ).scalar_one_or_none()
+    if obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Objeto de servicio no encontrado",
+        )
+
+    try:
+        tipo = TipoRecordatorio(data.tipo)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Tipo invalido: {data.tipo}",
+        )
+
+    r = Recordatorio(
+        objeto_servicio_id=data.objeto_servicio_id,
+        tipo=tipo,
+        condicion=data.condicion,
+        mensaje=data.mensaje,
+    )
+    db.add(r)
+    await db.flush()
+    return r
+
+
+async def listar_recordatorios_de_objeto(
+    db: AsyncSession,
+    objeto_servicio_id: UUID,
+    incluir_enviados: bool = False,
+) -> list[Recordatorio]:
+    """Lista recordatorios de un objeto_servicio."""
+    stmt = (
+        select(Recordatorio)
+        .where(
+            Recordatorio.objeto_servicio_id == objeto_servicio_id,
+            Recordatorio.activo.is_(True),
+        )
+        .order_by(Recordatorio.created_at.desc())
+    )
+    if not incluir_enviados:
+        stmt = stmt.where(Recordatorio.enviado.is_(False))
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def eliminar_recordatorio(
+    db: AsyncSession,
+    recordatorio_id: UUID,
+) -> None:
+    """Soft delete de un recordatorio."""
+    r = (
+        await db.execute(
+            select(Recordatorio).where(Recordatorio.id == recordatorio_id)
+        )
+    ).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recordatorio no encontrado",
+        )
+    r.activo = False
+    await db.flush()
+
+
+async def marcar_recordatorio_enviado(
+    db: AsyncSession,
+    recordatorio_id: UUID,
+) -> Recordatorio:
+    """Marca un recordatorio como enviado (usado por el worker)."""
+    from datetime import timezone as _tz
+    r = (
+        await db.execute(
+            select(Recordatorio).where(Recordatorio.id == recordatorio_id)
+        )
+    ).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recordatorio no encontrado",
+        )
+    r.enviado = True
+    r.fecha_envio = datetime.now(_tz.utc)
+    await db.flush()
+    return r
+
+
+async def buscar_recordatorios_pendientes(
+    db: AsyncSession,
+    limit: int = 200,
+) -> list[Recordatorio]:
+    """Devuelve recordatorios activos y no enviados (para el worker)."""
+    stmt = (
+        select(Recordatorio)
+        .where(
+            Recordatorio.enviado.is_(False),
+            Recordatorio.activo.is_(True),
+        )
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())

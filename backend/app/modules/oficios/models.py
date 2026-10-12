@@ -757,3 +757,138 @@ class Turno(TimestampMixin, Base):
             f"<Turno(id={self.id}, estado={self.estado.value}, "
             f"fecha={self.fecha_inicio})>"
         )
+
+
+# =========================================================
+# M4: Garantias y Recordatorios
+# =========================================================
+class TipoGarantia(str, Enum):
+    MANO_OBRA = "mano_obra"
+    REPUESTO = "repuesto"
+    COMPLETO = "completo"
+
+
+class TipoRecordatorio(str, Enum):
+    KM = "km"
+    FECHA = "fecha"
+    EVENTO = "evento"
+
+
+class Garantia(TimestampMixin, SoftDeleteMixin, Base):
+    """Garantia asociada a una orden entregada.
+
+    Se genera (automatica o manualmente) cuando una orden pasa a ENTREGADO.
+    El cliente puede reclamar dentro de la ventana fecha_inicio..fecha_fin.
+    """
+
+    __tablename__ = "garantias"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    orden_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo: Mapped[TipoGarantia] = mapped_column(
+        SQLEnum(
+            TipoGarantia,
+            name="tipo_garantia",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=TipoGarantia.COMPLETO,
+        server_default=TipoGarantia.COMPLETO.value,
+    )
+    duracion_dias: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=30,
+        server_default="30",
+    )
+    fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_fin: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    cobertura: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Que cubre la garantia",
+    )
+    condiciones: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Que NO cubre la garantia",
+    )
+
+    # Relaciones
+    orden: Mapped["OrdenTrabajo"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Garantia(id={self.id}, orden_id={self.orden_id}, "
+            f"fin={self.fecha_fin})>"
+        )
+
+
+class Recordatorio(TimestampMixin, SoftDeleteMixin, Base):
+    """Recordatorio automatico por km/fecha para un objeto_servicio.
+
+    El worker diario revisa recordatorios pendientes y envia notificacion
+    al propietario cuando se cumple la condicion.
+
+    Condicion (JSONB):
+    - tipo=km: {"km_umbral": 5000} (comparar contra Vehiculo.kilometraje_actual)
+    - tipo=fecha: {"fecha": "2027-03-15"}
+    - tipo=evento: {descripcion libre}
+    """
+
+    __tablename__ = "recordatorios"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    objeto_servicio_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("objetos_servicio.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo: Mapped[TipoRecordatorio] = mapped_column(
+        SQLEnum(
+            TipoRecordatorio,
+            name="tipo_recordatorio",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+    )
+    condicion: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        comment="Datos de la condicion (km_umbral o fecha)",
+    )
+    mensaje: Mapped[str] = mapped_column(String(255), nullable=False)
+    enviado: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
+    )
+    fecha_envio: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relaciones
+    objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Recordatorio(id={self.id}, tipo={self.tipo.value}, "
+            f"enviado={self.enviado})>"
+        )

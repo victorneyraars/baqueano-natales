@@ -42,7 +42,10 @@ from app.modules.promocion.routes import (
     router_admin as promocion_admin_router,
 )
 from app.modules.oficios.routes import (
+    router_garantias_cliente as oficios_garantias_cliente_router,
+    router_garantias_prestador as oficios_garantias_prestador_router,
     router_prestador_utilidades as oficios_prestador_utilidades_router,
+    router_recordatorios as oficios_recordatorios_router,
     router_turnos_cliente as oficios_turnos_cliente_router,
     router_turnos_prestador as oficios_turnos_prestador_router,
     router_publico as oficios_publico_router,
@@ -142,6 +145,9 @@ app.include_router(oficios_ordenes_cliente_router, prefix="/api/v1")
 app.include_router(oficios_prestador_utilidades_router, prefix="/api/v1")
 app.include_router(oficios_turnos_cliente_router, prefix="/api/v1")
 app.include_router(oficios_turnos_prestador_router, prefix="/api/v1")
+app.include_router(oficios_garantias_cliente_router, prefix="/api/v1")
+app.include_router(oficios_garantias_prestador_router, prefix="/api/v1")
+app.include_router(oficios_recordatorios_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------

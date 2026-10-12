@@ -14,6 +14,12 @@ from app.modules.oficios.deps import CategoriaMecanica, OrdenDelUsuario, Repuest
 from app.modules.oficios.models import EstadoOrden, EstadoTurno
 from app.modules.oficios.schemas import (
     ClienteBusquedaResponse,
+    GarantiaCreate,
+    GarantiaResponse,
+    GarantiaUpdate,
+    RecordatorioCreate,
+    RecordatorioResponse,
+    RecordatorioUpdate,
     TurnoCambiarEstadoRequest,
     TurnoCancelarRequest,
     TurnoCreate,
@@ -811,3 +817,215 @@ async def vincular_orden(
         db, turno_id, data.orden_id, prestador_id
     )
     return TurnoResponse.model_validate(turno)
+
+
+# =========================================================
+# M4: Garantias
+# =========================================================
+router_garantias_cliente = APIRouter(
+    prefix="/mis-ordenes/{orden_id}/garantia",
+    tags=["oficios-garantias-cliente"],
+)
+
+
+@router_garantias_cliente.get(
+    "",
+    response_model=GarantiaResponse | None,
+    summary="Ver garantia de mi orden",
+)
+async def ver_garantia_mi_orden(
+    orden_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.cliente_id != user.id and user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    g = await services.obtener_garantia_de_orden(db, orden_id)
+    return GarantiaResponse.model_validate(g) if g else None
+
+
+router_garantias_prestador = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/ordenes/{orden_id}/garantia",
+    tags=["oficios-garantias-prestador"],
+)
+
+
+async def _validar_garantia_prestador(
+    db, prestador_id: UUID, orden_id: UUID, user
+):
+    from app.modules.prestadores.models import Prestador
+
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return orden
+
+
+@router_garantias_prestador.get(
+    "",
+    response_model=GarantiaResponse | None,
+    summary="Ver garantia de una orden del taller",
+)
+async def ver_garantia_orden_prestador(
+    prestador_id: UUID,
+    orden_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_garantia_prestador(db, prestador_id, orden_id, user)
+    g = await services.obtener_garantia_de_orden(db, orden_id)
+    return GarantiaResponse.model_validate(g) if g else None
+
+
+@router_garantias_prestador.post(
+    "",
+    response_model=GarantiaResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear/actualizar garantia manual (solo ordenes entregadas)",
+)
+async def crear_garantia_orden(
+    prestador_id: UUID,
+    orden_id: UUID,
+    data: GarantiaCreate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_garantia_prestador(db, prestador_id, orden_id, user)
+    existente = await services.obtener_garantia_de_orden(db, orden_id)
+    if existente is not None:
+        # Actualizar la existente
+        upd = GarantiaUpdate(
+            tipo=data.tipo,
+            duracion_dias=data.duracion_dias,
+            cobertura=data.cobertura,
+            condiciones=data.condiciones,
+        )
+        g = await services.actualizar_garantia(db, existente.id, upd)
+        return GarantiaResponse.model_validate(g)
+
+    g = await services.crear_garantia(db, orden_id, data)
+    return GarantiaResponse.model_validate(g)
+
+
+# =========================================================
+# M4: Recordatorios
+# =========================================================
+router_recordatorios = APIRouter(
+    prefix="/mis-vehiculos/{objeto_id}/recordatorios",
+    tags=["oficios-recordatorios"],
+)
+
+
+async def _validar_objeto_del_usuario(db, objeto_id: UUID, user):
+    obj = (
+        await db.execute(
+            select(ObjetoServicio).where(ObjetoServicio.id == objeto_id)
+        )
+    ).scalar_one_or_none()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Vehiculo no encontrado")
+    if obj.propietario_id != user.id and user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return obj
+
+
+async def _validar_recordatorio_del_usuario(db, objeto_id: UUID, rec_id: UUID):
+    rec = (
+        await db.execute(
+            select(Recordatorio).where(
+                Recordatorio.id == rec_id,
+                Recordatorio.objeto_servicio_id == objeto_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
+    return rec
+
+
+@router_recordatorios.get(
+    "",
+    response_model=list[RecordatorioResponse],
+    summary="Listar mis recordatorios de un vehiculo",
+)
+async def listar_recordatorios(
+    objeto_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    incluir_enviados: bool = Query(False),
+):
+    await _validar_objeto_del_usuario(db, objeto_id, user)
+    recs = await services.listar_recordatorios_de_objeto(
+        db, objeto_id, incluir_enviados=incluir_enviados
+    )
+    return [RecordatorioResponse.model_validate(r) for r in recs]
+
+
+@router_recordatorios.post(
+    "",
+    response_model=RecordatorioResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear recordatorio",
+)
+async def crear_recordatorio_endpoint(
+    objeto_id: UUID,
+    data: RecordatorioCreate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_objeto_del_usuario(db, objeto_id, user)
+    # Forzar que el objeto sea el del path
+    if data.objeto_servicio_id != objeto_id:
+        raise HTTPException(
+            status_code=400,
+            detail="objeto_servicio_id no coincide con el path",
+        )
+    rec = await services.crear_recordatorio(db, data)
+    return RecordatorioResponse.model_validate(rec)
+
+
+@router_recordatorios.patch(
+    "/{recordatorio_id}",
+    response_model=RecordatorioResponse,
+    summary="Actualizar recordatorio",
+)
+async def actualizar_recordatorio_endpoint(
+    objeto_id: UUID,
+    recordatorio_id: UUID,
+    data: RecordatorioUpdate,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_objeto_del_usuario(db, objeto_id, user)
+    rec = await _validar_recordatorio_del_usuario(db, objeto_id, recordatorio_id)
+    if data.condicion is not None:
+        rec.condicion = data.condicion
+    if data.mensaje is not None:
+        rec.mensaje = data.mensaje
+    await db.flush()
+    return RecordatorioResponse.model_validate(rec)
+
+
+@router_recordatorios.delete(
+    "/{recordatorio_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar recordatorio",
+)
+async def eliminar_recordatorio_endpoint(
+    objeto_id: UUID,
+    recordatorio_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_objeto_del_usuario(db, objeto_id, user)
+    await _validar_recordatorio_del_usuario(db, objeto_id, recordatorio_id)
+    await services.eliminar_recordatorio(db, recordatorio_id)

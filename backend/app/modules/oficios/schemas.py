@@ -388,3 +388,69 @@ class TurnoListItemResponse(BaseModel):
     estado: str
     motivo: str | None
     orden_id: UUID | None
+
+
+# =========================================================
+# M4: Garantias y Recordatorios
+# =========================================================
+class GarantiaCreate(BaseModel):
+    """Crear una garantia (prestador)."""
+
+    tipo: str = Field("completo", description="mano_obra|repuesto|completo")
+    duracion_dias: int = Field(30, ge=1, le=3650)
+    cobertura: str | None = None
+    condiciones: str | None = None
+
+
+class GarantiaUpdate(BaseModel):
+    """Actualizar garantia (parcial)."""
+
+    tipo: str | None = None
+    duracion_dias: int | None = Field(None, ge=1, le=3650)
+    cobertura: str | None = None
+    condiciones: str | None = None
+
+
+class GarantiaResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    orden_id: UUID
+    tipo: str
+    duracion_dias: int
+    fecha_inicio: date
+    fecha_fin: date
+    cobertura: str | None
+    condiciones: str | None
+    activo: bool
+    created_at: datetime
+
+
+class RecordatorioCreate(BaseModel):
+    """Crear un recordatorio (cliente o sistema)."""
+
+    objeto_servicio_id: UUID
+    tipo: str = Field(..., description="km|fecha|evento")
+    condicion: dict = Field(..., description='Ej: {"km_umbral": 5000}')
+    mensaje: str = Field(..., min_length=1, max_length=255)
+
+
+class RecordatorioUpdate(BaseModel):
+    """Actualizar recordatorio (parcial)."""
+
+    condicion: dict | None = None
+    mensaje: str | None = Field(None, min_length=1, max_length=255)
+
+
+class RecordatorioResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    objeto_servicio_id: UUID
+    tipo: str
+    condicion: dict
+    mensaje: str
+    enviado: bool
+    fecha_envio: datetime | None
+    activo: bool
+    created_at: datetime
