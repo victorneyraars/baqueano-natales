@@ -94,12 +94,16 @@ class NotificationService:
         # 3. Crear log PENDIENTE
         log = await self._crear_log(db, usuario_id, titulo, body, tipo, data, analytics_label)
 
+        # 3b. Inyectar el notification_log_id en el payload del push.
+        # La app Flutter lo usa para reportar la apertura (POST /notificaciones/{id}/abierta).
+        payload = {**(data or {}), "notification_log_id": str(log.id)}
+
         # 4. Enviar via provider
         results = await self.provider.send_batch(
             tokens=[t.token for t in tokens],
             titulo=titulo,
             body=body,
-            data=data,
+            data=payload,
             analytics_label=analytics_label,
         )
 
