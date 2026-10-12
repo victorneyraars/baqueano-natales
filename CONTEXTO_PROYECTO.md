@@ -57,6 +57,46 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 17) - Centro de notificaciones del usuario (S7) - sistema 100% end-to-end
+
+**Sistema de notificaciones nivel industria: 100% completo (backend + admin + usuario).**
+
+- **S7 - Centro de notificaciones del usuario** (commits `f60a745` + `ca46767`):
+  - `MisNotificacionesScreen`: lista con marcar-abierta al tocar + SnackBar de feedback.
+  - `PreferenciasNotificacionScreen`: toggles por tipo + quiet hours con timepicker.
+  - Modelo `PreferenciaNotificacion` + 4 metodos nuevos en el repository
+    (misNotificaciones, marcarAbierta, misPreferencias, actualizarPreferencias).
+  - 2 rutas nuevas: `/mis-notificaciones` + `/mis-notificaciones/preferencias`.
+  - Card "Mis notificaciones" en el Home del cliente.
+- **Fix de UX** (`ca46767`): el SnackBar no se veia porque el `context`
+  original quedaba unmounted post `ref.invalidate()`. Fix: capturar el
+  `ScaffoldMessenger` antes del await.
+- **Fix del emulador** (sesion):
+  - 5 adb zombies acumulados -> matar todo + adb start-server.
+  - `-gpu host` con Intel UHD 630 -> warnings visuales.
+    `-gpu swiftshader_indirect` es mas estable.
+
+- **Estado final del sistema de notificaciones (100% end-to-end)**:
+  - S1 (modelo multi-device) OK
+  - S2 (refactor push batch + limpieza tokens) OK
+  - S3 (tracking entrega/apertura) OK
+  - S4 (preferencias + quiet hours) OK
+  - S5 (panel admin backend) OK
+  - S6 (panel admin Flutter) OK
+  - S7 (centro de notificaciones del usuario) OK
+  - Analytics end-to-end OK
+  - Banner en foreground OK
+
+- **Suite total: 364 tests verdes, 0 warnings.**
+
+- **Backlog (no bloqueante)**:
+  - Card -> detalle de notificacion (pantalla con body completo + data JSON).
+  - Filtro "solo no leidas" en la AppBar.
+  - Badge de no leidas en la Home.
+  - `android:label` de la notif (mostrar "Baqueano Natales").
+  - Icono monocromatico de notificacion (`ic_notification` vectorial).
+  - M5 del modulo oficios: fotos + reportes.
+
 ### 2026-10-12 (cont. 16) - Panel admin Flutter (S6) - sistema de notificaciones 100% completo
 
 **Sistema de notificaciones nivel industria: 100% completo (backend + frontend + admin panel).**
