@@ -43,6 +43,9 @@ from app.modules.prestadores.routes import (
 from app.modules.promocion.routes import (
     router_admin as promocion_admin_router,
 )
+from app.modules.oficios.routes_reportes import (
+    router_reportes_prestador as oficios_reportes_prestador_router,
+)
 from app.modules.oficios.routes_fotos import (
     router_fotos_cliente as oficios_fotos_cliente_router,
     router_fotos_prestador as oficios_fotos_prestador_router,
@@ -166,6 +169,7 @@ app.include_router(oficios_recordatorios_router, prefix="/api/v1")
 app.include_router(oficios_fotos_cliente_router, prefix="/api/v1")
 app.include_router(oficios_fotos_prestador_router, prefix="/api/v1")
 app.include_router(oficios_fotos_archivo_router, prefix="/api/v1")
+app.include_router(oficios_reportes_prestador_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
