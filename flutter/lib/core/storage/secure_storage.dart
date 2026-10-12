@@ -17,6 +17,7 @@ class SecureStorageService {
   static const _keyAccessToken = 'access_token';
   static const _keyUserId = 'user_id';
   static const _keyUserRole = 'user_role';
+  static const _keyLastFcmTap = 'last_fcm_tap';
 
   /// Guarda el token de acceso (JWT).
   static Future<void> saveAccessToken(String token) async {
@@ -52,6 +53,33 @@ class SecureStorageService {
   static Future<bool> hasAccessToken() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  /// Guarda el ultimo tap de notificacion FCM procesado.
+  ///
+  /// Formato: `<messageKey>|<timestampMs>`. `messageKey` puede contener
+  /// pipes (fallback `tipo|logId|sentTimeMs`), por eso parseamos con
+  /// `lastIndexOf('|')` en `getFcmTap`.
+  static Future<void> saveFcmTap(String messageKey, int timestampMs) async {
+    await _storage.write(
+      key: _keyLastFcmTap,
+      value: '$messageKey|$timestampMs',
+    );
+  }
+
+  /// Lee el ultimo tap de notificacion FCM procesado.
+  ///
+  /// Devuelve `null` si nunca se proceso un tap o si el valor guardado
+  /// esta corrupto. El caller decide la ventana temporal para deduplicar.
+  static Future<({String messageKey, int timestampMs})?> getFcmTap() async {
+    final raw = await _storage.read(key: _keyLastFcmTap);
+    if (raw == null || raw.isEmpty) return null;
+    final idx = raw.lastIndexOf('|');
+    if (idx <= 0) return null;
+    final messageKey = raw.substring(0, idx);
+    final timestampMs = int.tryParse(raw.substring(idx + 1));
+    if (timestampMs == null) return null;
+    return (messageKey: messageKey, timestampMs: timestampMs);
   }
 
   /// Limpia TODOS los datos almacenados (logout).

@@ -62,7 +62,7 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
       _navScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         debugPrint('[DeepLink] navegando a: $pending');
-        router.go(pending);
+        router.push(pending);
         ref.read(pendingNavigationProvider.notifier).set(null);
         _navScheduled = false;
       });

@@ -7,10 +7,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:baqueano_natales/core/network/dio_client.dart';
+import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
 const _canalId = 'baqueano_default';
 const _canalNombre = 'Notificaciones de Baqueano';
 const _canalDescripcion = 'Recordatorios, promociones y avisos';
+
+/// Ventana en la que un mismo tap se considera duplicado.
+///
+/// Cubre hot restart (el plugin nativo cachea `getInitialMessage` y Dart
+/// pierde su estado en memoria). 30s es suficiente para el caso dev y
+/// no bloquea un cold start legitimo del mismo mensaje.
+const _dedupWindowMs = 30 * 1000;
+
+/// Limite del set in-session para no crecer indefinidamente.
+const _dedupSetMaxSize = 30;
 
 class FcmService {
   FcmService({
@@ -27,6 +38,14 @@ class FcmService {
   final void Function(String path)? _onDeepLink;
   final _localNotif = FlutterLocalNotificationsPlugin();
 
+  /// Message keys procesados en esta sesion (FIFO acotado).
+  ///
+  /// Static a proposito: tras hot restart, el plugin nativo de
+  /// flutter_local_notifications puede retener un callback al isolate
+  /// viejo y quedar 2 instancias de FcmService vivas. El Set compartido
+  /// garantiza que ambas deduplican entre si.
+  static final Set<String> _procesadosEnSesion = <String>{};
+
   Future<void> inicializar() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
@@ -35,9 +54,8 @@ class FcmService {
       settings: initSettings,
       onDidReceiveNotificationResponse: (response) {
         final logId = response.payload;
-        if (logId != null && logId.isNotEmpty) {
-          _reportarAperturaPorId(logId);
-        }
+        if (logId == null || logId.isEmpty) return;
+        _procesarTapLocal(logId);
       },
     );
 
@@ -62,13 +80,13 @@ class FcmService {
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('[FCM] tap (background): data=${message.data}');
-      _procesarTap(message);
+      _procesarTapFcm(message);
     });
 
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint('[FCM] tap (terminated): data=${initialMessage.data}');
-      _procesarTap(initialMessage);
+      _procesarTapFcm(initialMessage);
     }
 
     await _messaging.setForegroundNotificationPresentationOptions(
@@ -96,6 +114,9 @@ class FcmService {
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
+    // El payload del banner local es el logId: al tocar, el callback
+    // `onDidReceiveNotificationResponse` lo usa para deduplicar y
+    // reportar la apertura.
     final logId = message.data['notification_log_id']?.toString();
 
     await _localNotif.show(
@@ -116,7 +137,83 @@ class FcmService {
     );
   }
 
-  Future<void> _procesarTap(RemoteMessage message) async {
+  /// Key canonica para deduplicar un tap.
+  ///
+  /// Usa `notification_log_id` (que identifica univocamente cada envio y
+  /// esta disponible en los 3 paths: banner local, `onMessageOpenedApp`
+  /// y `getInitialMessage`). Fallback a `messageId` de FCM si el logId
+  /// no esta (no deberia pasar en el flujo normal).
+  String _messageKey(RemoteMessage message) {
+    final logId = message.data['notification_log_id']?.toString();
+    if (logId != null && logId.isNotEmpty) return 'log:$logId';
+    final id = message.messageId;
+    if (id != null && id.isNotEmpty) return 'msg:$id';
+    final tipo = message.data['tipo']?.toString() ?? '';
+    final sentTime = message.sentTime?.millisecondsSinceEpoch ?? 0;
+    return 'fb:$tipo|$sentTime';
+  }
+
+  /// Registra el key en el set in-session SIN await intermedio.
+  ///
+  /// Devuelve `true` si era nuevo (se agrego), `false` si ya estaba.
+  /// Este metodo es **sincrono** a proposito: entre el `contains` y el
+  /// `add` no debe haber un `await`, porque dos eventos casi simultaneos
+  /// (`onDidReceiveNotificationResponse` + `onMessageOpenedApp`) entrarian
+  /// en paralelo y ambos pasarian el check.
+  bool _registrarEnSesionSync(String key) {
+    if (_procesadosEnSesion.contains(key)) return false;
+    _procesadosEnSesion.add(key);
+    if (_procesadosEnSesion.length > _dedupSetMaxSize) {
+      _procesadosEnSesion.remove(_procesadosEnSesion.first);
+    }
+    return true;
+  }
+
+  /// Devuelve `true` si el tap ya fue procesado (in-session o persistente).
+  ///
+  /// Si devuelve `false`, deja el tap marcado como procesado antes de
+  /// retornar (in-session + persistente).
+  Future<bool> _yaProcesado(String key) async {
+    // 1. Check + add SINCRONO: elimina el race entre los paths que
+    //    disparan casi simultaneamente.
+    if (!_registrarEnSesionSync(key)) {
+      debugPrint('[FCM] dedup in-session: $key');
+      return true;
+    }
+
+    // 2. Check persistente (cubre hot restart, donde el set se vacia
+    //    pero el plugin nativo re-entrega getInitialMessage).
+    final ultimo = await SecureStorageService.getFcmTap();
+    if (ultimo != null && ultimo.messageKey == key) {
+      final ahoraMs = DateTime.now().millisecondsSinceEpoch;
+      if (ahoraMs - ultimo.timestampMs < _dedupWindowMs) {
+        debugPrint('[FCM] dedup persistente: $key');
+        return true;
+      }
+    }
+
+    // 3. Persistir para la proxima sesion.
+    await SecureStorageService.saveFcmTap(
+      key,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    return false;
+  }
+
+  /// Path del banner local (`flutter_local_notifications`).
+  ///
+  /// El payload es el logId directamente (no tenemos el RemoteMessage).
+  Future<void> _procesarTapLocal(String logId) async {
+    final key = 'log:$logId';
+    if (await _yaProcesado(key)) return;
+    await _reportarAperturaPorId(logId);
+  }
+
+  /// Path de FCM (`onMessageOpenedApp` + `getInitialMessage`).
+  Future<void> _procesarTapFcm(RemoteMessage message) async {
+    final key = _messageKey(message);
+    if (await _yaProcesado(key)) return;
+
     final logId = message.data['notification_log_id']?.toString();
     if (logId != null && logId.isNotEmpty) {
       await _reportarAperturaPorId(logId);
