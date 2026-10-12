@@ -29,6 +29,36 @@ class FcmTokenUpdate(BaseModel):
     token: str = Field(..., min_length=1, max_length=500)
 
 
+class PreferenciaNotificacionResponse(BaseModel):
+    """Preferencias de notificacion del usuario."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    recordatorios: bool
+    promociones: bool
+    confirmaciones: bool
+    sistema: bool
+
+    quiet_hours_enabled: bool
+    quiet_hours_inicio: str | None
+    quiet_hours_fin: str | None
+    timezone: str
+
+
+class PreferenciaNotificacionUpdate(BaseModel):
+    """Actualizar preferencias (parcial)."""
+
+    recordatorios: bool | None = None
+    promociones: bool | None = None
+    confirmaciones: bool | None = None
+    sistema: bool | None = None
+
+    quiet_hours_enabled: bool | None = None
+    quiet_hours_inicio: str | None = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    quiet_hours_fin: str | None = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    timezone: str | None = Field(None, min_length=1, max_length=50)
+
+
 # ---------------------------------------------------------
 # Schemas de salida
 # ---------------------------------------------------------

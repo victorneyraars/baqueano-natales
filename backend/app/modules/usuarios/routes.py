@@ -14,6 +14,8 @@ from app.modules.usuarios.schemas import (
     FcmTokenResponse,
     FcmTokenUpdate,
     MessageResponse,
+    PreferenciaNotificacionResponse,
+    PreferenciaNotificacionUpdate,
     UsuarioMeResponse,
     UsuarioPublicoResponse,
     UsuarioUpdate,
@@ -179,6 +181,35 @@ async def deactivate_me(
 # ---------------------------------------------------------
 # Endpoints públicos
 # ---------------------------------------------------------
+@router.get(
+    "/me/preferencias-notificacion",
+    response_model=PreferenciaNotificacionResponse,
+    summary="Preferencias de notificacion del usuario",
+)
+async def get_preferencias_notificacion(
+    user: CurrentUser,
+    db: DbSession,
+) -> PreferenciaNotificacionResponse:
+    """Devuelve las preferencias del usuario (crea defaults si no existen)."""
+    prefs = await services.get_or_create_preferencias(db, user)
+    return PreferenciaNotificacionResponse.model_validate(prefs)
+
+
+@router.put(
+    "/me/preferencias-notificacion",
+    response_model=PreferenciaNotificacionResponse,
+    summary="Actualizar preferencias de notificacion",
+)
+async def update_preferencias_notificacion(
+    data: PreferenciaNotificacionUpdate,
+    user: CurrentUser,
+    db: DbSession,
+) -> PreferenciaNotificacionResponse:
+    """Actualiza las preferencias del usuario (parcial)."""
+    prefs = await services.update_preferencias(db, user, data)
+    return PreferenciaNotificacionResponse.model_validate(prefs)
+
+
 @router.get(
     "/{user_id}",
     response_model=UsuarioPublicoResponse,

@@ -139,3 +139,34 @@ async def deactivate_usuario(
     await db.refresh(user)
     logger.warning(f"Usuario desactivado: {user.id} (email: {user.email})")
     return user
+
+
+# ---------------------------------------------------------
+# Preferencias de notificacion
+# ---------------------------------------------------------
+async def get_or_create_preferencias(db, usuario):
+    """Devuelve las preferencias del usuario, o las crea con defaults."""
+    from sqlalchemy import select
+    from app.core.notifications.models import PreferenciaNotificacion
+
+    stmt = select(PreferenciaNotificacion).where(
+        PreferenciaNotificacion.usuario_id == usuario.id
+    )
+    prefs = (await db.execute(stmt)).scalar_one_or_none()
+    if prefs is None:
+        prefs = PreferenciaNotificacion(usuario_id=usuario.id)
+        db.add(prefs)
+        await db.flush()
+        await db.refresh(prefs)
+    return prefs
+
+
+async def update_preferencias(db, usuario, data):
+    """Actualiza las preferencias (parcial). Crea si no existen."""
+    prefs = await get_or_create_preferencias(db, usuario)
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(prefs, key, value)
+    await db.flush()
+    await db.refresh(prefs)
+    return prefs
