@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
+import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
@@ -332,6 +333,59 @@ class OficiosRepository {
         data: data,
       );
       return OrdenTrabajo.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // M2+: Busqueda de clientes y vehiculos (para crear ordenes)
+  // =========================================================
+
+  /// Busca clientes por email, nombre o apellido.
+  Future<List<ClienteBusqueda>> buscarClientes(
+    String prestadorId,
+    String query, {
+    int limit = 20,
+  }) async {
+    if (query.trim().length < 2) return [];
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/clientes',
+        queryParameters: {'q': query.trim(), 'limit': limit},
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((c) => ClienteBusqueda.fromJson(c as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Lista los vehiculos de un cliente.
+  Future<List<Vehiculo>> listarVehiculosDeCliente(
+    String prestadorId,
+    String clienteId,
+  ) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/clientes/$clienteId/vehiculos',
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((v) => Vehiculo.fromJson(v as Map<String, dynamic>))
+          .toList();
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

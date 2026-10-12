@@ -1,8 +1,10 @@
 /// Pantalla prestador: crear una orden nueva.
 ///
-/// Version MVP: el prestador ingresa manualmente los IDs de cliente y
-/// objeto_servicio. Una iteracion futura agregara busqueda/seleccion.
+/// El prestador busca el cliente por nombre/email (con debounce) y luego
+/// elige uno de sus vehiculos. Ya no se piden UUIDs manuales.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +12,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
+import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
 class FormularioOrdenScreen extends ConsumerStatefulWidget {
   const FormularioOrdenScreen({super.key, required this.prestadorId});
@@ -25,24 +29,67 @@ class FormularioOrdenScreen extends ConsumerStatefulWidget {
 class _FormularioOrdenScreenState
     extends ConsumerState<FormularioOrdenScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _clienteIdCtrl = TextEditingController();
-  final _objetoIdCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
   final _diagnosticoCtrl = TextEditingController();
   final _kmCtrl = TextEditingController();
+
+  Timer? _debounce;
+  String _queryCliente = '';
+
+  ClienteBusqueda? _clienteSel;
+  Vehiculo? _vehiculoSel;
 
   PrioridadOrden _prioridad = PrioridadOrden.normal;
   bool _guardando = false;
 
   @override
   void dispose() {
-    _clienteIdCtrl.dispose();
-    _objetoIdCtrl.dispose();
+    _debounce?.cancel();
+    _searchCtrl.dispose();
     _diagnosticoCtrl.dispose();
     _kmCtrl.dispose();
     super.dispose();
   }
 
+  void _onBuscar(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) setState(() => _queryCliente = value);
+    });
+  }
+
+  void _seleccionarCliente(ClienteBusqueda c) {
+    setState(() {
+      _clienteSel = c;
+      _vehiculoSel = null;
+      _searchCtrl.text = c.nombreDisplay;
+      _queryCliente = '';
+    });
+    FocusScope.of(context).unfocus();
+  }
+
+  void _limpiarCliente() {
+    setState(() {
+      _clienteSel = null;
+      _vehiculoSel = null;
+      _searchCtrl.clear();
+      _queryCliente = '';
+    });
+  }
+
   Future<void> _guardar() async {
+    if (_clienteSel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un cliente')),
+      );
+      return;
+    }
+    if (_vehiculoSel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un vehiculo')),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _guardando = true);
@@ -52,9 +99,9 @@ class _FormularioOrdenScreenState
       final nueva = OrdenTrabajo(
         id: '',
         numero: '',
-        clienteId: _clienteIdCtrl.text.trim(),
+        clienteId: _clienteSel!.id,
         prestadorId: widget.prestadorId,
-        objetoId: _objetoIdCtrl.text.trim(),
+        objetoId: _vehiculoSel!.objetoId,
         estado: EstadoOrden.ingresado,
         prioridad: _prioridad,
         fechaIngreso: DateTime.now(),
@@ -93,6 +140,8 @@ class _FormularioOrdenScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nueva orden')),
       body: Form(
@@ -100,66 +149,69 @@ class _FormularioOrdenScreenState
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Aviso MVP
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'MVP: ingresa manualmente los IDs de cliente y vehiculo. '
-                      'La busqueda se agregara en una proxima version.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
+            // --- Cliente ---
             Text(
               'Cliente',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: _clienteIdCtrl,
-              decoration: const InputDecoration(
-                labelText: 'UUID del cliente *',
-                hintText: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-                border: OutlineInputBorder(),
+            if (_clienteSel == null)
+              _BuscadorCliente(
+                controller: _searchCtrl,
+                query: _queryCliente,
+                prestadorId: widget.prestadorId,
+                onChanged: _onBuscar,
+                onSeleccion: _seleccionarCliente,
+              )
+            else
+              _ClienteChip(
+                cliente: _clienteSel!,
+                onLimpiar: _limpiarCliente,
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _objetoIdCtrl,
-              decoration: const InputDecoration(
-                labelText: 'UUID del objeto de servicio (vehiculo) *',
-                hintText: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
 
             const SizedBox(height: 20),
+
+            // --- Vehiculo ---
+            Text(
+              'Vehiculo',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_clienteSel == null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Primero selecciona un cliente.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              )
+            else
+              _SelectorVehiculo(
+                prestadorId: widget.prestadorId,
+                clienteId: _clienteSel!.id,
+                seleccionado: _vehiculoSel,
+                onSeleccion: (v) => setState(() => _vehiculoSel = v),
+              ),
+
+            const SizedBox(height: 20),
+
+            // --- Orden ---
             Text(
               'Orden',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<PrioridadOrden>(
@@ -215,6 +267,221 @@ class _FormularioOrdenScreenState
           ],
         ),
       ),
+    );
+  }
+}
+
+// =========================================================
+// Buscador de cliente con dropdown de resultados
+// =========================================================
+class _BuscadorCliente extends ConsumerWidget {
+  const _BuscadorCliente({
+    required this.controller,
+    required this.query,
+    required this.prestadorId,
+    required this.onChanged,
+    required this.onSeleccion,
+  });
+
+  final TextEditingController controller;
+  final String query;
+  final String prestadorId;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<ClienteBusqueda> onSeleccion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final params = BusquedaClientesParams(
+      prestadorId: prestadorId,
+      query: query,
+    );
+    final async = query.trim().length >= 2
+        ? ref.watch(busquedaClientesProvider(params))
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            labelText: 'Buscar cliente por nombre o email',
+            hintText: 'Min 2 caracteres',
+            prefixIcon: const Icon(Icons.search),
+            border: const OutlineInputBorder(),
+            helperText: 'Ej: juan, perez, juan@mail.com',
+          ),
+        ),
+        if (async != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: async.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text('Error: $e'),
+              ),
+              data: (clientes) {
+                if (clientes.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('Sin resultados'),
+                  );
+                }
+                return Card(
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    children: clientes
+                        .map((c) => ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.person),
+                              ),
+                              title: Text(c.nombreDisplay),
+                              subtitle:
+                                  c.email != null ? Text(c.email!) : null,
+                              onTap: () => onSeleccion(c),
+                            ))
+                        .toList(),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// =========================================================
+// Chip del cliente seleccionado
+// =========================================================
+class _ClienteChip extends StatelessWidget {
+  const _ClienteChip({required this.cliente, required this.onLimpiar});
+
+  final ClienteBusqueda cliente;
+  final VoidCallback onLimpiar;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const CircleAvatar(child: Icon(Icons.person)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    cliente.nombreDisplay,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (cliente.email != null)
+                    Text(
+                      cliente.email!,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Cambiar cliente',
+              onPressed: onLimpiar,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =========================================================
+// Selector de vehiculo del cliente
+// =========================================================
+class _SelectorVehiculo extends ConsumerWidget {
+  const _SelectorVehiculo({
+    required this.prestadorId,
+    required this.clienteId,
+    required this.seleccionado,
+    required this.onSeleccion,
+  });
+
+  final String prestadorId;
+  final String clienteId;
+  final Vehiculo? seleccionado;
+  final ValueChanged<Vehiculo> onSeleccion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final params = VehiculosDeClienteParams(
+      prestadorId: prestadorId,
+      clienteId: clienteId,
+    );
+    final async = ref.watch(vehiculosDeClienteProvider(params));
+
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(12),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('Error: $e'),
+      ),
+      data: (vehiculos) {
+        if (vehiculos.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Este cliente no tiene vehiculos registrados. '
+                    'Pedile que los agregue en "Mis vehiculos".',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return DropdownButtonFormField<Vehiculo>(
+          initialValue: seleccionado,
+          decoration: const InputDecoration(
+            labelText: 'Vehiculo del cliente',
+            border: OutlineInputBorder(),
+          ),
+          items: vehiculos
+              .map((v) => DropdownMenuItem(
+                    value: v,
+                    child: Text(
+                      v.nombreDisplay,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onSeleccion(v);
+          },
+        );
+      },
     );
   }
 }
