@@ -47,6 +47,7 @@ import 'package:baqueano_natales/features/oficios/presentation/screens/formulari
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_ordenes_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_orden_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/galeria_fotos_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/reportes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/ordenes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_orden_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_orden_screen.dart';
@@ -485,6 +486,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return DetalleMiPrestadorScreen(id: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/reportes',
+        name: 'mi-prestador-reportes',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ReportesTallerScreen(prestadorId: id);
         },
       ),
       GoRoute(

@@ -30,6 +30,11 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
         title: const Text('Mi oficio'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.bar_chart_outlined),
+            tooltip: 'Reportes',
+            onPressed: () => context.push('/mis-prestadores/$id/reportes'),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Editar',
             onPressed: () => context.push('/mis-prestadores/$id/editar'),

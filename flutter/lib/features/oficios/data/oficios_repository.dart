@@ -16,6 +16,7 @@ import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
@@ -906,4 +907,63 @@ class OficiosRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+  // =========================================================
+  // M5.3: Reportes del taller
+  // =========================================================
+
+  /// Obtiene el reporte del taller (JSON) en el rango dado.
+  Future<ReportePrestador> obtenerReporte(
+    String prestadorId, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/reportes',
+        queryParameters: {
+          if (desde != null) 'desde': _fmtFecha(desde),
+          if (hasta != null) 'hasta': _fmtFecha(hasta),
+        },
+      );
+      return ReportePrestador.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Descarga el reporte en CSV (bytes).
+  Future<Uint8List> descargarReporteCsv(
+    String prestadorId, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        '/api/v1/mis-prestadores/$prestadorId/reportes.csv',
+        queryParameters: {
+          if (desde != null) 'desde': _fmtFecha(desde),
+          if (hasta != null) 'hasta': _fmtFecha(hasta),
+        },
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(res.data ?? const <int>[]);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  String _fmtFecha(DateTime d) =>
+      '${d.year.toString().padLeft(4, "0")}-'
+      '${d.month.toString().padLeft(2, "0")}-'
+      '${d.day.toString().padLeft(2, "0")}';
 }

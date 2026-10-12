@@ -15,6 +15,7 @@ import 'package:baqueano_natales/features/oficios/domain/recordatorio.dart';
 import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
@@ -386,5 +387,41 @@ final fotosDeOrdenPrestadorProvider =
     params.prestadorId,
     params.ordenId,
     momento: params.momento,
+  );
+});
+
+// =========================================================
+// M5.3: Reportes del taller
+// =========================================================
+class ReportePrestadorParams {
+  const ReportePrestadorParams({
+    required this.prestadorId,
+    this.desde,
+    this.hasta,
+  });
+
+  final String prestadorId;
+  final DateTime? desde;
+  final DateTime? hasta;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReportePrestadorParams &&
+      other.prestadorId == prestadorId &&
+      other.desde == desde &&
+      other.hasta == hasta;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, desde, hasta);
+}
+
+final reportePrestadorProvider =
+    FutureProvider.family<ReportePrestador, ReportePrestadorParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.obtenerReporte(
+    params.prestadorId,
+    desde: params.desde,
+    hasta: params.hasta,
   );
 });
