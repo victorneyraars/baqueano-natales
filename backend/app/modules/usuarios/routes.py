@@ -11,6 +11,8 @@ from app.modules.auth.deps import CurrentUser
 from app.modules.usuarios import services
 from app.modules.usuarios.schemas import (
     AvatarUploadResponse,
+    FcmTokenResponse,
+    FcmTokenUpdate,
     MessageResponse,
     UsuarioMeResponse,
     UsuarioPublicoResponse,
@@ -67,6 +69,28 @@ async def update_me(
     """Actualiza los datos editables del usuario actual."""
     updated = await services.update_usuario(db, user, data)
     return UsuarioMeResponse.model_validate(updated)
+
+
+@router.post(
+    "/me/fcm-token",
+    response_model=FcmTokenResponse,
+    summary="Registrar token FCM del dispositivo",
+    description=(
+        "Guarda el token de Firebase Cloud Messaging del dispositivo actual. "
+        "El token se sobreescribe en cada login (modelo single-device)."
+    ),
+)
+async def registrar_fcm_token(
+    data: FcmTokenUpdate,
+    user: CurrentUser,
+    db: DbSession,
+) -> FcmTokenResponse:
+    """Registra o actualiza el token FCM del usuario actual."""
+    user.fcm_token = data.token
+    await db.flush()
+    await db.refresh(user)
+    preview = data.token[:20] + "..." if len(data.token) > 20 else data.token
+    return FcmTokenResponse(token_preview=preview)
 
 
 @router.post(

@@ -23,6 +23,12 @@ class UsuarioUpdate(BaseModel):
     apellido: str | None = Field(None, min_length=1, max_length=100)
 
 
+class FcmTokenUpdate(BaseModel):
+    """Registrar/actualizar el token FCM del dispositivo."""
+
+    token: str = Field(..., min_length=1, max_length=500)
+
+
 # ---------------------------------------------------------
 # Schemas de salida
 # ---------------------------------------------------------
@@ -83,3 +89,10 @@ class MessageResponse(BaseModel):
     """Respuesta genérica con un mensaje."""
 
     message: str
+
+
+class FcmTokenResponse(BaseModel):
+    """Respuesta al registrar un token FCM."""
+
+    message: str = "Token registrado correctamente"
+    token_preview: str

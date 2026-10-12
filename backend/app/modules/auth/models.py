@@ -88,6 +88,9 @@ class Usuario(Base):
     tiene_whatsapp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     tiene_sms: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Push notifications (FCM). Single-device: se sobreescribe en cada login.
+    fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Metadata
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
