@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     PUBLIC_MEDIA_URL: str = "https://dev-api.baqueanonatales.com"
     MAX_AVATAR_SIZE_BYTES: int = 5 * 1024 * 1024  # 5 MB
 
+    # --- Storage de fotos de ordenes (M5 oficios) ---
+    FOTO_STORAGE_PATH: str = "/app/media/ordenes"
+    MAX_FOTO_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB
+
 
     # --- Facebook / Meta (OAuth + Graph API) ---
     # App de Meta for Developers. El App ID es p?blico; el App Secret es

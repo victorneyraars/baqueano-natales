@@ -28,6 +28,7 @@ from sqlalchemy import (
     DateTime,
     Enum as SQLEnum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -512,6 +513,12 @@ class OrdenTrabajo(TimestampMixin, Base):
         lazy="selectin",
         order_by="OrdenHistorial.created_at",
     )
+    fotos: Mapped[list["OrdenFoto"]] = relationship(
+        back_populates="orden",
+        cascade="all, delete-orphan",
+        lazy="raise",
+        order_by="OrdenFoto.created_at",
+    )
 
     def __repr__(self) -> str:
         return (
@@ -650,6 +657,145 @@ class OrdenHistorial(TimestampMixin, Base):
 # =========================================================
 # M3: Turnos (agenda cliente-prestador)
 # =========================================================
+class MomentoFoto(str, Enum):
+    """Momento de la orden en que se tomo la foto."""
+
+    INGRESO = "ingreso"
+    DIAGNOSTICO = "diagnostico"
+    EN_PROCESO = "en_proceso"
+    ENTREGA = "entrega"
+    RECLAMO = "reclamo"
+    OTRO = "otro"
+
+
+class OrdenFoto(TimestampMixin, SoftDeleteMixin, Base):
+    """Foto asociada a una orden de trabajo.
+
+    Almacenamiento content-addressable: el nombre del archivo es el
+    SHA-256 del contenido. Esto da dedupe natural, URLs inmutables y
+    cacheables, y forward compat con S3/R2 (via `storage_backend`).
+
+    Se generan 3 variantes server-side al subir: `original` (max 2048px),
+    `medium` (1024px), `thumb` (256px). `blurhash` se calcula del thumb
+    para placeholders visuales en el cliente.
+
+    Privacidad: NO se sirve por nginx (a diferencia de avatares). El
+    endpoint autenticado valida ownership (cliente dueno, prestador
+    dueno o admin) antes de devolver el archivo.
+    """
+
+    __tablename__ = "orden_fotos"
+    __table_args__ = (
+        UniqueConstraint(
+            "storage_backend",
+            "hash_sha256",
+            name="uq_orden_foto_backend_hash",
+        ),
+        Index("ix_orden_fotos_orden_momento", "orden_id", "momento"),
+        Index("ix_orden_fotos_hash_backend", "hash_sha256", "storage_backend"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    orden_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    item_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("orden_items.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Item del presupuesto al que se asocia (opcional)",
+    )
+
+    momento: Mapped[MomentoFoto] = mapped_column(
+        SQLEnum(
+            MomentoFoto,
+            name="momento_foto",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=MomentoFoto.OTRO,
+        server_default=MomentoFoto.OTRO.value,
+        index=True,
+    )
+
+    # Quien subio la foto
+    subido_por_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    subido_por_rol: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Snapshot del rol al subir: cliente|prestador|admin",
+    )
+
+    # Storage content-addressable
+    hash_sha256: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+        comment="SHA-256 hex del contenido original",
+    )
+    storage_backend: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="local",
+        server_default="local",
+        comment="local|s3|r2|...",
+    )
+    storage_key: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Prefijo de las variantes: ordenes/ab/cd/<hash>",
+    )
+    variantes: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        comment='{"original": "...", "medium": "...", "thumb": "..."}',
+    )
+
+    # Metadata del archivo
+    mime_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    tamano_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    ancho: Mapped[int] = mapped_column(Integer, nullable=False)
+    alto: Mapped[int] = mapped_column(Integer, nullable=False)
+    blurhash: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Metadata de usuario
+    descripcion: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    fecha_captura: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Fecha EXIF de captura (si esta disponible)",
+    )
+    metadata_extra: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Relaciones
+    orden: Mapped["OrdenTrabajo"] = relationship(
+        back_populates="fotos",
+        lazy="raise",
+    )
+    item: Mapped["OrdenItem | None"] = relationship(lazy="raise")
+    subido_por: Mapped["Usuario"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrdenFoto(id={self.id}, momento={self.momento.value}, "
+            f"hash={self.hash_sha256[:8]})>"
+        )
+
+
 class EstadoTurno(str, Enum):
     """Ciclo de vida de un turno agendado.
 
