@@ -161,6 +161,12 @@ class HomeScreen extends ConsumerWidget {
               subtitle: 'Servicios agendados con talleres',
               onTap: () => context.push('/mis-ordenes'),
             ),
+            _FeatureCard(
+              icon: Icons.event_available_outlined,
+              title: 'Mis turnos',
+              subtitle: 'Reservas con talleres y oficios',
+              onTap: () => context.push('/mis-turnos'),
+            ),
 
             const SizedBox(height: 24),
 

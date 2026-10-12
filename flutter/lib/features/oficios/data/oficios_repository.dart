@@ -11,6 +11,7 @@ import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
 class OficiosRepository {
@@ -386,6 +387,222 @@ class OficiosRepository {
       return list
           .map((v) => Vehiculo.fromJson(v as Map<String, dynamic>))
           .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // M3: Turnos (cliente)
+  // =========================================================
+
+  /// Lista los turnos del cliente autenticado.
+  Future<List<Turno>> listarMisTurnos({String? estado}) async {
+    try {
+      final query = <String, dynamic>{};
+      if (estado != null && estado.isNotEmpty) query['estado'] = estado;
+      final res = await _dio.get(
+        '/api/v1/mis-turnos',
+        queryParameters: query.isEmpty ? null : query,
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((t) => Turno.fromJson(t as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Crea un turno (cliente reserva con un prestador).
+  Future<Turno> crearTurno({
+    required String prestadorId,
+    required String objetoId,
+    required DateTime fechaInicio,
+    int duracionMin = 30,
+    String? motivo,
+    String? notasCliente,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-turnos',
+        data: {
+          'prestador_id': prestadorId,
+          'objeto_servicio_id': objetoId,
+          'fecha_inicio': fechaInicio.toUtc().toIso8601String(),
+          'duracion_min': duracionMin,
+          'motivo': ?motivo,
+          'notas_cliente': ?notasCliente,
+        },
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Detalle de un turno del cliente.
+  Future<Turno> detalleMiTurno(String turnoId) async {
+    try {
+      final res = await _dio.get('/api/v1/mis-turnos/$turnoId');
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Cancela un turno (cliente).
+  Future<Turno> cancelarTurno(String turnoId, {String? motivo}) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-turnos/$turnoId/cancelar',
+        data: {'motivo': ?motivo},
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // M3: Turnos (prestador)
+  // =========================================================
+
+  /// Lista los turnos del taller (agenda).
+  Future<List<Turno>> listarTurnosPrestador(
+    String prestadorId, {
+    String? estado,
+    DateTime? desde,
+    DateTime? hasta,
+  }) async {
+    try {
+      final query = <String, dynamic>{};
+      if (estado != null && estado.isNotEmpty) query['estado'] = estado;
+      if (desde != null) query['desde'] = desde.toUtc().toIso8601String();
+      if (hasta != null) query['hasta'] = hasta.toUtc().toIso8601String();
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/turnos',
+        queryParameters: query.isEmpty ? null : query,
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((t) => Turno.fromJson(t as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Detalle de un turno (prestador).
+  Future<Turno> detalleTurnoPrestador(
+    String prestadorId,
+    String turnoId,
+  ) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId',
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Cambia el estado de un turno (prestador).
+  Future<Turno> cambiarEstadoTurno(
+    String prestadorId,
+    String turnoId,
+    String nuevoEstado, {
+    String? motivo,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado',
+        data: {
+          'nuevo_estado': nuevoEstado,
+          'motivo': ?motivo,
+        },
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Rechaza un turno (prestador).
+  Future<Turno> rechazarTurno(
+    String prestadorId,
+    String turnoId, {
+    String? motivo,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/rechazar',
+        data: {'motivo': ?motivo},
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Vincula una orden existente al turno.
+  Future<Turno> vincularOrdenATurno(
+    String prestadorId,
+    String turnoId,
+    String ordenId,
+  ) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/vincular-orden',
+        data: {'orden_id': ordenId},
+      );
+      return Turno.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
@@ -135,6 +136,22 @@ class _Contenido extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
+
+                  // --- Reservar turno (CTA) ---
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () {
+                      final nombre = Uri.encodeComponent(prestador.nombre);
+                      context.push(
+                        '/mis-prestadores/${prestador.id}/reservar?nombre=$nombre',
+                      );
+                    },
+                    icon: const Icon(Icons.event_available),
+                    label: const Text('Reservar turno'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
 
                   // --- Contacto ---
                   _seccionTitulo(theme, 'Contacto'),

@@ -43,6 +43,11 @@ import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_m
 import 'package:baqueano_natales/features/oficios/presentation/screens/ordenes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_orden_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/formulario_orden_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/mis_turnos_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_turno_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/agenda_taller_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_turno_taller_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/reservar_turno_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_mi_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
@@ -315,6 +320,51 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return FormularioVehiculoScreen(objetoId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-turnos',
+          name: 'mis-turnos',
+          builder: (context, state) => const MisTurnosScreen(),
+        ),
+        GoRoute(
+          path: '/mis-turnos/:id',
+          name: 'mi-turno-detalle',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return DetalleMiTurnoScreen(turnoId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/turnos',
+          name: 'agenda-taller',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return AgendaTallerScreen(prestadorId: id);
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/turnos/:tid',
+          name: 'turno-taller-detalle',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            final tid = state.pathParameters['tid']!;
+            return DetalleTurnoTallerScreen(
+              prestadorId: id,
+              turnoId: tid,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/mis-prestadores/:id/reservar',
+          name: 'reservar-turno',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            final nombre = state.uri.queryParameters['nombre'];
+            return ReservarTurnoScreen(
+              prestadorId: id,
+              prestadorNombre: nombre,
+            );
           },
         ),
       GoRoute(

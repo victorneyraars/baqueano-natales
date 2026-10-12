@@ -203,6 +203,15 @@ class _Contenido extends StatelessWidget {
             '/mis-prestadores/${prestador.id}/ordenes',
           ),
         ),
+        const SizedBox(height: 8),
+
+        OutlinedButton.icon(
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: const Text('Agenda del taller'),
+          onPressed: () => context.push(
+            '/mis-prestadores/${prestador.id}/turnos',
+          ),
+        ),
 
         const SizedBox(height: 8),
         OutlinedButton.icon(

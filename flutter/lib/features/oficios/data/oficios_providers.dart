@@ -12,6 +12,7 @@ import 'package:baqueano_natales/features/oficios/data/oficios_repository.dart';
 import 'package:baqueano_natales/features/oficios/domain/mecanica_categoria.dart';
 import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
+import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
 // =========================================================
@@ -179,3 +180,76 @@ class VehiculosDeClienteParams {
   @override
   int get hashCode => Object.hash(prestadorId, clienteId);
 }
+
+// =========================================================
+// M3: Turnos del cliente
+// =========================================================
+final misTurnosProvider =
+    FutureProvider.family<List<Turno>, String?>((ref, estado) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarMisTurnos(estado: estado);
+});
+
+final miTurnoDetalleProvider =
+    FutureProvider.family<Turno, String>((ref, turnoId) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.detalleMiTurno(turnoId);
+});
+
+// =========================================================
+// M3: Turnos del prestador
+// =========================================================
+class TurnosPrestadorParams {
+  const TurnosPrestadorParams({
+    required this.prestadorId,
+    this.estado,
+  });
+
+  final String prestadorId;
+  final String? estado;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TurnosPrestadorParams &&
+      other.prestadorId == prestadorId &&
+      other.estado == estado;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, estado);
+}
+
+final turnosPrestadorProvider =
+    FutureProvider.family<List<Turno>, TurnosPrestadorParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.listarTurnosPrestador(
+    params.prestadorId,
+    estado: params.estado,
+  );
+});
+
+class TurnoPrestadorDetalleParams {
+  const TurnoPrestadorDetalleParams({
+    required this.prestadorId,
+    required this.turnoId,
+  });
+
+  final String prestadorId;
+  final String turnoId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TurnoPrestadorDetalleParams &&
+      other.prestadorId == prestadorId &&
+      other.turnoId == turnoId;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, turnoId);
+}
+
+final turnoPrestadorDetalleProvider =
+    FutureProvider.family<Turno, TurnoPrestadorDetalleParams>(
+        (ref, params) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.detalleTurnoPrestador(params.prestadorId, params.turnoId);
+});
