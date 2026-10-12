@@ -12,6 +12,7 @@ from app.modules.oficios import services
 from app.modules.oficios.deps import CategoriaMecanica, OrdenDelUsuario, Repuesto
 from app.modules.oficios.models import EstadoOrden
 from app.modules.oficios.schemas import (
+    ClienteBusquedaResponse,
     MecanicaCategoriaCreate,
     MecanicaCategoriaResponse,
     MecanicaCategoriaUpdate,
@@ -530,3 +531,65 @@ async def aprobar_presupuesto(
     orden = await services.aprobar_presupuesto(db, orden_id, user.id, data)
     orden = await services.obtener_orden(db, orden.id)
     return _serializar_orden(orden, incluir_notas_internas=False)
+
+
+# =========================================================
+# M2+: Utilidades del prestador (busqueda para crear ordenes)
+# =========================================================
+router_prestador_utilidades = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}",
+    tags=["oficios-prestador-utilidades"],
+)
+
+
+async def _validar_prestador_del_usuario(
+    db, prestador_id: UUID, user, prestador_repo
+):
+    """Valida que el usuario sea dueno del prestador o admin."""
+    prestador = (
+        await db.execute(
+            select(prestador_repo).where(prestador_repo.id == prestador_id)
+        )
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return prestador
+
+
+@router_prestador_utilidades.get(
+    "/clientes",
+    response_model=list[ClienteBusquedaResponse],
+    summary="Buscar clientes por nombre/email",
+)
+async def buscar_clientes(
+    prestador_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    q: str = Query(..., min_length=2, max_length=100),
+    limit: int = Query(20, ge=1, le=50),
+):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
+
+    clientes = await services.buscar_clientes(db, q, limit=limit)
+    return [ClienteBusquedaResponse.model_validate(c) for c in clientes]
+
+
+@router_prestador_utilidades.get(
+    "/clientes/{cliente_id}/vehiculos",
+    response_model=list[VehiculoResponse],
+    summary="Listar vehiculos de un cliente",
+)
+async def listar_vehiculos_de_cliente(
+    prestador_id: UUID,
+    cliente_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
+
+    rows = await services.listar_vehiculos_de_cliente(db, cliente_id)
+    return [VehiculoResponse(**r) for r in rows]

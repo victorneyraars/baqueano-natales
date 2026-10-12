@@ -290,3 +290,17 @@ class OrdenListItemResponse(BaseModel):
     total_aprobado: Decimal
     fecha_ingreso: datetime
     fecha_estimada_entrega: datetime | None
+
+
+# =========================================================
+# M2+: Busqueda de clientes
+# =========================================================
+class ClienteBusquedaResponse(BaseModel):
+    """Resultado de busqueda de cliente (para crear ordenes)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nombre: str | None
+    apellido: str | None
+    email: str | None

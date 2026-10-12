@@ -854,3 +854,62 @@ async def listar_mis_ordenes_cliente(
                 detail=f"Estado invalido: {estado}",
             )
     return list((await db.execute(stmt)).scalars().all())
+
+
+# =========================================================
+# M2+: Busqueda de clientes y vehiculos (para crear ordenes)
+# =========================================================
+async def buscar_clientes(
+    db: AsyncSession,
+    query: str,
+    limit: int = 20,
+) -> list:
+    """Busca usuarios con rol CLIENTE por email, nombre o apellido.
+
+    Query minima de 2 chars. Devuelve hasta `limit` resultados.
+    Excluye usuarios inactivos.
+    """
+    from app.modules.auth.models import Usuario
+
+    if not query or len(query.strip()) < 2:
+        return []
+
+    like = f"%{query.strip()}%"
+    stmt = (
+        select(Usuario)
+        .where(
+            Usuario.rol == RolUsuario.CLIENTE,
+            Usuario.activo.is_(True),
+        )
+        .where(
+            Usuario.email.ilike(like)
+            | Usuario.nombre.ilike(like)
+            | Usuario.apellido.ilike(like)
+        )
+        .order_by(Usuario.nombre, Usuario.apellido)
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def listar_vehiculos_de_cliente(
+    db: AsyncSession,
+    cliente_id: UUID,
+) -> list[dict]:
+    """Lista los vehiculos de un cliente (sin validar permisos).
+
+    La validacion de permisos (que el caller sea prestador o admin) se hace
+    en el endpoint. Este service solo consulta.
+    """
+    stmt = (
+        select(ObjetoServicio, Vehiculo)
+        .join(Vehiculo, Vehiculo.objeto_servicio_id == ObjetoServicio.id)
+        .where(
+            ObjetoServicio.propietario_id == cliente_id,
+            ObjetoServicio.tipo == TipoObjetoServicio.VEHICULO,
+            ObjetoServicio.activo.is_(True),
+        )
+        .order_by(ObjetoServicio.created_at.desc())
+    )
+    rows = (await db.execute(stmt)).all()
+    return [_vehiculo_a_response(obj, veh) for obj, veh in rows]
