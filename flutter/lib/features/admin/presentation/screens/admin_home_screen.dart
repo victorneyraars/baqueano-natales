@@ -230,6 +230,27 @@ class AdminHomeScreen extends ConsumerWidget {
               onTap: () => context.push('/admin/promocion'),
             ),
 
+            _AdminCard(
+              icon: Icons.notifications_active,
+              title: 'Enviar notificacion',
+              subtitle: 'Composer: push a un segmento',
+              onTap: () => context.push('/admin/notificaciones'),
+            ),
+
+            _AdminCard(
+              icon: Icons.history,
+              title: 'Historial de notificaciones',
+              subtitle: 'Filtros por tipo, estado y fecha',
+              onTap: () => context.push('/admin/notificaciones/historial'),
+            ),
+
+            _AdminCard(
+              icon: Icons.analytics,
+              title: 'Stats de notificaciones',
+              subtitle: 'Delivery rate, open rate, top 5',
+              onTap: () => context.push('/admin/notificaciones/stats'),
+            ),
+
             const _AdminCard(
               icon: Icons.people_outline,
               title: 'Usuarios',

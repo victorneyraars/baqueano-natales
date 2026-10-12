@@ -26,6 +26,9 @@ import 'package:baqueano_natales/features/social/presentation/screens/admin_soci
 import 'package:baqueano_natales/features/social/presentation/screens/mis_publicaciones_screen.dart';
 import 'package:baqueano_natales/features/promocion/presentation/screens/admin_promocion_editor_screen.dart';
 import 'package:baqueano_natales/features/promocion/presentation/screens/admin_promocion_galeria_screen.dart';
+import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_composer_screen.dart';
+import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_historial_screen.dart';
+import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_stats_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
@@ -228,6 +231,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'admin-social-publicaciones',
         builder: (context, state) =>
             const AdminSocialPublicacionesScreen(),
+      ),
+
+      // Admin - Notificaciones
+      GoRoute(
+        path: '/admin/notificaciones',
+        name: 'admin-notificaciones-composer',
+        builder: (context, state) =>
+            const AdminNotificacionesComposerScreen(),
+      ),
+      GoRoute(
+        path: '/admin/notificaciones/historial',
+        name: 'admin-notificaciones-historial',
+        builder: (context, state) =>
+            const AdminNotificacionesHistorialScreen(),
+      ),
+      GoRoute(
+        path: '/admin/notificaciones/stats',
+        name: 'admin-notificaciones-stats',
+        builder: (context, state) =>
+            const AdminNotificacionesStatsScreen(),
       ),
 
       // =========================================================
