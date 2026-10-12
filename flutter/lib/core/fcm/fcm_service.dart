@@ -4,14 +4,22 @@
 /// - Inicializacion (listeners foreground + background).
 /// - Solicitud de permiso runtime (Android 13+).
 /// - Obtencion del token FCM del dispositivo.
+/// - Banner en foreground (flutter_local_notifications).
 /// - Reporte de apertura al backend (analytics).
 library;
 
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:baqueano_natales/core/network/dio_client.dart';
+
+/// ID del canal Android. Debe matchear el meta-data del AndroidManifest
+/// (com.google.firebase.messaging.default_notification_channel_id).
+const _canalId = 'baqueano_default';
+const _canalNombre = 'Notificaciones de Baqueano';
+const _canalDescripcion = 'Recordatorios, promociones y avisos';
 
 class FcmService {
   FcmService({FirebaseMessaging? messaging, Dio? dio})
@@ -20,32 +28,63 @@ class FcmService {
 
   final FirebaseMessaging _messaging;
   final Dio _dio;
+  final _localNotif = FlutterLocalNotificationsPlugin();
 
-  /// Inicializa FCM: listeners de mensajes + presentacion en foreground.
+  /// Inicializa FCM + el plugin de notificaciones locales.
   /// Llamar UNA VEZ al arranque de la app (en main).
   Future<void> inicializar() async {
-    // Mensajes recibidos con la app en foreground.
+    // === Setup flutter_local_notifications ===
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidInit);
+
+    await _localNotif.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        final logId = response.payload;
+        if (logId != null && logId.isNotEmpty) {
+          _reportarAperturaPorId(logId);
+        }
+      },
+    );
+
+    // Canal Android (obligatorio en Android 8+)
+    const channel = AndroidNotificationChannel(
+      _canalId,
+      _canalNombre,
+      description: _canalDescripcion,
+      importance: Importance.high,
+    );
+    await _localNotif
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    // === FCM listeners ===
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint(
         '[FCM] foreground: title=${message.notification?.title} '
         'data=${message.data}',
       );
+      _mostrarBannerLocal(message);
     });
 
-    // Usuario toco la notificacion (app estaba en background).
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('[FCM] tap (background): data=${message.data}');
-      _reportarApertura(message);
+      final logId = message.data['notification_log_id'];
+      if (logId != null) {
+        _reportarAperturaPorId(logId.toString());
+      }
     });
 
-    // Si la app estaba terminada y se abrio desde una notif, esto la trae.
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint('[FCM] tap (terminated): data=${initialMessage.data}');
-      _reportarApertura(initialMessage);
+      final logId = initialMessage.data['notification_log_id'];
+      if (logId != null) {
+        _reportarAperturaPorId(logId.toString());
+      }
     }
 
-    // Mostrar notificacion tambien con la app en foreground.
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
@@ -53,10 +92,6 @@ class FcmService {
     );
   }
 
-  /// Solicita permiso runtime y devuelve el token FCM, o null si no se otorgo.
-  ///
-  /// Llamar DESPUES del login (necesita que el usuario este autenticado
-  /// para que el backend asocie el token al usuario correcto).
   Future<String?> solicitarPermisoYObtenerToken() async {
     final settings = await _messaging.requestPermission(
       alert: true,
@@ -74,20 +109,37 @@ class FcmService {
     return token;
   }
 
-  /// Reporta la apertura al backend (analytics). Best-effort: no lanza.
-  ///
-  /// El backend incluye `notification_log_id` en el payload del push.
-  /// Si no esta, no podemos reportar (notif antigua o tipo no FCM).
-  Future<void> _reportarApertura(RemoteMessage message) async {
-    final logId = message.data['notification_log_id'];
-    if (logId == null || logId.toString().isEmpty) {
+  Future<void> _mostrarBannerLocal(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) {
       return;
     }
+    final logId = message.data['notification_log_id']?.toString();
+
+    await _localNotif.show(
+      id: notification.hashCode,
+      title: notification.title ?? 'Baqueano',
+      body: notification.body ?? '',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _canalId,
+          _canalNombre,
+          channelDescription: _canalDescripcion,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+      payload: logId,
+    );
+  }
+
+  Future<void> _reportarAperturaPorId(String logId) async {
+    if (logId.isEmpty) return;
     try {
       await _dio.post('/api/v1/notificaciones/$logId/abierta');
       debugPrint('[FCM] apertura reportada: log_id=$logId');
     } catch (e) {
-      // Best-effort: no rompe el flujo si falla el reporte
       debugPrint('[FCM] error reportando apertura: $e');
     }
   }
