@@ -380,6 +380,8 @@ async def detalle_orden(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
@@ -398,6 +400,8 @@ async def actualizar_orden(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
@@ -419,6 +423,8 @@ async def agregar_item(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
@@ -439,6 +445,8 @@ async def editar_item(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
@@ -458,6 +466,8 @@ async def eliminar_item(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
@@ -476,6 +486,8 @@ async def cambiar_estado(
     user: CurrentUser,
     db: DbSession,
 ):
+    from app.modules.prestadores.models import Prestador
+    await _validar_prestador_del_usuario(db, prestador_id, user, Prestador)
     orden = await services.obtener_orden(db, orden_id)
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
