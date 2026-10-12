@@ -24,6 +24,63 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-12 - Modulo oficios Fases M3 (turnos) + mejora UX formulario de ordenes
+
+**Estado del modulo oficios: M1 + M2 + M3 completas (backend + frontend + tests).**
+
+- **Mejora UX formulario crear orden** (commit `57e0d5d` + `88de440`):
+  - Backend: 2 endpoints nuevos (`GET /mis-prestadores/{id}/clientes?q=...`
+    para buscar clientes, `GET .../clientes/{cid}/vehiculos` para listar
+    vehiculos del cliente). Service `buscar_clientes` (busca por email,
+    nombre o apellido con min 2 chars) + `listar_vehiculos_de_cliente`.
+  - Frontend: `FormularioOrdenScreen` reescrito. Ya NO pide UUIDs manuales.
+    Ahora tiene buscador de cliente con debounce 400ms + dropdown de
+    resultados + chip del cliente + selector de vehiculo del cliente.
+  - 8 tests nuevos en `test_services_busqueda.py`.
+
+- **Fase M3 backend - turnos + agenda** (commit `13b7d8f`):
+  - Tabla `turnos`: cliente + prestador + objeto_servicio + fecha_inicio +
+    duracion_min + motivo + notas + orden_id (opcional para vincular).
+  - State machine de 7 estados: `pendiente -> confirmado -> en_curso ->
+    completado`. Ramas: `pendiente -> rechazado`, `pendiente|confirmado ->
+    cancelado`, `confirmado -> no_asistio`.
+  - Transiciones por rol (prestador mueve operativos, cliente cancela).
+  - 9 services: crear_turno, listar_turnos_cliente/prestador, obtener_turno,
+    actualizar_turno, cambiar_estado_turno, rechazar_turno, cancelar_turno,
+    vincular_orden_a_turno.
+  - 10 endpoints: 5 cliente (`/mis-turnos` CRUD + cancelar) + 5 prestador
+    (`/mis-prestadores/{id}/turnos` listar/detalle/estado/rechazar/vincular).
+  - Migracion `3fa886c2e6d7`.
+  - 34 tests nuevos: state machine (19) + services (15).
+
+- **Fase M3 frontend** (commit `b7053ef`):
+  - Domain: `Turno` + `EstadoTurno` enum (7 valores con colorHex).
+  - Repository: 8 metodos M3 (4 cliente, 4 prestador + vincular).
+  - Providers: 4 providers family con params inmutables.
+  - 5 pantallas nuevas:
+    - `MisTurnosScreen` (cliente): lista con filtros por estado.
+    - `DetalleMiTurnoScreen` (cliente): detalle + cancelar con motivo.
+    - `AgendaTallerScreen` (prestador): agenda con filtros.
+    - `DetalleTurnoTallerScreen` (prestador): acciones contextuales segun
+      estado (confirmar / rechazar / en_curso / completar / no_asistio).
+    - `ReservarTurnoScreen` (cliente): selector de vehiculo + date picker +
+      time picker + duracion configurable + motivo + notas.
+  - Router: 5 rutas nuevas.
+  - Home: card "Mis turnos" en Mi actividad.
+  - Detalle publico del prestador: boton "Reservar turno" (CTA principal).
+  - Detalle mi prestador: boton "Agenda del taller".
+
+- **Estado del proyecto**:
+  - Suite de tests del backend: **218 + 34 = 252 tests verdes** aproximadamente.
+  - `flutter analyze`: limpio en cada paso.
+  - Builds OK.
+
+**Roadmap del modulo oficios:**
+- M1 (objetos_servicio + vehiculos): ✅ COMPLETA
+- M2 (ordenes + state machine): ✅ COMPLETA
+- M3 (turnos + agenda): ✅ COMPLETA
+- M4 (garantias + recordatorios + worker): ⏳ proxima
+- M5 (fotos + notificaciones + reportes): ⏳
 ### 2026-10-11 (cont. 10) - Modulo oficios: tests automatizados M1+M2 (77 tests) + fix populate_existing
 
 **Deuda tecnica cerrada. Suite completa del proyecto: 218 tests verdes.**
