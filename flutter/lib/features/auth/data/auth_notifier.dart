@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/auth/data/auth_repository.dart';
+import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
 import 'package:baqueano_natales/features/auth/domain/user.dart';
 
 /// Estado de autenticación.
@@ -91,6 +92,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
       final user = await _repository.getCurrentUser();
       state = AuthState.authenticated(user);
+      _registrarFcmAsync();
     } on UnauthorizedException {
       // Token expirado → limpiar sesión
       await _repository.logout();
@@ -109,6 +111,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final user = await _repository.loginWithGoogle();
       state = AuthState.authenticated(user);
+      _registrarFcmAsync();
     } on ApiException catch (e) {
       state = AuthState.unauthenticated(error: e.message);
     } catch (e) {
@@ -123,6 +126,21 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthState.loading();
     await _repository.logout();
     state = const AuthState.unauthenticated();
+  }
+
+  /// Pide permiso + registra el token FCM (fire-and-forget, no bloquea).
+  void _registrarFcmAsync() {
+    Future.microtask(() async {
+      try {
+        final fcm = ref.read(fcmServiceProvider);
+        final token = await fcm.solicitarPermisoYObtenerToken();
+        if (token != null) {
+          await _repository.registrarFcmToken(token);
+        }
+      } catch (_) {
+        // Best-effort: no rompe el flujo de auth
+      }
+    });
   }
 
   /// Limpia el mensaje de error (útil después de mostrarlo).

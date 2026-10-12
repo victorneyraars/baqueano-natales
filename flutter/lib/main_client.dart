@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
+import 'package:baqueano_natales/core/fcm/fcm_service.dart';
 import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
 
@@ -26,6 +27,9 @@ Future<void> main() async {
 
   // 3. Inicializar Firebase
   await Firebase.initializeApp();
+
+  // 3.b Inicializar FCM (listeners). El token se registra post-login.
+  await FcmService().inicializar();
 
   // 4. Arrancar la app
   runApp(

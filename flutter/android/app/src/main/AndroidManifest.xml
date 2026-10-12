@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permiso runtime para notificaciones (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="baqueano_natales"
         android:name="${applicationName}"
@@ -8,6 +10,10 @@
         <meta-data
             android:name="com.google.android.gms.credentials.API_ENABLED"
             android:value="false" />
+        <!-- Canal default para notificaciones FCM (Android 8+) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="baqueano_default" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

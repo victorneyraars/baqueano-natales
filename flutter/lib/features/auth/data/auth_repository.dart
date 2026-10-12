@@ -160,6 +160,22 @@ class AuthRepository {
     }
   }
 
+  /// Registra el token FCM del dispositivo en el backend.
+  ///
+  /// Requiere JWT valido (llamar despues del login).
+  /// Best-effort: si falla, solo loguea; no rompe el flujo de auth.
+  Future<void> registrarFcmToken(String token) async {
+    try {
+      await _dio.post(
+        '/api/v1/usuarios/me/fcm-token',
+        data: {'token': token},
+      );
+      debugPrint('[AuthRepo] FCM token registrado en backend');
+    } catch (e) {
+      debugPrint('[AuthRepo] Error registrando FCM token: $e');
+    }
+  }
+
   /// Verifica si hay una sesión activa (JWT guardado).
   Future<bool> hasActiveSession() async {
     return SecureStorageService.hasAccessToken();
