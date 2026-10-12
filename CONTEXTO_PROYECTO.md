@@ -11,6 +11,37 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 23) - M5.2 notificaciones in-app en cambios de estado
+
+**Slice M5.2 cerrado end-to-end (backend + frontend).**
+
+- **Backend** (`app/core/notifications/service.py`):
+  - `enviar_in_app()`: pipeline completo (preferencias + quiet hours + rate limit) pero **sin tokens FCM**. El log queda `estado=ENVIADA` directo con `canal=IN_APP`.
+  - `_log_skipped()` ahora acepta `canal` (default FCM, retrocompatible).
+- **Wire** en `oficios/services.py` con helper `_notificar_orden()` (best-effort, try/except que nunca rompe el flujo):
+  - `crear_orden` -> notifica al cliente.
+  - `cambiar_estado` -> notifica al "otro lado" (si cambio prestador -> cliente; si cambio cliente -> prestador dueno).
+  - `aprobar_presupuesto` -> notifica al prestador con el resultado.
+- **Payload del deep link**: `data = {"tipo": "orden", "orden_id": str(uuid), "estado": "..."}` para que el frontend navegue.
+- **Frontend** (`mis_notificaciones_screen.dart`):
+  - Helper `_resolverRuta()` que mapea `data.tipo` + id a la ruta GoRouter.
+  - Soporta `orden` / `turno` / `recordatorio`. Sin tipo conocido -> solo marca como leida + SnackBar.
+  - Tap navega con `GoRouter.of(context).push()` (apila, preserva el back).
+- **`FcmService._resolverRuta()`** ya mapeaba `case 'campana'` con `orden_id` -> `/mis-ordenes/{id}` desde la sesion anterior, sin cambios.
+- **Validado end-to-end** en emulador:
+  - Crear orden real via SQL -> notif in-app "Nueva orden OT-2026-0002".
+  - `cambiar_estado` a `diagnosticando` -> notif "Orden OT-2026-0002: diagnosticando".
+  - Tap en la campanita del Home -> aparecen las 2 notifs con badge `campana`.
+  - Tap en cualquiera -> navega al detalle de la orden (badge baja a 0).
+  - Tap en notif de recordatorio (`sistema`) -> NO navega, solo marca leida + SnackBar.
+- **Suite total: 385 passed, 0 warnings.**
+- **Tests HTTP del backend de M5.2**: pendiente (solo smoke manual por SQL). Deuda: agregar tests que validen que `crear_orden` / `cambiar_estado` / `aprobar_presupuesto` generan un log con `canal=IN_APP`.
+
+**Estado del modulo oficios (M5):**
+- M5.1 (fotos): backend + frontend OK
+- M5.2 (notifs in-app en cambio de estado): backend + frontend OK
+- M5.3 (reportes taller): pendiente
+
 ### 2026-10-12 (cont. 22) - M5.1 fotos frontend (Flutter)
 
 **Slice M5.1 cerrado end-to-end (backend + frontend).**
