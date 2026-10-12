@@ -24,6 +24,36 @@
   - POST /publicar -> 201 -> worker publico en Facebook
 - RESUELTO (2026-10-11): share_plus upgraded a 13.3.1 (ver changelog arriba).
 
+### 2026-10-11 (cont. 10) - Modulo oficios: tests automatizados M1+M2 (77 tests) + fix populate_existing
+
+**Deuda tecnica cerrada. Suite completa del proyecto: 218 tests verdes.**
+
+- **Bug critico encontrado por tests en `services.obtener_orden`**:
+  - Sintoma: `aprobar_presupuesto` veia `orden.items = []` aunque hubiera items en la DB -> el
+    cliente que aprobaba todos los items terminaba viendo la orden como RECHAZADA.
+  - Causa: SQLAlchemy identity map devolvia la instancia cacheada sin refrescar la relacion
+    `items` (los `selectinload` no aplican sobre objetos ya cargados en la sesion).
+  - Fix: `.execution_options(populate_existing=True)` en el statement (SQLAlchemy 2.0).
+    Fuerza refresco de la instancia desde la DB (y re-aplica los selectinload).
+  - Impacto: **bug en produccion** — los tests lo detectaron antes que un cliente real.
+- **Suite de tests nueva (77 tests)** en `backend/tests/modules/oficios/`:
+  - `test_state_machine.py` (26): transiciones validas/invalidas por rol + completitud.
+  - `test_schemas.py` (11): validaciones Pydantic (rangos, requeridos, defaults).
+  - `test_models.py` (11): enums + creacion + relaciones ORM.
+  - `test_services_vehiculos.py` (10): CRUD completo + patente unica + permisos (403).
+  - `test_services_ordenes.py` (19): crear orden + items + cambiar estado + aprobar/rechazar
+    + workflow end-to-end completo (crear -> items -> presupuestar -> aprobar -> ejecutar).
+- **`conftest.py` raiz actualizado**: import de oficios + TRUNCATE de las 7 tablas de oficios.
+- **`conftest.py` de oficios** con fixtures: `usuario_cliente`, `categoria_oficio`,
+  `prestador_test`, `objeto_servicio_test`, `vehiculo_test`, `categoria_mecanica`.
+- **`test_promocion.py` actualizado**: pasa a esperar 6 plantillas (agrega `lanzamiento`).
+- **Suite completa del proyecto**: 218 passed en 86s (antes: 141).
+- **Commits**: `c8bcc01` + `e313f0f` (rebased).
+
+**Estado del modulo oficios:**
+- M1 backend + frontend + tests ✅
+- M2 backend + frontend + tests ✅
+- Suite de tests: 77 tests propios + integracion con la suite global.
 ### 2026-10-11 (cont. 9) - Modulo oficios Fase M2 frontend completa (pantallas de ordenes)
 
 **Frontend Flutter del ciclo completo de ordenes. M2 cerrada end-to-end.**
