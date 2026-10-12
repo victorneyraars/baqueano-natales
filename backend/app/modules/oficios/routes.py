@@ -11,7 +11,7 @@ from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.oficios import services
 from app.modules.oficios.deps import CategoriaMecanica, OrdenDelUsuario, Repuesto
-from app.modules.oficios.models import EstadoOrden, EstadoTurno
+from app.modules.oficios.models import EstadoOrden, EstadoTurno, ObjetoServicio
 from app.modules.oficios.schemas import (
     ClienteBusquedaResponse,
     GarantiaCreate,
