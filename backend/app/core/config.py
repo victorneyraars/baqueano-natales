@@ -122,6 +122,12 @@ class Settings(BaseSettings):
     # las publicaciones con estado=PENDIENTE y proximo_intento_en <= now.
     SOCIAL_WORKER_INTERVAL_SEC: int = 30
 
+    # ----------------------------------------------------------------
+    # Worker de recordatorios (oficios)
+    # ----------------------------------------------------------------
+    RECORDATORIOS_WORKER_ENABLED: bool = True
+    RECORDATORIOS_WORKER_INTERVAL_SEC: int = 3600  # 1 hora
+
     @property
     def admin_emails_list(self) -> list[str]:
         """Lista de emails admin parseados."""

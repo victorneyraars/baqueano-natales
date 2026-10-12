@@ -59,6 +59,10 @@ from app.modules.social.routes import (
     router_admin as social_admin_router,
 )
 from app.modules.social.worker import start_worker, stop_worker
+from app.modules.oficios.worker import (
+    start_worker as start_recordatorios_worker,
+    stop_worker as stop_recordatorios_worker,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +83,13 @@ async def lifespan(app: FastAPI):
     # Arrancar el worker de publicaciones sociales (APScheduler)
     # No-op si SOCIAL_WORKER_ENABLED=false
     start_worker()
+    start_recordatorios_worker()
 
     yield
 
     # Detener el worker
     stop_worker()
+    stop_recordatorios_worker()
 
     logger.info("Cerrando Baqueano Natales API")
 
