@@ -11,6 +11,40 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 22) - M5.1 fotos frontend (Flutter)
+
+**Slice M5.1 cerrado end-to-end (backend + frontend).**
+
+- **Modelo `OrdenFoto`** (Dart) + `MomentoFoto` enum (ingreso/diagnostico/en_proceso/entrega/reclamo/otro) + `FotoVariante`.
+- **`AuthedImage`** (`core/network/authed_image_provider.dart`): `ImageProvider` custom que usa `DioClient` singleton para bajar bytes con `Authorization: Bearer` automatico. **Reusable en cualquier feature** que necesite servir imagenes privadas.
+- **Repository**: 5 metodos nuevos (`subirFoto`, `subirFotoPrestador`, `listarFotosDeMiOrden`, `listarFotosDeOrdenPrestador`, `eliminarFotoDeMiOrden`, `eliminarFotoDeOrdenPrestador`). Multipart con `FormData` + `MultipartFile.fromBytes`.
+- **Providers**: `fotosDeMiOrdenProvider` + `fotosDeOrdenPrestadorProvider` (family con params inmutables).
+- **Widgets reusables**:
+  - `FotoThumb`: thumbnail con `AuthedImage`, variante configurable (`thumb`/`medium`/`original`), placeholder, `onTap` + `onLongPress`.
+  - `GaleriaFotos`: grid reusable con `maxFotos`, `onVerTodas`, `onFotoTap`.
+- **Pantalla `GaleriaFotosScreen`**:
+  - FAB upload con `image_picker` (camara/galeria + momento).
+  - Filtro por momento (bottom sheet + badge en el icono).
+  - Long-press para eliminar (dialogo de confirmacion).
+  - Visor fullscreen con `PageView` + `InteractiveViewer` (pinch zoom 1-5x) + boton delete en AppBar.
+- **Wire**: boton de fotos en AppBars de `detalle_mi_orden_screen` y `detalle_orden_taller_screen`. 2 rutas nuevas en `app_router.dart`.
+- **Dep**: `image_picker ^1.1.2`.
+- **Validado end-to-end en emulador Android 14**:
+  - Upload PNG/JPEG desde camara y galeria -> 201 + grid actualiza.
+  - `AuthedImage` -> GET con JWT a `/api/v1/ordenes/fotos/{id}/archivo/thumb` -> 200.
+  - Filtro `?momento=` -> 200.
+  - DELETE -> 204 + grid refresca.
+- **Bugs encontrados y arreglados en el camino**:
+  1. `FotoThumb` con `width/height: null` colapsaba a 0x0 en grid -> default `double.infinity`.
+  2. Visor usaba variante `thumb` (256px borroso) -> ahora `original` (2048px).
+  3. `BoxFit.cover` recortaba la imagen -> `contain` en visor.
+  4. Long-press competia en gesture arena con `onTap` del `FotoThumb` -> ambos en el mismo widget.
+- **Gotcha del emulador**: el AVD genera una escena sintetica de baja resolucion para la camara -> la foto se ve borrosa pero es la fuente, no el pipeline. Probar con device fisico o subir imagen desde la galeria (drag&drop de un PNG/JPG a la ventana del emulador).
+
+**Estado del modulo oficios (M5):**
+- M5.1 (fotos): backend + frontend OK
+- M5.2 (notifs in-app en cambio de estado): pendiente
+- M5.3 (reportes taller): pendiente
 ### 2026-10-12 (cont. 21) - M5.1 fotos de ordenes (backend completo)
 
 **Primer slice de M5 del modulo oficios: fotos con estandares de industria.**
