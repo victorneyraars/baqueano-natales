@@ -143,7 +143,9 @@ async def db(test_engine, _init_schema) -> AsyncSession:
                 "orden_historial, orden_items, ordenes_trabajo, "
                 "turnos, garantias, recordatorios, "
                 "vehiculos, objetos_servicio, "
-                "mecanica_repuestos, mecanica_categorias_servicio "
+                "mecanica_repuestos, mecanica_categorias_servicio, "
+                "notification_logs, fcm_tokens, "
+                "preferencias_notificacion "
                 "RESTART IDENTITY CASCADE"
             )
         )

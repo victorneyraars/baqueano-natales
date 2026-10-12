@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.firebase import init_firebase
 from app.core.logging import setup_logging
 from app.modules.auth.routes import router as auth_router
+from app.modules.notificaciones.admin_routes import router as admin_notificaciones_router
 from app.modules.notificaciones.routes import router as notificaciones_router
 from app.modules.usuarios.routes import router as usuarios_router
 from app.modules.admin.routes import router as admin_router
@@ -125,6 +126,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(usuarios_router, prefix="/api/v1")
 app.include_router(notificaciones_router, prefix="/api/v1")
+app.include_router(admin_notificaciones_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
 # Comercios
