@@ -11,6 +11,25 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 24) - M5.2 tests HTTP del wire de notificaciones in-app
+
+**Deuda de tests de M5.2 cerrada.**
+
+- **5 tests nuevos** (`tests/modules/oficios/test_notificaciones_in_app.py`) que validan los 3 flujos wire:
+  - `crear_orden` -> notif IN_APP al cliente con `data.tipo=orden` + `orden_id` + `estado`.
+  - `cambiar_estado` (prestador) -> notif al cliente con `estado_anterior` + `estado`.
+  - `cambiar_estado` (cliente, rechazar) -> notif al prestador dueno.
+  - `aprobar_presupuesto` -> notif al prestador con `total_aprobado`.
+  - `enviar_in_app()` funciona sin tokens FCM activos (canal=IN_APP).
+- **Decision de diseno del test**: llaman a los services directamente (no HTTP) porque el wire esta en el service y asi evitamos la cadena HTTP completa. Los tests HTTP ya existen para los endpoints en si.
+- **Transiciones validas del cliente** (descubierto en el proceso): solo `presupuestado -> aprobado|rechazado` y `rechazado -> cancelado`. El test usa `rechazado` porque es la transicion "del cliente" que dispara notif al prestador.
+- **Suite total: 390 passed, 0 warnings.**
+
+**Estado del modulo oficios (M5):**
+- M5.1 (fotos): backend + frontend OK
+- M5.2 (notifs in-app): backend + frontend + tests OK
+- M5.3 (reportes taller): pendiente
+
 ### 2026-10-12 (cont. 23) - M5.2 notificaciones in-app en cambios de estado
 
 **Slice M5.2 cerrado end-to-end (backend + frontend).**
