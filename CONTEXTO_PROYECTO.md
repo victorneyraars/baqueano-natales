@@ -57,6 +57,44 @@
   - **Deuda pendiente de M4**: push FCM real (hoy el worker marca
     `enviado=True` y loguea, pero no manda push al usuario).
 
+### 2026-10-12 (cont. 9) - Backend de FCM (push notifications) completo
+
+**Worker de recordatorios ahora manda push real. Cierra M4 al 100% (backend).**
+
+- **Slice 1 (commit `770fbae`)** - Registro de token:
+  - Columna `usuarios.fcm_token VARCHAR(500) NULL` (modelo single-device).
+  - Migracion `f1a2b3c4d5e6`.
+  - Endpoint `POST /api/v1/usuarios/me/fcm-token` con schema `FcmTokenUpdate`.
+  - 4 tests HTTP: ok, sobreescribe, token > 500 chars (422), sin auth (401).
+- **Slice 2 (commit `40af0bf`)** - Servicio de push:
+  - `app/core/push.py` transversal con `enviar_push(token, ...)` y
+    `enviar_push_a_usuario(user_id, ..., db=None)`.
+  - El SDK de FCM (sincrono) se corre con `asyncio.to_thread` para no
+    bloquear el event loop.
+  - **Nunca propaga excepciones** (best-effort): devuelve True/False.
+  - `FCM_ENABLED` en `Settings` para desactivar globalmente (tests, fallback).
+  - 7 tests unitarios con mock de `messaging.send`.
+- **Slice 3 (misma commit `40af0bf`)** - Wire en worker:
+  - `worker.py` reemplaza el `# TODO M5` por `_enviar_push_recordatorio`.
+  - Stats del worker ahora incluye counter `pushes`.
+  - El push se manda **despues** de marcar el recordatorio como enviado
+    (la marca es la fuente de verdad; si el push falla, no se re-dispara).
+  - 2 tests de integracion: push ok → stats.pushes=1; push falla →
+    recordatorio igual marcado enviado, stats.errores=0.
+
+- **Cleanup de warnings** (commit `83cab05`):
+  - `pytest.ini`: `cache_dir = /tmp/.pytest_cache` (elimina los 2
+    PytestCacheWarning por permisos en Docker).
+  - `logging.py`: migrado a `from pythonjsonlogger.json import JsonFormatter`
+    con try/except para v2 (elimina el DeprecationWarning).
+  - **Suite: 0 warnings.**
+
+- **Suite total: 337 tests verdes** (328 + 7 push service + 2 worker push).
+- **Pendiente de FCM:** frontend Flutter (`firebase_messaging`, permiso
+  POST_NOTIFICATIONS, registrar token post-login). Proxima sesion.
+- **Como deshabilitar FCM en produccion:** `FCM_ENABLED=false` en `.env` +
+  recrear el container.
+
 ### 2026-10-12 (cont. 8) - Auditoria cross-modulo del patron MissingGreenlet
 
 **El bug MissingGreenlet no era solo de oficios: 7 endpoints mas en 3 modulos.**

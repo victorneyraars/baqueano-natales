@@ -305,6 +305,39 @@ Importar en este orden:
 - Si el worker tiene una tabla de "pendientes", incluir funcion
   buscar_X_pendientes para tests + endpoint manual.
 
+### 4.7. FCM (push notifications)
+
+**Servicio transversal:** `app/core/push.py`.
+
+**API:**
+- `enviar_push(fcm_token, titulo, body, data=None) -> bool`
+- `enviar_push_a_usuario(user_id, titulo, body, data=None, db=None) -> bool`
+
+**Reglas:**
+- **Nunca propaga excepciones.** Devuelve `True`/`False`. El caller no
+  debe crashear por un push fallido.
+- El SDK de FCM es sincrono -> corre con `asyncio.to_thread` para no
+  bloquear el event loop.
+- Si `FCM_ENABLED=False` (en `Settings`) -> no-op que devuelve `False`.
+  Util para tests + fallback si FCM esta caido en produccion.
+
+**Registrar token de un dispositivo:**
+- Endpoint `POST /api/v1/usuarios/me/fcm-token` (body `{token: str}`).
+- Modelo **single-device**: el token se sobreescribe en cada login. Si en
+  el futuro hace falta multi-device, migrar a tabla `fcm_tokens`.
+
+**Tests:**
+- Unitarios: mock de `messaging.send` con `unittest.mock.patch`.
+  Ejemplo: `with patch("app.core.push.messaging.send", return_value="id"):`
+- Integracion: mock de `enviar_push_a_usuario` con `AsyncMock`. Ejemplo:
+  `patch("app.core.push.enviar_push_a_usuario", new=AsyncMock(return_value=True))`.
+
+**Deshabilitar globalmente:** `FCM_ENABLED=false` en `.env` + recrear container.
+
+**Gotcha:** el worker marca `enviado=True` ANTES de mandar el push. La
+marca es la fuente de verdad. Si el push falla, el recordatorio no se
+re-dispara. Esto es intencional: mejor perder 1 push que spamear al user.
+
 ### 4.6. Commits
 
 - Formato: `<tipo>(<scope>): <descripcion corta>` en el primer -m.
