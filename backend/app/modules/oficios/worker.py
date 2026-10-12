@@ -26,6 +26,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import push
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
 from app.modules.oficios import services
@@ -65,7 +66,7 @@ async def procesar_recordatorios(db: AsyncSession | None = None) -> dict:
 
 async def _procesar_con_db(db: AsyncSession) -> dict:
     """Implementacion del ciclo. Recibe una sesion ya abierta."""
-    stats = {"evaluados": 0, "enviados": 0, "pendientes": 0, "errores": 0}
+    stats = {"evaluados": 0, "enviados": 0, "pendientes": 0, "errores": 0, "pushes": 0}
 
     try:
         pendientes = await services.buscar_recordatorios_pendientes(db, limit=200)
@@ -86,7 +87,8 @@ async def _procesar_con_db(db: AsyncSession) -> dict:
                         "Worker recordatorios: enviado id=%s tipo=%s",
                         rec.id, rec.tipo.value,
                     )
-                    # TODO M5: enviar notificacion push/in-app al dueno
+                    # Push al dueno del objeto (best-effort, no propaga)
+                    await _enviar_push_recordatorio(db, rec, stats)
                 else:
                     stats["pendientes"] += 1
             except Exception:
@@ -102,6 +104,45 @@ async def _procesar_con_db(db: AsyncSession) -> dict:
     if stats["evaluados"] > 0:
         logger.info("Worker recordatorios: ciclo %s", stats)
     return stats
+
+
+async def _enviar_push_recordatorio(
+    db: AsyncSession, rec: Recordatorio, stats: dict
+) -> None:
+    """Envia push al propietario del objeto. Best-effort: nunca lanza.
+
+    El push se manda despues de marcar el recordatorio como enviado (la
+    marca es la fuente de verdad). Si el push falla, el usuario no recibe
+    la notificacion pero el recordatorio no se re-dispara.
+    """
+    try:
+        obj = (
+            await db.execute(
+                select(ObjetoServicio).where(
+                    ObjetoServicio.id == rec.objeto_servicio_id
+                )
+            )
+        ).scalar_one_or_none()
+        if obj is None:
+            return
+
+        enviado = await push.enviar_push_a_usuario(
+            user_id=obj.propietario_id,
+            titulo="Recordatorio de mantenimiento",
+            body=rec.mensaje,
+            data={
+                "tipo": "recordatorio",
+                "recordatorio_id": str(rec.id),
+                "objeto_servicio_id": str(rec.objeto_servicio_id),
+            },
+            db=db,
+        )
+        if enviado:
+            stats["pushes"] += 1
+    except Exception:
+        logger.exception(
+            "Worker recordatorios: error enviando push rec=%s", rec.id,
+        )
 
 
 async def _evaluar_condicion(db: AsyncSession, rec: Recordatorio) -> bool:

@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # --- Firebase ---
     FIREBASE_SERVICE_ACCOUNT_PATH: str = "/app/secrets/firebase-service-account.json"
     FIREBASE_PROJECT_ID: str = "baqueano-natales"
+    FCM_ENABLED: bool = True
 
     # --- Google ---
     GOOGLE_CLIENT_ID: str = ""
