@@ -229,6 +229,10 @@ async def actualizar_vehiculo(
         veh.fecha_ultima_revision = data.fecha_ultima_revision
 
     await db.flush()
+    # Refrescar obj y veh para que _vehiculo_a_response no dispare IO
+    # lazy (MissingGreenlet) al leer updated_at post-flush.
+    await db.refresh(obj)
+    await db.refresh(veh)
     return _vehiculo_a_response(obj, veh)
 
 
