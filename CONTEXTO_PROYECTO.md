@@ -11,6 +11,41 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 26) - M5.3 reportes del taller (frontend) - **M5 COMPLETO**
+
+**Modulo oficios M5 cerrado al 100% (backend + frontend + tests).**
+
+- **Frontend**:
+  - Modelo `ReportePrestador` + 4 sub-modelos (`ReporteKPIs`, `ReporteSerieMes`, `ReporteTopServicio`, `ReporteTopCliente`).
+  - `OficiosRepository`: 2 metodos nuevos (`obtenerReporte` JSON, `descargarReporteCsv` bytes).
+  - Provider family `reportePrestadorProvider` con params inmutables (prestadorId + desde + hasta).
+  - Pantalla `ReportesTallerScreen`:
+    - Selector de rango: chips 30d / 90d / 12m.
+    - KPIs en cards 2x2 (icono + label + valor).
+    - Chart de barras con `CustomPaint` (sin `fl_chart`).
+    - Top 10 servicios + Top 10 clientes.
+    - Boton de descarga CSV (share sheet via `share_plus` + `path_provider`).
+  - Wire: boton `bar_chart_outlined` en AppBar de `detalle_mi_prestador`.
+  - Ruta nueva: `/mis-prestadores/:id/reportes`.
+- **Bug critico detectado en el smoke test (y arreglado)**: `_desde`/`_hasta` se calculaban con getters llamando `DateTime.now()` en cada build -> Riverpod family veia params distintos (microsegundos) -> fetch infinito. Fix: guardar como campos de estado (`late DateTime`) y recalcular solo en `initState` / `onChanged` del preset. **Aprendizaje general para Riverpod family: los params deben ser inmutables y deterministas.**
+- **Validado end-to-end** en emulador:
+  - KPIs correctos: 2 ordenes, $87.000, ticket $87.000, tasa 100%, duracion 2.0 d.
+  - Chart de barras con 1 barra (oct).
+  - Top 3 servicios + Top 1 cliente.
+  - Cambio de chips: refetch correcto, sin loop.
+- **Flutter analyze: No issues found!**
+
+**Estado del modulo oficios (M5):**
+- M5.1 (fotos): backend + frontend + tests OK
+- M5.2 (notifs in-app): backend + frontend + tests OK
+- M5.3 (reportes): backend + frontend + tests OK
+- **M5 COMPLETO.**
+
+**Backlog del proyecto (fuera de M5):**
+- Cosmeticos de notifs (`android:label`, `ic_notification` monocromatico, card -> detalle).
+- Rotar secretos expuestos (pendiente desde oct-08).
+- M6 hipotetico: chat cliente-prestador, pagos, etc.
+
 ### 2026-10-12 (cont. 25) - M5.3 reportes del taller (backend completo)
 
 **Ultimo slice de M5 backend. Metricas de industria basadas en Jobber / ServiceTitan / TallerPro.**
