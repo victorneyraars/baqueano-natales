@@ -1,9 +1,20 @@
 # =========================================================
-# Baqueano Natales - Stack base (dev y prod comparten esto)
+# Baqueano Natales - Stack base
 # =========================================================
+# Este archivo define solo los servicios COMPARTIDOS entre entornos:
+#   - db:     PostgreSQL 16 (una instancia, multiples DBs)
+#   - nginx:  Reverse proxy (enruta por server_name)
+#
+# Los backends viven en archivos override por entorno:
+#   - docker-compose.prod.yml -> backend-prod (usa .env.prod)
+#   - docker-compose.dev.yml  -> backend-dev  (usa .env.dev)
+#
 # Uso:
-#   Dev:   docker compose up
-#   Prod:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Solo prod:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Solo dev:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   Ambos:      docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml up -d
+#
+# Los scripts en scripts/ encapsulan estas combinaciones.
 # =========================================================
 
 services:
@@ -29,48 +40,6 @@ services:
       start_period: 30s
     networks:
       - baqueano_net
-    # No exponer al host. Solo accesible desde la red interna.
-
-  # ---------------------------------------------------------
-  # Backend FastAPI
-  # ---------------------------------------------------------
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: baqueano_backend
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      # Override del host de la DB (dentro de docker es "db", no "localhost")
-      POSTGRES_HOST: db
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      # Hot reload en dev (comentado por default, se activa con override)
-      - ./backend/app:/app/app
-      # Migraciones y config de Alembic
-      - ./backend/alembic:/app/alembic
-      - ./backend/alembic.ini:/app/alembic.ini
-      # Tests y config de pytest
-      - ./backend/tests:/app/tests
-      - ./backend/pytest.ini:/app/pytest.ini
-      - ./backend/secrets:/app/secrets:ro
-      - media_data:/app/media
-    expose:
-      - "8000"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' 2>/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - baqueano_net
-    # No exponer al host. Nginx lo consume por la red interna.
 
   # ---------------------------------------------------------
   # Nginx (Reverse Proxy)
@@ -87,25 +56,16 @@ services:
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./deploy/nginx/certs:/etc/nginx/certs:ro
       - nginx_cache:/var/cache/nginx
-      - media_data:/var/www/media:ro
-      # Certificados Let's Encrypt (se montará cuando los tengamos)
-      # - ./deploy/certbot/conf:/etc/letsencrypt:ro
-      # - ./deploy/certbot/www:/var/www/certbot:ro
-    depends_on:
-      backend:
-        condition: service_healthy
     networks:
       - baqueano_net
 
 # ---------------------------------------------------------
-# Volúmenes persistentes
+# Volumenes persistentes
 # ---------------------------------------------------------
 volumes:
   postgres_data:
     driver: local
   nginx_cache:
-    driver: local
-  media_data:
     driver: local
 
 # ---------------------------------------------------------

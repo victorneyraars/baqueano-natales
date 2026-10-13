@@ -84,3 +84,6 @@ Thumbs.db
 
 # Certificados TLS (self-signed / Let's Encrypt)
 deploy/nginx/certs/
+
+# --- Backups de compose/nginx (temporales, no commitear) ---
+*.backup-*
