@@ -277,32 +277,135 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.handyman_outlined,
-              size: 64,
-              color: theme.colorScheme.onSurfaceVariant,
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.handyman_outlined,
+                size: 56,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
-              'Aún no tenés oficios',
-              style: theme.textTheme.titleMedium,
+              'Ofrece tus servicios',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Creá tu primer perfil de prestador con el botón +.',
+              'Crea tu perfil de prestador para que los clientes te '
+              'encuentren, te contacten y agenden turnos.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _StepItem(
+              numero: 1,
+              titulo: 'Crea tu perfil',
+              descripcion: 'Nombre, categoria, especialidades.',
+              theme: theme,
+            ),
+            const SizedBox(height: 12),
+            _StepItem(
+              numero: 2,
+              titulo: 'Carga tus servicios',
+              descripcion: 'Con precios y duraciones estimadas.',
+              theme: theme,
+            ),
+            const SizedBox(height: 12),
+            _StepItem(
+              numero: 3,
+              titulo: 'Enviar a revision',
+              descripcion: 'Un admin lo verifica y ya apareces publico.',
+              theme: theme,
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () => context.push('/mis-prestadores/nuevo'),
+              icon: const Icon(Icons.add),
+              label: const Text('Crear mi primer perfil'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+                textStyle: theme.textTheme.titleMedium,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StepItem extends StatelessWidget {
+  const _StepItem({
+    required this.numero,
+    required this.titulo,
+    required this.descripcion,
+    required this.theme,
+  });
+
+  final int numero;
+  final String titulo;
+  final String descripcion;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$numero',
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                titulo,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                descripcion,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
