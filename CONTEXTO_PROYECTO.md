@@ -11,6 +11,33 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-13 (cont. 32) - Bloque 6: AAB release (clientProd + adminProd)
+
+**Release signing real. Los 2 AABs de producción construidos y firmados con keystore propio.**
+
+**Implementacion:**
+- Keystore de release: `D:\dev\baqueano-keys\baqueano-release.jks` (fuera del repo, RSA 2048, validez ~27 años).
+- `flutter/android/key.properties` (gitignored) con las credenciales.
+- `build.gradle.kts` refactorizado: `signingConfigs.create("release")` lee de `key.properties`. Si el archivo no existe (CI sin keystore), la config release queda sin firmar (fail-loud).
+- Backup del gradle original: `build.gradle.kts.bak`.
+
+**AABs construidos:**
+- `clientProd`: 58.24 MB, 15.5 min (primer build con clean + daemon off).
+- `adminProd`:  58.18 MB,  8.6 min (incremental, reusa cache).
+
+**Comandos canonicos:**
+
+    flutter build appbundle --flavor clientProd --release -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
+    flutter build appbundle --flavor adminProd  --release -t lib/main_admin.dart  --dart-define-from-file=dart_defines/admin_prod.json
+
+**Plan Play Store (decision de enfoques):**
+- `cl.baqueanonatales` (clientProd) -> track **Production** (eventual, público).
+- `cl.baqueanonatales.admin` (adminProd) -> track **Internal testing** (permanente, evita penalización por "repetitive content").
+
+**Deuda nueva:**
+- Backup del keystore + password: en gestor del owner (pendiente confirmar).
+- Subir los AABs a Play Console (proximo bloque manual).
+- Fase 5 de Play Store (keystore + Play App Signing + metadata) queda en curso.
 ### 2026-10-13 (cont. 31) - Flutter flavors completos (4 variantes)
 
 **Ciclo de release desbloqueado: la app puede apuntar a prod o dev segun el flavor.**
