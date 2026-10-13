@@ -11,6 +11,36 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-13 (cont. 28) - Smoke test end-to-end del MVP de mecanica
+
+**MVP de mecanica cerrado end-to-end. Todos los flujos criticos verificados.**
+
+- **Onboarding del prestador** (flujo completo verificado):
+  1. Cliente crea prestador desde el empty state nuevo de `MisOficios` -> `POST /mis-prestadores` (201).
+  2. Envia a revision -> `POST /mis-prestadores/{id}/enviar-revision` (200).
+  3. Admin verifica -> `POST /admin/prestadores/{id}/verificar` (200).
+  4. Estado final: `verificado`, `verificado=true`, `verificado_en` + `verificado_por_id` seteados.
+- **Empty state mejorado** de `MisOficiosScreen` (commit 43bb658):
+  - Icono circular grande + titulo "Ofrece tus servicios".
+  - 3 pasos numerados (crea perfil, carga servicios, envia a revision).
+  - CTA grande "Crear mi primer perfil".
+- **Flujos del MVP verificados de punta a punta** (sesiones previas + esta):
+  - Cliente descubre talleres (`/prestadores` + categorias).
+  - Cliente reserva turno (M3).
+  - Cliente aprueba/rechaza presupuesto por item (M2).
+  - Prestador ejecuta + entrega -> garantia automatica (M4).
+  - Prestador sube fotos content-addressable (M5.1).
+  - Cliente recibe notifs in-app en cada cambio (M5.2).
+  - Prestador ve reportes + descarga CSV (M5.3).
+  - Cliente califica -> prestador responde (M6).
+- **Estado del MVP de mecanica: FUNCIONAL.** Todos los bloques backend + frontend + tests verdes.
+- **Suite backend: 402 passed, 0 warnings.**
+
+**Deuda documentada (no bloqueante):**
+- Push FCM real (hoy el worker marca `enviado=True` y loguea, pero no verifica entrega en device fisico).
+- Admin flavor con CRUD de ordenes globales (no existe endpoint).
+- Cosmetica de notifs (`android:label`, `ic_notification` monocromatico).
+
 ### 2026-10-12 (cont. 27) - M6 reviews/calificaciones (frontend) + smoke test e2e
 
 **Modulo reviews cerrado end-to-end (backend + frontend).**
