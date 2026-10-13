@@ -1,6 +1,6 @@
 # Baqueano Natales — Contexto Completo del Proyecto
 
-> **Última actualización:** 2026-10-12
+> **Última actualización:** 2026-10-13
 > **Propósito:** Documento maestro que resume el estado completo del proyecto para retomar el trabajo en cualquier momento sin perder contexto.
 
 > **Ver también:**
@@ -10,6 +10,95 @@
 ---
 
 ## 📋 Changelog reciente
+
+### 2026-10-13 (cont. 30) - Infraestructura dual (prod + dev) en el server nuevo
+
+**El server nuevo pasa de un backend unico a dos entornos aislados. Server legacy respaldado.**
+
+**Bloque 1 - Decisiones estrategicas:**
+- Topologia: 1 server, 2 containers backend (prod + dev), 1 Postgres con 3 DBs fisicas, usuarios Postgres con minimo privilegio por DB.
+- Subdominios normalizados: `api.baqueanonatales.com` (prod) + `api-dev.baqueanonatales.com` (dev). `dev-api.` deprecated con redirect 301 por 30 dias.
+- Server legacy (`161.118.240.229`): plan de retiro en 4 fases (freeze -> snapshot -> 90 dias de gracia -> apagado -> destruccion).
+- Staging: descartado por ahora (dev + prod alcanzan para el MVP).
+
+**Bloque 2 - Snapshot del server legacy (completado):**
+- Snapshot completo: `snapshot-legacy-2026-10-13.tar.gz` (51 MB, 9 archivos, checksums SHA-256 verificados en Windows).
+- Contenido: codigo legacy + config nginx/systemd + secretos cifrados (GPG) + DB dump + 8 backups historicos + metadata.
+- Excluidos: venv, SDKs Flutter/Kotlin, caches (reproducibles).
+- Frase GPG guardada en gestor del owner (nombre: "GPG backup phrase - superapp-natales legacy").
+- Hallazgos: 47 tablas, git remote con PAT expuesto (cuenta `sandraalvaradoclp`), `.github_token` adicional, `firebase-service-account.json` legacy.
+
+**Bloque 3 - Infraestructura dual (completado):**
+
+- **3.1 Preparacion (sin downtime):**
+  - Backup fresco pre-rename + pre-swap de `baqueano_natales` (3 snapshots en `~/backups/`).
+  - `.env.prod` y `.env.dev` creados (copia del `.env` + 8 variables cambiadas).
+  - `docker-compose.yml` refactorizado a base (solo `db` + `nginx`).
+  - `docker-compose.prod.yml` (backend-prod, container `baqueano_backend_prod`).
+  - `docker-compose.dev.yml` (backend-dev, container `baqueano_backend_dev`).
+  - `deploy/nginx/conf.d.new/`: `api.conf`, `api-dev.conf`, `dev-api.conf` (redirect 301).
+  - `deploy/nginx/nginx.conf`: upstream `baqueano_backend` -> `backend-prod:8000`.
+  - `deploy/nginx/conf.d/default.conf`: quitado bloque `/media/` (nginx ya no monta volumen).
+  - 11 scripts en `scripts/`: `prod-up/down/restart/logs`, `dev-*`, `all-up/down`, `status`.
+
+- **3.2 Usuarios Postgres + DBs:**
+  - 3 usuarios nuevos con `NOSUPERUSER NOCREATEDB NOCREATEROLE`: `baqueano_prod_user`, `baqueano_dev_user`, `baqueano_test_user`.
+  - Password rotado para `baqueano_user` (bootstrap superuser) — aplicado en el swap.
+  - DB `baqueano_natales` renombrada a `baqueano_natales_prod`.
+  - DB `baqueano_test` renombrada a `baqueano_natales_test`.
+  - DB `baqueano_natales_dev` creada vacia.
+  - `REVOKE CONNECT FROM PUBLIC` en cada DB nueva + `GRANT CONNECT` solo al usuario respectivo (aislamiento verificado).
+  - Passwords guardadas en gestor del owner. NO versionadas.
+
+- **3.3 Swap (2 min de downtime):**
+  - `baqueano_backend` viejo parado.
+  - DB renombrada + owner + grants + rotacion password + `.env` base actualizado.
+  - Fix de permisos de volumenes nuevos (`chown 1000:1000` en `media_data_prod` y `media_data_dev`).
+  - Stack completo recreado con `docker compose -f ... -f prod -f dev up -d --build`.
+  - 4 containers healthy: `baqueano_db`, `baqueano_nginx`, `baqueano_backend_prod`, `baqueano_backend_dev`.
+  - Migraciones Alembic aplicadas en dev (29 migraciones, version `914a9136f997 (head)`).
+  - Tablas: 29 en prod, 29 en dev (schemas sincronizados).
+  - Confs nginx activados (movidos de `conf.d.new/` a `conf.d/`).
+
+- **3.4 DNS cutover:**
+  - `api.baqueanonatales.com` A record actualizado: `161.118.240.229` -> `104.129.59.151`.
+  - Marcado como **proxied** en Cloudflare (critico: el Origin Cert solo es valido via Cloudflare Edge).
+  - Purge no aplicable (no habia nada cacheado).
+  - `api-dev.baqueanonatales.com` creado y proxied.
+
+**Verificacion end-to-end (post-swap):**
+- `https://api.baqueanonatales.com/health` -> `environment=production`.
+- `https://api-dev.baqueanonatales.com/health` -> `environment=development`.
+- `https://dev-api.baqueanonatales.com/health` -> 301 a `api-dev`.
+- `/api/v1/prestadores` en prod -> data real (`taller-mecanico-del-sur`).
+- `/api/v1/prestadores` en dev -> `items: []` (DB vacia).
+- Aislamiento Postgres: `prod_user` no puede conectar a `baqueano_natales_dev`.
+
+**Bloque 9.B - Documentacion (parcial):**
+- `SERVER_CHEATSHEET.md`: agregadas 3 secciones (Workflow dual-entorno, 5 gotchas nuevos, rotacion de secretos pendiente).
+
+**Hallazgos / aprendizajes nuevos:**
+- `docker compose config` imprime TODOS los secretos sin filtrado.
+- Permisos de volumenes Docker nuevos: owner `root:root`, requiere `chown 1000:1000`.
+- `docker exec` + `< /dev/null` + `docker cp` es el patron canonico para `pg_dump`.
+- `docker compose exec -T` bloquea el resto del script en `bash -s` multi-linea.
+- Cloudflare Origin Certificate SOLO valida via Cloudflare Edge (proxied=true). Sin proxy, los clientes ven cert invalido.
+
+**Deuda pendiente (documentada, no bloqueante):**
+- Rotacion de secretos (`SECRET_KEY`, `TOKEN_ENCRYPTION_KEY`, `FACEBOOK_APP_SECRET`) — anotada para el final.
+- Revocar GitHub PAT legacy + archivar repo `sandraalvaradoclp/superapp-natales`.
+- Portar script de backup del legacy al server nuevo (rclone a B2 separado por entorno).
+- Implementar flavors Flutter (client-dev/prod, admin-dev/prod).
+- Keystore de release + subir a Play Store (internal testing).
+- CI/CD con GitHub Actions.
+
+**Commits:**
+- `119eefb` infra: infraestructura dual (prod + dev) para el server
+- `6a1a03c` infra: activar confs de nginx (api + api-dev + redirect dev-api)
+
+**Estado de la suite backend:** 402 tests verdes (sin cambios de codigo de aplicacion).
+**Estado del server:** 4 containers healthy, health publico OK en ambos entornos.
+
 
 ### 2026-10-13 (cont. 29) - Cosmeticos de notificaciones (D) + label por flavor
 

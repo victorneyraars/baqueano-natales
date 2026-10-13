@@ -476,3 +476,166 @@ Endpoints backend consumidos:
       instancias Dart vivas) y ademas persistir en disco (SecureStorage)
       con ventana temporal.
     - Para un estado 100% limpio, **cold start** (`q` + `flutter run`).
+
+
+---
+
+## Workflow dual-entorno (prod + dev) — ACTUALIZADO 2026-10-13
+
+El server nuevo (`104.129.59.151`) corre **dos entornos aislados** en paralelo.
+
+| Servicio | Container | Env file | DB | Volumen media |
+|---|---|---|---|---|
+| db | `baqueano_db` | `.env` (base) | multiples DBs | `postgres_data` |
+| nginx | `baqueano_nginx` | — | — | `nginx_cache` |
+| backend-prod | `baqueano_backend_prod` | `.env.prod` | `baqueano_natales_prod` | `media_data_prod` |
+| backend-dev | `baqueano_backend_dev` | `.env.dev` | `baqueano_natales_dev` | `media_data_dev` |
+
+Subdominios:
+- `api.baqueanonatales.com` -> `backend-prod` (Cloudflare proxied)
+- `api-dev.baqueanonatales.com` -> `backend-dev` (Cloudflare proxied)
+- `dev-api.baqueanonatales.com` -> redirect 301 a `api-dev` (temporal, 30 dias)
+
+### Comandos operativos (scripts)
+
+    # Levantar prod
+    scripts/prod-up.sh [--build]
+
+    # Levantar dev
+    scripts/dev-up.sh [--build]
+
+    # Levantar ambos
+    scripts/all-up.sh [--build]
+
+    # Bajar solo prod (deja db + nginx + dev)
+    scripts/prod-down.sh
+
+    # Bajar solo dev (deja db + nginx + prod)
+    scripts/dev-down.sh
+
+    # Bajar TODO (incluye db + nginx)
+    scripts/all-down.sh
+
+    # Reiniciar sin recrear (rapido)
+    scripts/prod-restart.sh
+    scripts/dev-restart.sh
+
+    # Logs en vivo
+    scripts/prod-logs.sh [N]
+    scripts/dev-logs.sh [N]
+
+    # Estado consolidado (containers + health + recursos)
+    scripts/status.sh
+
+### Uso directo de docker compose
+
+    # Prod
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml <cmd>
+
+    # Dev
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml <cmd>
+
+    # Ambos
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml <cmd>
+
+### Aplicar migraciones Alembic
+
+    docker exec baqueano_backend_prod alembic upgrade head
+    docker exec baqueano_backend_dev alembic upgrade head
+
+### Usuarios Postgres (minimo privilegio)
+
+| Usuario | Atributos | Acceso |
+|---|---|---|
+| `baqueano_user` | Superuser (bootstrap) | Todas las DBs (solo admin manual) |
+| `baqueano_prod_user` | NOSUPERUSER | Solo `baqueano_natales_prod` |
+| `baqueano_dev_user` | NOSUPERUSER | Solo `baqueano_natales_dev` |
+| `baqueano_test_user` | NOSUPERUSER | Solo `baqueano_natales_test` |
+
+Passwords guardadas en el gestor del owner. NO versionadas en el repo.
+
+### Backups del server nuevo
+
+Backups manuales en `~/backups/`:
+
+    ssh deploy@104.129.59.151 "ls -lah ~/backups/"
+
+Rclone remotes (pendiente de portar el script de backup del legacy):
+- `b2:baqueano-natales-backups-prod`
+- `b2:baqueano-natales-backups-dev`
+
+---
+
+## Gotchas nuevos (2026-10-13)
+
+28. **Permisos de volumenes Docker nuevos**: cuando Docker crea un volumen vacio
+    (ej. `media_data_prod`), lo monta con owner `root:root`. Si el container
+    corre como `appuser` (uid 1000), falla con
+    `PermissionError: [Errno 13] Permission denied: '/app/media/avatars'` y
+    entra en restart loop.
+
+    Fix (one-time por volumen):
+
+        docker run --rm -v baqueano-natales_media_data_prod:/mnt alpine \
+          sh -c "mkdir -p /mnt/avatars /mnt/afiches /mnt/audios /mnt/biblioteca /mnt/comercios /mnt/items /mnt/promociones /mnt/oficios && chown -R 1000:1000 /mnt && chmod -R 755 /mnt"
+
+    Despues: `scripts/prod-restart.sh` (o el correspondiente).
+
+29. **`docker compose config` imprime TODOS los secretos**: el comando resuelve
+    las variables del `.env` y las muestra en el output. NUNCA correrlo sin
+    censurar.
+
+    Mal:  `docker compose config`
+    Bien: `docker compose config --services`
+    Bien: `docker compose config --volumes`
+    Bien: `docker compose config | grep -vE "(SECRET|PASSWORD|TOKEN|KEY|PASSPHRASE|DATABASE_URL|APP_SECRET)"`
+
+30. **`docker compose exec -T` consume stdin dentro de `bash -s` multi-linea**:
+    cuando se invoca un `docker compose exec` en medio de un script enviado por
+    `bash -s`, el resto del script se pierde porque Docker lee hasta EOF.
+
+    Fix: separar en llamadas SSH distintas, o usar `docker exec <container>`
+    (sin `compose`) que NO lee stdin.
+
+31. **`docker exec` + `< /dev/null` + `docker cp`** es el patron canonico para
+    `pg_dump` en Docker:
+
+        # 1. Dump dentro del container (evita SIGPIPE)
+        docker exec baqueano_db pg_dump -U baqueano_user -d baqueano_natales_prod -f /tmp/dump.sql < /dev/null
+
+        # 2. Copiar al host
+        docker cp baqueano_db:/tmp/dump.sql /tmp/dump.sql
+
+        # 3. Comprimir
+        gzip -c /tmp/dump.sql > backup.sql.gz
+
+    NO usar `docker compose exec -T db pg_dump ... | gzip` porque:
+    - El pipe puede cerrar temprano (SIGPIPE) y matar la sesion SSH.
+    - El heredoc/pipe se trunca silenciosamente con contenido largo.
+
+32. **`docker compose up -d` deja containers "orphan"** cuando se renombra un
+    servicio en el compose base: los viejos siguen en `docker ps -a` pero no se
+    recrean. Se puede limpiar con `docker compose up -d --remove-orphans` o
+    borrarlos manualmente con `docker rm <container>`.
+
+---
+
+## Rotacion de secretos pendiente (2026-10-13)
+
+⚠️ **PENDIENTE — hacer al final de todo** (no bloquea el desarrollo actual).
+
+| Secreto | Estado | Prioridad |
+|---|---|---|
+| `SECRET_KEY` (JWT) | filtrado en `.env` | Alta |
+| `TOKEN_ENCRYPTION_KEY` | filtrado en docker compose config | **ALTA** (requiere re-cifrado de tokens FB) |
+| `FACEBOOK_APP_SECRET` | filtrado en docker compose config | Media |
+| Frase GPG de backups legacy | guardada en gestor, NO filtrada | Baja (solo rotar si se filtra) |
+| GitHub PAT legacy | expuesto en git remote | Alta (revocar, no rotar) |
+| `POSTGRES_PASSWORD` viejo | filtrado | ✅ Ya rotado en el swap |
+| Cloudflare Global Key | decision consciente, no deuda | N/A |
+
+Ver `CONTEXTO_PROYECTO.md` seccion "Secretos expuestos" para la lista completa.
+
+---
+
+**Fin del apendice.**

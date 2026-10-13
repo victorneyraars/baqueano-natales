@@ -1,6 +1,6 @@
 # Operativa de desarrollo — Baqueano Natales
 
-> **Última actualización:** 2026-10-12
+> **Última actualización:** 2026-10-13
 > **Propósito:** documentar la metodología de trabajo acordada, patrones
 > canónicos de comandos, reglas por dominio y workflow dual-repo, para
 > retomar el proyecto en cualquier chat nuevo sin perder rigor ni repetir
@@ -55,6 +55,47 @@ distintas.
 
 **Regla:** para Flutter, SIEMPRE editar en Windows. Para backend, SIEMPRE
 editar en el server.
+
+### Servidor nuevo: 2 entornos aislados (prod + dev)
+
+El server nuevo (`104.129.59.151`) corre **dos entornos productivos en
+paralelo** (ver `SERVER_CHEATSHEET.md` para detalle completo).
+
+| Container | Env file | DB | Subdominio |
+|---|---|---|---|
+| `baqueano_backend_prod` | `.env.prod` | `baqueano_natales_prod` | `api.baqueanonatales.com` |
+| `baqueano_backend_dev` | `.env.dev` | `baqueano_natales_dev` | `api-dev.baqueanonatales.com` |
+
+Comandos canonicos (usar los scripts, no `docker compose` directo):
+
+    scripts/prod-up.sh [--build]      # levantar prod
+    scripts/dev-up.sh [--build]       # levantar dev
+    scripts/all-up.sh [--build]       # levantar ambos
+    scripts/prod-down.sh              # bajar solo prod
+    scripts/dev-down.sh               # bajar solo dev
+    scripts/prod-restart.sh           # reiniciar sin recrear
+    scripts/dev-restart.sh
+    scripts/prod-logs.sh [N]          # logs en vivo
+    scripts/dev-logs.sh [N]
+    scripts/status.sh                 # estado consolidado
+
+Migraciones Alembic:
+
+    docker exec baqueano_backend_prod alembic upgrade head
+    docker exec baqueano_backend_dev alembic upgrade head
+
+**Regla:** siempre que se cambie codigo de backend, decidir explicitamente
+si el cambio va a prod, a dev, o a ambos.
+
+### Usuarios Postgres por entorno (minimo privilegio)
+
+    baqueano_user         -> Superuser bootstrap (solo admin manual)
+    baqueano_prod_user    -> Solo baqueano_natales_prod
+    baqueano_dev_user     -> Solo baqueano_natales_dev
+    baqueano_test_user    -> Solo baqueano_natales_test
+
+Los backends usan su propio usuario via `DATABASE_URL` del `.env` correspondiente.
+NUNCA usar `baqueano_user` desde la app.
 
 ---
 
@@ -183,6 +224,55 @@ Patron viejo (funcionaba solo con scripts cortos):
 Si `grep -c` devuelve `0`, el bloque no se aplico: reejecutar.
 
 ---
+
+
+### 3.8. `docker compose config` imprime TODOS los secretos
+
+**Regla:** NUNCA correr `docker compose config` sin censurar. El comando
+resuelve las variables del `.env` y las imprime en el output. Es un leak
+silencioso de todos los secretos.
+
+    # MAL: filtra todo
+    docker compose config
+
+    # BIEN: solo metadatos
+    docker compose config --services
+    docker compose config --volumes
+
+    # BIEN: filtrar el output
+    docker compose config | grep -vE "(SECRET|PASSWORD|TOKEN|KEY|PASSPHRASE|DATABASE_URL|APP_SECRET)"
+
+### 3.9. `docker exec` vs `docker compose exec` en scripts `bash -s`
+
+Cuando se manda un script multi-linea por SSH (`bash -s`), usar `docker exec <container>`
+(sin `compose`). El `docker compose exec -T` consume stdin y bloquea el resto
+del script. Ademas, agregar `< /dev/null` como cinturon de seguridad.
+
+Patron canonico para `pg_dump`:
+
+    # 1. Dump dentro del container (evita SIGPIPE)
+    docker exec baqueano_db pg_dump -U <user> -d <db> -f /tmp/dump.sql < /dev/null
+
+    # 2. Copiar al host
+    docker cp baqueano_db:/tmp/dump.sql /tmp/dump.sql
+
+    # 3. Comprimir
+    gzip -c /tmp/dump.sql > backup.sql.gz
+
+NO usar `docker compose exec -T db pg_dump ... | gzip` porque:
+- El pipe puede cerrar temprano (SIGPIPE) y matar la sesion SSH.
+- El pipe se trunca silenciosamente con contenido largo.
+
+### 3.10. Permisos de volumenes Docker nuevos
+
+Cuando Docker crea un volumen vacio (ej. `media_data_prod`), lo monta con
+owner `root:root`. Si el container corre como `appuser` (uid 1000), falla
+con `PermissionError` y entra en restart loop.
+
+Fix one-time:
+
+    docker run --rm -v baqueano-natales_media_data_prod:/mnt alpine \
+      sh -c "mkdir -p /mnt/avatars /mnt/afiches && chown -R 1000:1000 /mnt && chmod -R 755 /mnt"
 
 ## 4. Reglas por dominio
 
@@ -561,6 +651,26 @@ El usuario luego pega el CONTEXTO_PROYECTO.md completo en el proximo chat.
 9. **Flutter:** flutter analyze despues de cada cambio.
 10. **Cierre de sesion:** actualizar CONTEXTO_PROYECTO.md.
 11. **Here-strings:** no poner el cierre al inicio de linea dentro del contenido.
+---
+
+## 10. Reglas de oro del workflow dual-entorno (resumen)
+
+1. **Backend por SSH, Flutter en Windows.** No mezclar.
+2. **`pull --rebase` antes de cada push.**
+3. **Un cambio por vez, verificar antes de avanzar.**
+4. **Nunca `Set-Content`.** Usar `[System.IO.File]::WriteAllText` con UTF8 sin BOM.
+5. **Nunca `.Replace(a, b, 1)`.** Es 2-arg o usar regex.
+6. **Siempre reemplazar CRLF por LF en here-strings SSH.**
+7. **Scripts Python > 1 KB via SSH: usar base64.**
+8. **Migraciones Alembic: limpiar los `usuarios.*` falsos a mano.**
+9. **SQLAlchemy post-flush: `await db.refresh(obj)` antes de serializar.**
+10. **Tests HTTP con `ASGITransport`: override de `get_db` + `get_current_user`.**
+11. **Docker: `docker exec <container>` (no `compose`) dentro de `bash -s`.**
+12. **`docker compose config` filtra secretos: censurar SIEMPRE.**
+13. **Volumenes nuevos: `chown 1000:1000` antes de levantar el container.**
+14. **Prod y dev son entornos separados: usar los scripts `prod-*` / `dev-*`.**
+15. **Nunca editar el `.env` viejo. Solo `.env.prod` y `.env.dev`.**
+16. **Cierre de sesion: actualizar CONTEXTO_PROYECTO.md + CHEATSHEET + OPERATIVA.**
 
 ---
 
