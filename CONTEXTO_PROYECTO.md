@@ -11,6 +11,23 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-13 (cont. 29) - Cosmeticos de notificaciones (D) + label por flavor
+
+**Deuda cosmetica de notificaciones cerrada.**
+
+- **Fix del label (bug real)**: `AndroidManifest.xml` tenia `android:label="Baqueano Natales"` hardcodeado. Los `resValue("string", "app_name", ...)` de los flavors client/admin se ignoraban -> el admin decia "baqueano_natales" en el launcher. Fix: `android:label="@string/app_name"` (respeta el `resValue` de cada flavor).
+  - Client -> "Baqueano Natales".
+  - Admin -> "Baqueano Admin".
+- **Icono monocromatico** (`res/drawable/ic_notification.xml`): campana vectorial blanca (Material Design notifications). FCM lo tinta automaticamente segun el theme del sistema.
+- **Wire**: `AndroidManifest.xml` -> `meta-data default_notification_icon -> @drawable/ic_notification` (lo usa FCM para el push en background).
+- **fcm_service.dart**: icono del canal + banner local (`flutter_local_notifications`) -> `@drawable/ic_notification`. Antes usaba `@mipmap/ic_launcher` (cuadrado de launcher).
+- **Validado visualmente**: banner en foreground con campana blanca, launcher dice "Baqueano Natales".
+
+**Deuda pendiente:**
+- **C (push FCM en device fisico)** sin validar. Con emulador + Play Store funciona end-to-end. Falta celular real con USB debugging.
+- **M5** modulo oficios: fotos + reportes ya cerrados en M5.1 y M5.3. Falta notificaciones in-app especificas en la M5 (revisar si ya cubierto por M5.2).
+- **M6** (Reviews): cerrado backend + frontend + tests + smoke e2e.
+
 ### 2026-10-13 (cont. 28) - Smoke test end-to-end del MVP de mecanica
 
 **MVP de mecanica cerrado end-to-end. Todos los flujos criticos verificados.**
