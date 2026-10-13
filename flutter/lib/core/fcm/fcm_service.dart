@@ -47,7 +47,7 @@ class FcmService {
   static final Set<String> _procesadosEnSesion = <String>{};
 
   Future<void> inicializar() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(android: androidInit);
 
     await _localNotif.initialize(
@@ -130,7 +130,7 @@ class FcmService {
           channelDescription: _canalDescripcion,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
         ),
       ),
       payload: logId,
