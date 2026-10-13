@@ -673,6 +673,59 @@ Rclone remotes (pendiente de portar el script de backup del legacy):
 
 Ver `CONTEXTO_PROYECTO.md` seccion "Secretos expuestos" para la lista completa.
 
+
+## Google Play Console
+
+| Item | Valor |
+|---|---|
+| URL | https://play.google.com/console |
+| Cuenta | `victorneyraars@gmail.com` |
+| Developer | **Studio Digital 360** (Personal) |
+| Account ID | `5489050729101024675` |
+| URL directa | https://play.google.com/console/u/0/developers/5489050729101024675 |
+
+### Apps registradas
+
+| App | Package | Track |
+|---|---|---|
+| PartFinder 360 | `com.studiodigital360.partfinder360` | Internal testing |
+| Baqueano Natales | `cl.baqueanonatales` | Production (eventual) |
+| Baqueano Admin | `cl.baqueanonatales.admin` | Internal testing permanente |
+
+### SHA-1 del upload key (Baqueano)
+
+    SHA-1:  89:A1:E9:9D:B0:E7:A8:BA:26:DD:88:EA:7A:DB:88:AE:71:5B:17:04
+    SHA-256: B2:51:81:81:2B:F5:76:9A:60:94:34:A7:A9:4B:77:BC:38:15:18:3C:11:FD:39:B6:68:E1:B8:18:C7:9B:5C:1B
+
+(Esta huella NO va en Firebase. Firebase necesita el SHA-1 del **app signing key de Google** que aparece despues de subir el primer AAB.)
+
+### Ubicacion del SHA-1 de Google (2026)
+
+    Play Console -> Proteccion con Play -> Proteccion de Play Store -> Gestionar la firma de apps de Play
+
+NO esta en "Configuracion -> Integridad de la app" como dicen los tutoriales viejos.
+
+### AABs locales
+
+    D:\dev\baqueano-natales\flutter\build\app\outputs\bundle\clientProdRelease\app-clientProd-release.aab
+    D:\dev\baqueano-natales\flutter\build\app\outputs\bundle\adminProdRelease\app-adminProd-release.aab
+
+### Keystore de release
+
+    D:\dev\baqueano-keys\baqueano-release.jks  (FUERA del repo)
+    Alias: baqueano-release
+    Password: en gestor del owner
+    Backup: 2 copias cifradas (gestor + B2/Drive)
+
+### Gotcha Firebase + Play App Signing
+
+Si Google Sign-In falla en release con `ApiException: 10`:
+1. Falta registrar el SHA-1 del **app signing key de Google** en Firebase.
+2. Ir a Play Console -> ubicacion 2026 (arriba) -> copiar SHA-1.
+3. Firebase Console -> app Android -> Agregar huella digital -> pegar.
+4. Descargar nuevo `google-services.json` -> reemplazar en `flutter/android/app/`.
+5. Rebuild + re-upload.
+
 ---
 
 **Fin del apendice.**

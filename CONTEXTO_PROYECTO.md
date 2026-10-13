@@ -2237,6 +2237,35 @@ B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97
 
 ---
 
+
+## 🏪 Google Play Console
+
+| Item | Valor |
+|---|---|
+| **URL** | https://play.google.com/console |
+| **Login** | `victorneyraars@gmail.com` (cuenta Google) |
+| **Developer account** | **Studio Digital 360** |
+| **Tipo de cuenta** | Personal |
+| **Account ID** | `5489050729101024675` |
+| **URL directa** | https://play.google.com/console/u/0/developers/5489050729101024675 |
+
+### Apps registradas (estado 2026-10-13)
+
+| App | Package | Estado |
+|---|---|---|
+| PartFinder 360 | `com.studiodigital360.partfinder360` | Borrador / Prueba interna (últ. act. 2 oct 2026) |
+| Baqueano Natales | `cl.baqueanonatales` | ⏳ Por crear |
+| Baqueano Admin | `cl.baqueanonatales.admin` | ⏳ Por crear (solo internal testing) |
+
+### Notas operativas
+
+- **Cuenta con experiencia**: ya publicó `PartFinder 360`, lo que confirma que el workflow de Play Console funciona y se pasó el período de "closed testing de 14 días" que aplica a cuentas personales nuevas.
+- **Play App Signing es obligatorio**: la upload key (`baqueano-release.jks`) firma el AAB; Google firma el APK final con su app signing key (RSA 4096).
+- **Ubicación del SHA-1 del app signing key** (Google movió esto en 2026):
+  - **Antes**: `Configuración → Integridad de la app → Firma de apps`
+  - **Ahora**: `Protección con Play → Protección de Play Store → Gestionar la firma de apps de Play`
+- **Firebase necesita el SHA-1 del app signing key de Google**, NO el de la upload key. El de la upload key (`89:A1:E9:...`) solo sirve para autenticar la subida.
+- **Requirement nuevo 2026**: Google pide registrar package names de apps distribuidas **fuera de Play Store** (deadline 30 sept 2026). No aplica a nuestras apps (todas van a Play Store), pero tenerlo presente si en el futuro distribuimos APKs sideloaded.
 ## 🌐 Dominios y DNS
 
 ### Cloudflare
