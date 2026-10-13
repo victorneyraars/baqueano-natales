@@ -11,6 +11,55 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-13 (cont. 31) - Flutter flavors completos (4 variantes)
+
+**Ciclo de release desbloqueado: la app puede apuntar a prod o dev segun el flavor.**
+
+**Implementacion:**
+
+- **4 flavors** en `flutter/android/app/build.gradle.kts` (dimension `app`):
+  - `clientDev`  -> `cl.baqueanonatales.dev`       -> "Baqueano DEV"
+  - `clientProd` -> `cl.baqueanonatales`           -> "Baqueano Natales"
+  - `adminDev`   -> `cl.baqueanonatales.admin.dev` -> "Baqueano Admin DEV"
+  - `adminProd`  -> `cl.baqueanonatales.admin`     -> "Baqueano Admin"
+
+- **AppConfig refactorizado**: ya no hardcodea URL ni environment. Los lee de
+  `String.fromEnvironment('API_URL')` y `String.fromEnvironment('ENVIRONMENT')`
+  (inyectados por `--dart-define-from-file`). Fallback: derivar de `environment`.
+
+- **`dart_defines/*.json`**: 4 archivos (uno por variante) con `API_URL`,
+  `ENVIRONMENT`, `APP_TYPE`.
+
+- **`main_client.dart` / `main_admin.dart`**: sin hardcodear env. Solo
+  `AppConfig.init(type: ...)`.
+
+- **Firebase** (via CLI en el server):
+  - 2 apps nuevas creadas: `cl.baqueanonatales.dev` + `cl.baqueanonatales.admin.dev`.
+  - SHA-1 y SHA-256 de debug agregados a las 2 apps nuevas (Management API).
+  - `google-services.json` regenerado con los 4 clients + reemplazado en el repo.
+
+**Comandos canonicos:**
+
+    flutter run --flavor clientDev  -t lib/main_client.dart --dart-define-from-file=dart_defines/client_dev.json
+    flutter run --flavor clientProd -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
+    flutter run --flavor adminDev   -t lib/main_admin.dart  --dart-define-from-file=dart_defines/admin_dev.json
+    flutter run --flavor adminProd  -t lib/main_admin.dart  --dart-define-from-file=dart_defines/admin_prod.json
+
+**Validacion end-to-end:**
+
+- 4 APKs debug construidos OK.
+- `aapt dump badging` confirma `package` y `label` correctos en cada uno.
+- `flutter analyze: No issues found!`
+
+**Commits:**
+- `87f8a55` docs: documentar Firebase CLI + permisos admin desde el server
+- `05215d1` feat(flutter): 4 flavors (client/admin x dev/prod) + dart-define-from-file
+
+**Deuda nueva documentada:**
+- Disco `D:` quedo con solo ~5.6 GB libres. Antes del Bloque 6 (AAB release)
+  hay que liberar ~10 GB (borrar APKs debug, limpiar caches de Gradle).
+
+
 ### 2026-10-13 (cont. 30) - Infraestructura dual (prod + dev) en el server nuevo
 
 **El server nuevo pasa de un backend unico a dos entornos aislados. Server legacy respaldado.**
