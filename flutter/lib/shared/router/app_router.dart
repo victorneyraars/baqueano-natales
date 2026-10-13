@@ -47,6 +47,7 @@ import 'package:baqueano_natales/features/oficios/presentation/screens/formulari
 import 'package:baqueano_natales/features/oficios/presentation/screens/mis_ordenes_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_mi_orden_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/galeria_fotos_screen.dart';
+import 'package:baqueano_natales/features/oficios/presentation/screens/crear_review_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/reportes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/ordenes_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_orden_taller_screen.dart';
@@ -57,6 +58,7 @@ import 'package:baqueano_natales/features/oficios/presentation/screens/agenda_ta
 import 'package:baqueano_natales/features/oficios/presentation/screens/detalle_turno_taller_screen.dart';
 import 'package:baqueano_natales/features/oficios/presentation/screens/reservar_turno_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_mi_prestador_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/reviews_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/formulario_prestador_screen.dart';
@@ -433,6 +435,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             return DetalleMiOrdenScreen(ordenId: id);
           },
         ),
+
+      GoRoute(
+        path: '/mis-ordenes/:id/review',
+        name: 'mi-orden-review',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CrearReviewScreen(ordenId: id);
+        },
+      ),
         GoRoute(
           path: '/mis-ordenes/:id/fotos',
           name: 'mi-orden-fotos',
@@ -494,6 +505,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ReportesTallerScreen(prestadorId: id);
+        },
+      ),
+
+      GoRoute(
+        path: '/mis-prestadores/:id/reviews',
+        name: 'mi-prestador-reviews',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ReviewsPrestadorScreen(prestadorId: id);
         },
       ),
       GoRoute(

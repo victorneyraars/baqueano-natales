@@ -11,6 +11,7 @@ import 'package:baqueano_natales/features/oficios/domain/orden_historial.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/presentation/widgets/garantia_card.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/review_card.dart';
 
 class DetalleMiOrdenScreen extends ConsumerStatefulWidget {
   const DetalleMiOrdenScreen({super.key, required this.ordenId});
@@ -276,6 +277,10 @@ class _Contenido extends StatelessWidget {
           const SizedBox(height: 16),
           _GarantiaSectionWrapper(ordenId: orden.id),
         ],
+
+        // Review (si la orden esta entregada)
+        const SizedBox(height: 16),
+        ReviewSeccion(orden: orden),
 
         // Timeline
         if (orden.historial.isNotEmpty) ...[

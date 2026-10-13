@@ -16,6 +16,7 @@ import 'package:baqueano_natales/features/oficios/domain/cliente_busqueda.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
+import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
@@ -424,4 +425,13 @@ final reportePrestadorProvider =
     desde: params.desde,
     hasta: params.hasta,
   );
+});
+
+// =========================================================
+// M6: Review de una orden (o null si aun no califico)
+// =========================================================
+final miReviewProvider =
+    FutureProvider.family<Review?, String>((ref, ordenId) async {
+  final repo = ref.watch(oficiosRepositoryProvider);
+  return repo.obtenerMiReview(ordenId);
 });

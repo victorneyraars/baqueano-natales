@@ -17,6 +17,7 @@ import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
+import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 
@@ -966,4 +967,50 @@ class OficiosRepository {
       '${d.year.toString().padLeft(4, "0")}-'
       '${d.month.toString().padLeft(2, "0")}-'
       '${d.day.toString().padLeft(2, "0")}';
+
+  // =========================================================
+  // M6: Reviews
+  // =========================================================
+
+  /// Cliente crea una review de una orden entregada.
+  Future<Review> crearReview(
+    String ordenId, {
+    required int rating,
+    String? comentario,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-ordenes/$ordenId/review',
+        data: {
+          'rating': rating,
+          if (comentario != null && comentario.isNotEmpty)
+            'comentario': comentario,
+        },
+      );
+      return Review.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Devuelve la review de una orden (o null si aun no califico).
+  Future<Review?> obtenerMiReview(String ordenId) async {
+    try {
+      final res = await _dio.get('/api/v1/mis-ordenes/$ordenId/review');
+      if (res.data == null) return null;
+      return Review.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

@@ -17,6 +17,7 @@ import 'package:baqueano_natales/features/comercios/data/comercio_repository.dar
 import 'package:baqueano_natales/features/prestadores/data/prestador_repository.dart';
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
+import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 
 // =========================================================
 // Repositorio (inyectable para tests)
@@ -229,4 +230,13 @@ final adminPrestadorDetalleProvider =
     FutureProvider.family<Prestador, String>((ref, id) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.adminObtenerPrestador(id);
+});
+
+// =========================================================
+// M6: Reviews de un prestador (paginado)
+// =========================================================
+final reviewsPrestadorProvider =
+    FutureProvider.family<ReviewListResponse, String>((ref, slug) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return repo.listarReviewsPublicas(slug);
 });

@@ -15,6 +15,7 @@ import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.da
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 
 /// Filtros para el listado público de prestadores.
 class PrestadoresFiltros {
@@ -634,5 +635,53 @@ class PrestadorRepository {
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
+  }
+
+  // =========================================================
+  // M6: Reviews
+  // =========================================================
+
+  /// Lista las reviews publicas de un prestador (paginado).
+  Future<ReviewListResponse> listarReviewsPublicas(
+    String slug, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/prestadores/$slug/reviews',
+        queryParameters: {'page': page, 'page_size': pageSize},
+      );
+      return ReviewListResponse.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Prestador responde una review (una sola vez).
+  Future<Review> responderReview(
+    String prestadorId,
+    String reviewId,
+    String respuesta,
+  ) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/reviews/$reviewId/respuesta',
+        data: {'respuesta': respuesta},
+      );
+      return Review.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
   }
 }

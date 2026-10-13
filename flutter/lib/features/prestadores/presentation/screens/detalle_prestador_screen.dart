@@ -20,6 +20,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/review_list.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
 
 class DetallePrestadorScreen extends ConsumerWidget {
@@ -136,6 +137,12 @@ class _Contenido extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
+
+                  // --- Resenas ---
+                  const SizedBox(height: 24),
+                  _seccionTitulo(theme, 'Resenas'),
+                  const SizedBox(height: 4),
+                  ReviewList(slug: prestador.slug),
 
                   // --- Reservar turno (CTA) ---
                   const SizedBox(height: 24),
