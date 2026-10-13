@@ -618,6 +618,43 @@ Rclone remotes (pendiente de portar el script de backup del legacy):
     recrean. Se puede limpiar con `docker compose up -d --remove-orphans` o
     borrarlos manualmente con `docker rm <container>`.
 
+
+## Gotchas nuevos (2026-10-13 - Bloque 6: release signing + AAB)
+
+33. **JDK 25 + locale español: `keytool -printcert` crashea**: con JDK 25
+    y locale no-inglés, `keytool -printcert -file cert.pem` falla con
+    `java.util.MissingFormatArgumentException: Format specifier '%2$s'`.
+    Fix: forzar locale inglés con flags JVM:
+    `keytool "-J-Duser.language=en" "-J-Duser.country=US" -printcert -file cert.pem`
+
+34. **`keytool -printcert -jarfile` no funciona con AAB**: a diferencia del
+    APK, el AAB usa un esquema de firma distinto. Para extraer el certificado
+    hay que descomprimir el AAB (es un zip) y usar
+    `keytool -printcert -file META-INF/BAQUEANO.RSA`.
+    Alternativa robusta: `keytool -exportcert -rfc -alias <alias> -keystore <ks>
+    -storepass <pass> -file cert.pem` + `keytool -printcert -file cert.pem`.
+
+35. **`flutter build appbundle` sin `-t` falla con "Target file lib/main.dart
+    not found"**: si el proyecto tiene entry points separados
+    (`lib/main_client.dart`, `lib/main_admin.dart`), hay que pasar
+    explícitamente el target. El default `lib/main.dart` no existe.
+    Comando canónico:
+    `flutter build appbundle --flavor clientProd --release -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json`
+
+36. **Play App Signing cambia el SHA-1 de producción**: el APK que instalan
+    los usuarios NO está firmado con tu upload key, sino con el **app signing
+    key de Google**. Firebase necesita el SHA-1 del app signing key (no el
+    tuyo). Síntoma: Google Sign-In funciona en local pero falla en producción
+    con `ApiException: 10`.
+    Fix: Play Console → Configuración → Integridad de la app → Firma de apps →
+    copiar el SHA-1 → agregar a Firebase → descargar nuevo `google-services.json`
+    → rebuild.
+
+37. **`.jks` fuera del repo + `key.properties` gitignored**: el keystore de
+    release vive en `D:\dev\baqueano-keys\baqueano-release.jks` (fuera del
+    repo). El `key.properties` apunta a esa ruta con forward slashes
+    (`D:/dev/baqueano-keys/baqueano-release.jks`).
+    Backup obligatorio: 2 copias cifradas (gestor + B2/Drive).
 ---
 
 ## Rotacion de secretos pendiente (2026-10-13)
