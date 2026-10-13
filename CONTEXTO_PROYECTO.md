@@ -85,8 +85,9 @@
 - Cloudflare Origin Certificate SOLO valida via Cloudflare Edge (proxied=true). Sin proxy, los clientes ven cert invalido.
 
 **Deuda pendiente (documentada, no bloqueante):**
-- Rotacion de secretos (`SECRET_KEY`, `TOKEN_ENCRYPTION_KEY`, `FACEBOOK_APP_SECRET`) — anotada para el final.
-- Revocar GitHub PAT legacy + archivar repo `sandraalvaradoclp/superapp-natales`.
+- **Rotacion de secretos (`SECRET_KEY`, `TOKEN_ENCRYPTION_KEY`, `FACEBOOK_APP_SECRET`)** — bloque final, se hace todo junto.
+- **Revocar 2 PATs legacy** (remote de `superapp-natales` + `~/.github_token`) — bloque final.
+- **Archivar repo `sandraalvaradoclp/superapp-natales`** — bloque final.
 - Portar script de backup del legacy al server nuevo (rclone a B2 separado por entorno).
 - Implementar flavors Flutter (client-dev/prod, admin-dev/prod).
 - Keystore de release + subir a Play Store (internal testing).
