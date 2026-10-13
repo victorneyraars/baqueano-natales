@@ -11,6 +11,35 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-12 (cont. 27) - M6 reviews/calificaciones (frontend) + smoke test e2e
+
+**Modulo reviews cerrado end-to-end (backend + frontend).**
+
+- **Frontend**:
+  - Modelo `Review` + `ReviewItem` + `ReviewListResponse`.
+  - `OficiosRepository`: `crearReview`, `obtenerMiReview`.
+  - `PrestadorRepository`: `listarReviewsPublicas`, `responderReview`.
+  - `miReviewProvider` + `reviewsPrestadorProvider` (family).
+  - Pantallas/widgets:
+    - `CrearReviewScreen`: estrellas 1-5 + comentario (max 2000).
+    - `ReviewSeccion`: card en detalle de orden con 3 estados (sin review -> CTA / con review -> estrellas + comentario + respuesta).
+    - `ReviewList`: widget publico reusable para el detalle del prestador.
+    - `ReviewsPrestadorScreen`: panel del dueno con lista + boton "Responder" (una sola vez, via dialog).
+  - Wire: card en `detalle_mi_orden`, seccion Resenas en `detalle_prestador`, boton en AppBar de `detalle_mi_prestador` (3er icono), 2 rutas nuevas.
+- **Bug critico detectado y arreglado en el proceso** (Riverpod family): `_desde`/`_hasta` con `DateTime.now()` como getter disparaban fetch infinito (cada build = DateTime distinto -> params distintos -> re-fetch). Fix: campos `late DateTime` + recalculo explicito en `initState` y `onChanged`. **Regla general: params de provider family deben ser inmutables y deterministas.** Ya documentado de M5.3, reaplicado.
+- **Bug de `pytest_plugins`** en conftest anidado: pytest 8+ exige que este SOLO en el conftest raiz, y el plugin del conftest raiz + descubrimiento automatico del conftest de oficios da "plugin already registered". Fix: conftest anidado con **imports explicitos** de los fixtures (no `pytest_plugins`).
+- **Smoke test end-to-end validado**:
+  - Cliente califica (`POST /mis-ordenes/{id}/review` -> 201).
+  - Prestador ve resenas (`GET /prestadores/{slug}/reviews` -> 200).
+  - Prestador responde (`POST /mis-prestadores/{pid}/reviews/{rid}/respuesta` -> 200).
+
+**Estado del MVP de mecanica:**
+- Backend + frontend de oficios M1-M5: COMPLETO.
+- Reviews (M6): backend + frontend COMPLETO.
+- Pendiente MVP: onboarding de prestadores + smoke test final del flujo completo.
+
+**Suite backend: 402 passed (tras M6). Flutter analyze: limpio.**
+
 ### 2026-10-12 (cont. 26) - M5.3 reportes del taller (frontend) - **M5 COMPLETO**
 
 **Modulo oficios M5 cerrado al 100% (backend + frontend + tests).**
