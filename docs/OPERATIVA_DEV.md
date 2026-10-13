@@ -415,6 +415,21 @@ Importar en este orden:
 - Si el worker tiene una tabla de "pendientes", incluir funcion
   buscar_X_pendientes para tests + endpoint manual.
 
+
+
+### 4.9. Firebase CLI disponible desde el server
+
+**Tenemos Firebase CLI logueado con admin en el server nuevo.** Cualquier operacion
+de administracion de Firebase (crear apps, SHA, descargar `google-services.json`)
+se puede hacer via SSH sin abrir la consola web.
+
+    ssh deploy@104.129.59.151 "firebase <comando> --project baqueano-natales-prod"
+
+Ver `SERVER_CHEATSHEET.md` -> "Firebase CLI en el server" para comandos completos.
+
+**Regla:** si hay que crear una app Firebase nueva, hacerlo desde el server
+(no desde la consola web), asi queda documentado en el historial de bash.
+
 ### 4.7. FCM (push notifications)
 
 **Servicio transversal:** `app/core/push.py`.

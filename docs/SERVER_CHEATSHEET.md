@@ -639,3 +639,85 @@ Ver `CONTEXTO_PROYECTO.md` seccion "Secretos expuestos" para la lista completa.
 ---
 
 **Fin del apendice.**
+
+
+---
+
+## Firebase CLI en el server (ACTUALIZADO 2026-10-13)
+
+**Tenemos Firebase CLI instalado y logueado con permisos de admin desde el server nuevo.** Esto permite administrar apps, SHA, y descargar `google-services.json` sin abrir la consola web.
+
+| Item | Valor |
+|---|---|
+| Binario | `/usr/local/bin/firebase` (v15.32.1) |
+| Usuario logueado | `victorneyraars@gmail.com` |
+| Project ID | `baqueano-natales-prod` |
+| Project Number | `1072830106109` |
+| Config del token | `~/.config/configstore/firebase-tools.json` (modo 600) |
+| Node | v22.23.3 |
+| npm | 10.9.9 |
+
+### Apps Android registradas (estado 2026-10-13)
+
+| Display Name | App ID | Package Name |
+|---|---|---|
+| (Not specified) | `1:1072830106109:android:fbc1b17131d59b0d133194` | `cl.baqueanonatales` |
+| Baqueano Admin | `1:1072830106109:android:a1008d3e2715ec06133194` | `cl.baqueanonatales.admin` |
+
+**Pendiente**: registrar `cl.baqueanonatales.dev` y `cl.baqueanonatales.admin.dev` para los flavors dev (Bloque 4).
+
+### Comandos utiles
+
+    # Listar apps
+    firebase apps:list ANDROID --project baqueano-natales-prod
+
+    # Crear app Android (NO acepta SHA-1, solo packageName)
+    firebase apps:create ANDROID "Nombre visible" -a cl.paquete.app --project baqueano-natales-prod
+
+    # Descargar google-services.json completo (todos los clientes)
+    firebase apps:sdkconfig ANDROID --project baqueano-natales-prod --out /tmp/google-services.json
+
+    # Descargar config de UNA app especifica
+    firebase apps:sdkconfig ANDROID 1:1072830106109:android:fbc1b17131d59b0d133194 -o /tmp/config.json
+
+### Agregar SHA-1/SHA-256 a una app
+
+**Gotcha:** `firebase apps:create` **no acepta** flag de SHA-1. Hay que pegarle a la Management API despues de crear la app.
+
+Obtener el access_token del configstore y usarlo:
+
+    ACCESS_TOKEN=$(jq -r '.tokens.access_token' ~/.config/configstore/firebase-tools.json)
+
+    # SHA-1 de debug actual
+    SHA1="6E:0B:71:E0:63:01:E8:F7:CF:0E:3D:BC:1F:29:77:C8:D6:BE:63:3D"
+
+    # Agregar SHA-1
+    curl -sS -X POST \
+      "https://firebase.googleapis.com/v1beta1/projects/baqueano-natales-prod/androidApps/<APP_ID>/sha" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"shaHash\": \"$SHA1\", \"certType\": \"SHA_1\"}"
+
+    # SHA-256 de debug actual
+    SHA256="B2:A9:81:11:D4:55:81:B1:E8:5A:15:E7:6D:C1:5F:9E:20:0A:FE:72:FD:C5:EB:33:25:6E:97:82:B2:20:7C:BE"
+
+    curl -sS -X POST \
+      "https://firebase.googleapis.com/v1beta1/projects/baqueano-natales-prod/androidApps/<APP_ID>/sha" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"shaHash\": \"$SHA256\", \"certType\": \"SHA_256\"}"
+
+El access_token dura 1h. Si expira: `firebase login:ci` o re-loguearse.
+
+### Regenerar google-services.json despues de cambios
+
+    firebase apps:sdkconfig ANDROID --project baqueano-natales-prod -o ~/baqueano-natales/flutter/android/app/google-services.json
+
+Despues commitear (el archivo va al repo, no es secreto — son API keys publicas).
+
+### Riesgos / buenas practicas
+
+- **NO loguearse con la Global API Key de Cloudflare ni credenciales compartidas.**
+- El token de Firebase en `~/.config/configstore/firebase-tools.json` da acceso total al proyecto Firebase. Tratarlo como secreto.
+- Si se revoca el login (`firebase logout`), todos los comandos de administracion fallan. Re-loguear con `firebase login:ci` (link interactivo).
+- **Nunca** loguearse con una cuenta personal que no sea del proyecto.
