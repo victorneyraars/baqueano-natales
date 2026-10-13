@@ -1,0 +1,5 @@
+{
+  "APP_TYPE": "admin",
+  "ENVIRONMENT": "dev",
+  "API_URL": "https://api-dev.baqueanonatales.com"
+}

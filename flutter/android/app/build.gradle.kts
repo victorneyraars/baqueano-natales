@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")   // ← NUEVO: Firebase
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -22,12 +22,22 @@ android {
     flavorDimensions += "app"
 
     productFlavors {
-        create("client") {
+        create("clientDev") {
+            dimension = "app"
+            applicationId = "cl.baqueanonatales.dev"
+            resValue("string", "app_name", "Baqueano DEV")
+        }
+        create("clientProd") {
             dimension = "app"
             applicationId = "cl.baqueanonatales"
             resValue("string", "app_name", "Baqueano Natales")
         }
-        create("admin") {
+        create("adminDev") {
+            dimension = "app"
+            applicationId = "cl.baqueanonatales.admin.dev"
+            resValue("string", "app_name", "Baqueano Admin DEV")
+        }
+        create("adminProd") {
             dimension = "app"
             applicationId = "cl.baqueanonatales.admin"
             resValue("string", "app_name", "Baqueano Admin")
@@ -59,10 +69,8 @@ flutter {
 }
 
 dependencies {
-    // Credential Manager (requerido por google_sign_in v7)
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-    // Core library desugaring (requerido por flutter_local_notifications v22)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

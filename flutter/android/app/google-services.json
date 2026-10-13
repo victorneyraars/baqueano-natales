@@ -94,6 +94,80 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072830106109:android:880c1a5f04d9ea2a133194",
+        "android_client_info": {
+          "package_name": "cl.baqueanonatales.admin.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072830106109-hg8mfr9h8mfp8r7dphbb1jmlec8po8er.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.admin.dev",
+            "certificate_hash": "6e0b71e06301e8f7cf0e3dbc1f2977c8d6be633d"
+          }
+        },
+        {
+          "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrbLvF_vLxm-l0u6lm08Tk3TK8C8fHfbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072830106109:android:bb34e6bb803427df133194",
+        "android_client_info": {
+          "package_name": "cl.baqueanonatales.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072830106109-pjgbstl4ppf2vp0likskpl35uq7intno.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.dev",
+            "certificate_hash": "6e0b71e06301e8f7cf0e3dbc1f2977c8d6be633d"
+          }
+        },
+        {
+          "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrbLvF_vLxm-l0u6lm08Tk3TK8C8fHfbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -1,9 +1,8 @@
 /// Entry point de la app Admin (Baqueano Admin).
 ///
-/// Este main:
-/// 1. Configura el tipo de app (admin) y entorno (dev).
-/// 2. Inicializa Firebase.
-/// 3. Arranca la app con ProviderScope (Riverpod).
+/// El environment (dev/prod) se inyecta con --dart-define-from-file:
+///   flutter run --flavor adminDev  -t lib/main_admin.dart --dart-define-from-file=dart_defines/admin_dev.json
+///   flutter run --flavor adminProd -t lib/main_admin.dart --dart-define-from-file=dart_defines/admin_prod.json
 library;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -15,19 +14,11 @@ import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
 
 Future<void> main() async {
-  // 1. Configuración ANTES que nada
-  AppConfig.init(
-    type: AppType.admin,
-    env: Environment.dev, // TODO: cambiar a prod cuando hagamos cutover
-  );
+  AppConfig.init(type: AppType.admin);
 
-  // 2. Inicializar Flutter bindings (necesario para Firebase)
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 3. Inicializar Firebase
   await Firebase.initializeApp();
 
-  // 4. Arrancar la app
   runApp(
     const ProviderScope(
       child: BaqueanoAdminApp(),

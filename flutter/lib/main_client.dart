@@ -1,4 +1,8 @@
 /// Entry point de la app Cliente.
+///
+/// El tipo (client) y el environment (dev/prod) se combinan en el flavor:
+///   flutter run --flavor clientDev  -t lib/main_client.dart --dart-define-from-file=dart_defines/client_dev.json
+///   flutter run --flavor clientProd -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
 library;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -12,10 +16,7 @@ import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
 
 Future<void> main() async {
-  AppConfig.init(
-    type: AppType.client,
-    env: Environment.dev,
-  );
+  AppConfig.init(type: AppType.client);
 
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -53,8 +54,6 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     final pending = ref.watch(pendingNavigationProvider);
     final authState = ref.watch(authNotifierProvider);
 
-    // Deep link: esperar a que la sesion este autenticada antes de navegar.
-    // Si no, el router (que tiene guard de auth) redirige a /home y se pierde.
     final listoParaNavegar =
         pending != null && pending.isNotEmpty && authState.isAuthenticated;
 

@@ -1,0 +1,5 @@
+{
+  "APP_TYPE": "client",
+  "ENVIRONMENT": "prod",
+  "API_URL": "https://api.baqueanonatales.com"
+}

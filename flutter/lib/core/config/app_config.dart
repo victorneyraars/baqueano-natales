@@ -1,7 +1,7 @@
 /// Configuración central de la aplicación.
 ///
 /// Define URLs, constantes y el tipo de app (client/admin) en runtime.
-/// Este archivo es la ÚNICA fuente de verdad para configuración.
+/// Los valores de entorno se inyectan por `--dart-define-from-file` al compilar.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -17,25 +17,24 @@ class AppConfig {
   static late AppType appType;
 
   /// Entorno actual (dev o prod).
+  ///
+  /// Se deriva de `String.fromEnvironment('ENVIRONMENT')` inyectado por
+  /// `--dart-define-from-file`. Default: dev.
   static late Environment environment;
 
   /// URL base del backend.
   ///
-  /// - dev:  apunta al server nuevo (104.129.59.151) por HTTP.
-  ///         El server no tiene SSL todavía (Fase 6 pendiente).
-  /// - prod: apunta a api.baqueanonatales.com por HTTPS (cuando se
-  ///         haga el cutover DNS).
+  /// Se inyecta con `--dart-define-from-file` (clave `API_URL`). Si no
+  /// se inyecta, cae a un default seguro según `environment`.
   static String get apiBaseUrl {
-    switch (environment) {
-      case Environment.dev:
-        return 'http://104.129.59.151';
-      case Environment.prod:
-        return 'https://api.baqueanonatales.com';
-    }
+    const url = String.fromEnvironment('API_URL');
+    if (url.isNotEmpty) return url;
+    return environment == Environment.prod
+        ? 'https://api.baqueanonatales.com'
+        : 'https://api-dev.baqueanonatales.com';
   }
 
   /// Web Client ID de Firebase (necesario para Google Sign-In).
-  /// Se obtiene de google-services.json (bloque con client_type: 3).
   static const String googleServerClientId =
       '1072830106109-c1b5cktisbj3khu8s9jmf7crn8ni0dh7.apps.googleusercontent.com';
 
@@ -52,12 +51,18 @@ class AppConfig {
   /// Inicializa la configuración global.
   ///
   /// Debe llamarse como PRIMERA línea del main() de cada entry point.
+  /// Si no se pasa `env`, se deriva de `--dart-define=ENVIRONMENT`.
   static void init({
     required AppType type,
-    Environment env = Environment.dev,
+    Environment? env,
   }) {
     appType = type;
-    environment = env;
+    if (env != null) {
+      environment = env;
+    } else {
+      const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev');
+      environment = envStr == 'prod' ? Environment.prod : Environment.dev;
+    }
     if (kDebugMode) {
       debugPrint(
         '[AppConfig] type=$appType, env=$environment, api=$apiBaseUrl',
