@@ -725,7 +725,7 @@ Usa un service account con permisos de admin en Studio Digital 360.
 | Service account GCP | `play-publisher@baqueano-natales-prod.iam.gserviceaccount.com` |
 | JSON key (secreto) | `/home/deploy/baqueano-natales/backend/secrets/play-publisher.json` (chmod 600) |
 | API habilitada | `androidpublisher.googleapis.com` en proyecto `baqueano-natales-prod` |
-| Script | `backend/app/upload_to_play.py` (dentro del container: `/app/upload_to_play.py`) |
+| Script | `backend/app/app/upload_to_play.py` (dentro del container: `/app/app/upload_to_play.py`) |
 | Permiso Play Console | Admin (todos los permisos) sobre `Baqueano Natales` |
 
 ### Flujo tipico (build → upload → publicar)
@@ -738,7 +738,7 @@ Usa un service account con permisos de admin en Studio Digital 360.
 
     # 3. Copiar al container + correr script
     ssh deploy@104.129.59.151 "docker cp /tmp/app-vX.aab baqueano_backend_prod:/tmp/app-vX.aab"
-    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/upload_to_play.py /tmp/app-vX.aab internal"
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/app/upload_to_play.py /tmp/app-vX.aab internal"
 
     # 4. La release se publica DIRECTAMENTE (status=completed).
     #    Los testers reciben la actualizacion en 5-30 min.
@@ -746,16 +746,16 @@ Usa un service account con permisos de admin en Studio Digital 360.
 ### Comandos del script
 
     # Publicar en internal testing (default)
-    python3 /app/upload_to_play.py /tmp/app.aab internal
+    python3 /app/app/upload_to_play.py /tmp/app.aab internal
 
     # Publicar en internal testing pero como BORRADOR (para revisar)
-    python3 /app/upload_to_play.py /tmp/app.aab internal --draft
+    python3 /app/app/upload_to_play.py /tmp/app.aab internal --draft
 
     # Publicar en prueba cerrada (alpha)
-    python3 /app/upload_to_play.py /tmp/app.aab alpha
+    python3 /app/app/upload_to_play.py /tmp/app.aab alpha
 
     # Publicar en produccion
-    python3 /app/upload_to_play.py /tmp/app.aab production
+    python3 /app/app/upload_to_play.py /tmp/app.aab production
 
 ### Reglas del track internal
 
@@ -792,6 +792,17 @@ Fix: enviar SOLO la nueva release en el array (no las viejas).
 **Libs Python (google-api-python-client)**:
     Se agregan al `requirements.txt` para que queden persistidas en el rebuild.
     Si se instalan con `pip install` directo en el container, se pierden al recrear.
+
+
+### Path dentro del container
+
+El script vive en `/app/app/upload_to_play.py` (doble `/app/`). Esto es porque el
+`Dockerfile` del backend hace `COPY . .` desde `backend/`, entonces:
+- `backend/app/upload_to_play.py` → `/app/app/upload_to_play.py`
+
+**Comando canonico actualizado:**
+
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/app/upload_to_play.py /tmp/app-vX.aab internal"
 
 ## Google Play Console
 
