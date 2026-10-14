@@ -690,3 +690,91 @@ El usuario luego pega el CONTEXTO_PROYECTO.md completo en el proximo chat.
 ---
 
 **Fin del documento.**
+
+---
+
+## 11. Responsividad (regla permanente)
+
+**Baqueano es 100% responsive. Phone, tablet 7", tablet 10", foldable.**
+
+### Breakpoints (Material 3)
+
+| Rango | Nombre | Uso |
+|---|---|---|
+| < 600 dp | compact | Phone |
+| 600-839 dp | medium | Tablet 7-10" |
+| 840-1199 dp | expanded | Tablet grande / foldable |
+| >= 1200 dp | large | Desktop / TV |
+
+### Reglas por componente
+
+| Elemento | Phone (<600) | Tablet (>=600) |
+|---|---|---|
+| Home cards | 1 columna | 2-3 columnas (grid) |
+| Listas | Vertical full-width | Grid 2-3 columnas o master-detail |
+| Detalle | Full screen (push) | Master-detail (side-by-side) |
+| Formularios | Full width | Max 600dp centrado |
+| Bottom nav | BottomNavigationBar | NavigationRail lateral |
+| Modales | Bottom sheet | Dialog centrado |
+| Tablas | Horizontal scroll | Full width |
+
+### Widget canonico
+
+    class ResponsiveLayout extends StatelessWidget {
+      final Widget phone;
+      final Widget tablet;
+      final Widget? desktop;
+      const ResponsiveLayout({
+        super.key,
+        required this.phone,
+        required this.tablet,
+        this.desktop,
+      });
+      @override
+      Widget build(BuildContext context) {
+        final w = MediaQuery.sizeOf(context).width;
+        if (w >= 1200 && desktop != null) return desktop!;
+        if (w >= 600) return tablet;
+        return phone;
+      }
+    }
+
+### Grid responsive
+
+SIEMPRE usar `SliverGridDelegateWithMaxCrossAxisExtent` (no `WithFixedCrossAxisCount`):
+
+    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: 400,   // auto-calcula columnas
+      childAspectRatio: 1.5,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+    ),
+
+### Dispositivos de prueba obligatorios
+
+| Categoria | Target |
+|---|---|
+| Phone | Pixel 6 / Motorola Edge 30 Pro |
+| Tablet 7" | Pixel Tablet (7" config) |
+| Tablet 10" | Pixel Tablet (10" config) |
+| Foldable abierto | Pixel Fold (opcional) |
+
+### Reglas de imagenes
+
+- **Iconos in-app**: SVG siempre que sea posible.
+- **Fotos**: multiple resolucion + cache.
+- **Graphics**: BoxFit.cover con safe areas.
+
+### Checklist antes de commitear una pantalla nueva
+
+- [ ] Se ve bien en phone (<600dp)
+- [ ] Se ve bien en tablet 7" (600-839dp)
+- [ ] Se ve bien en tablet 10" (>=840dp)
+- [ ] No hay overflows en ninguna resolucion
+- [ ] Los textos no se cortan ni se cortan feo
+- [ ] Los botones son alcanzables con el pulgar
+- [ ] Las imagenes no se pixelan
+
+---
+
+**Fin del documento.**
