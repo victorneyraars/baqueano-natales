@@ -75,6 +75,14 @@
           }
         },
         {
+          "client_id": "1072830106109-khadnavr9fn1f8i1c1lforhggkdrsl44.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.admin",
+            "certificate_hash": "29c92d46e14affaac0264ca05c58c3ca326c10bb"
+          }
+        },
+        {
           "client_id": "1072830106109-nv8q2jjt7kateq7cmqesg383entpu2sb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

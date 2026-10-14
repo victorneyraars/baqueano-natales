@@ -2,13 +2,17 @@
 """
 Sube un AAB a Google Play Console y publica directamente.
 
+Detecta el package automaticamente segun el nombre del AAB:
+- Si contiene "admin" -> cl.baqueanonatales.admin
+- Si no -> cl.baqueanonatales
+
 Uso:
     python3 upload_to_play.py <path_aab> [track] [--draft]
 
 Ejemplos:
-    python3 upload_to_play.py /tmp/app.aab internal           # publica directo
-    python3 upload_to_play.py /tmp/app.aab internal --draft   # deja en borrador
-    python3 upload_to_play.py /tmp/app.aab production         # publica en prod
+    python3 upload_to_play.py /tmp/app-clientProd-release.aab internal
+    python3 upload_to_play.py /tmp/app-adminProd-release.aab  internal
+    python3 upload_to_play.py /tmp/app.aab internal --draft
 """
 
 import sys
@@ -20,10 +24,22 @@ from googleapiclient.errors import HttpError
 
 # --- Config ---
 SERVICE_ACCOUNT_FILE = "/app/secrets/play-publisher.json"
-PACKAGE_NAME = "cl.baqueanonatales"
 SCOPES = ["https://www.googleapis.com/auth/androidpublisher"]
 
+PACKAGES = {
+    "admin":  "cl.baqueanonatales.admin",
+    "client": "cl.baqueanonatales",
+}
+
 RELEASE_NOTES = "Nueva version de Baqueano Natales. Incluye mejoras internas."
+
+
+def detect_package(aab_path: str) -> str:
+    """Detecta el package segun el nombre del AAB."""
+    name = Path(aab_path).name.lower()
+    if "admin" in name:
+        return PACKAGES["admin"]
+    return PACKAGES["client"]
 
 
 def get_service():
@@ -40,27 +56,32 @@ def upload_aab(aab_path, track="internal", draft=False):
 
     size_mb = Path(aab_path).stat().st_size / 1024 / 1024
     status = "draft" if draft else "completed"
-    print(f"Subiendo: {aab_path} ({size_mb:.2f} MB) al track '{track}' (status={status})")
+    package_name = detect_package(aab_path)
+
+    print(f"Subiendo: {aab_path} ({size_mb:.2f} MB)")
+    print(f"  Package: {package_name}")
+    print(f"  Track:   {track}")
+    print(f"  Status:  {status}")
 
     service = get_service()
 
     # --- 1. Crear edit ---
     print("[1/4] Creando edit...")
-    edit = service.edits().insert(body={}, packageName=PACKAGE_NAME).execute()
+    edit = service.edits().insert(body={}, packageName=package_name).execute()
     edit_id = edit["id"]
     print(f"      edit_id = {edit_id}")
 
     try:
-        # --- 2. Subir el AAB ---
+        # --- 2. Subir AAB ---
         print("[2/4] Subiendo AAB (puede tardar 1-2 min)...")
         media = MediaFileUpload(aab_path, mimetype="application/octet-stream", resumable=True)
         bundle = service.edits().bundles().upload(
-            editId=edit_id, packageName=PACKAGE_NAME, media_body=media
+            editId=edit_id, packageName=package_name, media_body=media
         ).execute()
         version_code = bundle["versionCode"]
         print(f"      versionCode = {version_code}")
 
-        # --- 3. Crear release en el track ---
+        # --- 3. Crear release ---
         print(f"[3/4] Creando release en track '{track}' (status={status})...")
         release_body = {
             "track": track,
@@ -69,37 +90,34 @@ def upload_aab(aab_path, track="internal", draft=False):
                     "name": f"Build {version_code}",
                     "status": status,
                     "versionCodes": [str(version_code)],
-                    "releaseNotes": [
-                        {"language": "es-419", "text": RELEASE_NOTES}
-                    ],
+                    "releaseNotes": [{"language": "es-419", "text": RELEASE_NOTES}],
                 }
             ],
         }
-        release = service.edits().tracks().update(
-            editId=edit_id, packageName=PACKAGE_NAME, track=track, body=release_body
+        service.edits().tracks().update(
+            editId=edit_id, packageName=package_name, track=track, body=release_body
         ).execute()
         print(f"      Release creada en estado '{status}'")
 
-        # --- 4. Commit del edit ---
-        print("[4/4] Confirmando edit (esto PUBLICa)...")
-        service.edits().commit(editId=edit_id, packageName=PACKAGE_NAME).execute()
+        # --- 4. Commit ---
+        print("[4/4] Confirmando edit...")
+        service.edits().commit(editId=edit_id, packageName=package_name).execute()
 
         print()
         if draft:
-            print("✅ LISTO (draft)")
-            print(f"   versionCode {version_code} en borrador en '{track}'")
-            print("   Anda a Play Console y publicá manualmente.")
+            print("LISTO (draft)")
+            print(f"   versionCode {version_code} en borrador en '{track}' ({package_name})")
         else:
-            print("✅ LISTO (publicado)")
-            print(f"   versionCode {version_code} publicado en '{track}'")
-            print("   Los testers reciben la actualización en 5-30 min.")
+            print("LISTO (publicado)")
+            print(f"   versionCode {version_code} publicado en '{track}' ({package_name})")
+            print(f"   Los testers reciben la actualizacion en 5-30 min.")
 
     except HttpError as e:
         msg = e.content.decode() if hasattr(e, "content") else str(e)
-        print(f"\n❌ ERROR API: {msg[:800]}")
+        print(f"\nERROR API: {msg[:800]}")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ ERROR: {type(e).__name__}: {e}")
+        print(f"\nERROR: {type(e).__name__}: {e}")
         sys.exit(1)
 
 

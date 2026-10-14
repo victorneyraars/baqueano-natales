@@ -11,6 +11,57 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-14 (cont. 35) - Bloque 7: Baqueano Admin publicado en Play Store
+
+**Ambas apps publicadas: cliente + admin. Dupla completa operativa.**
+
+**Estado de Baqueano Admin:**
+
+| Componente | Estado |
+|---|---|
+| App en Play Console | `Baqueano Admin` (ID: `4973778958369099895`) |
+| Package | `cl.baqueanonatales.admin` |
+| Icono | Morado (#5A3D8A -> #1A0F2E), 5 densidades × 2 variantes |
+| Feature graphic | Morado con logo + tagline |
+| 4 screenshots | Mockups de gestion (panel, verificaciones, reportes, redes) |
+| Categoria | **Negocios** (no Estilo de vida) |
+| Formularios Play | Todos completos |
+| Play App Signing | Activado, SHA-1 de Google: `29:C9:2D:46:E1:4A:FF:AA:C0:26:4C:A0:5C:58:C3:CA:32:6C:10:BB` |
+| Firebase | SHA-1 admin registrado en `cl.baqueanonatales.admin` |
+| AAB | versionCode=3 (0.3.0), publicado via API |
+| Track | Internal testing |
+
+**Cambios al script de upload:**
+
+`upload_to_play.py` ahora **detecta automaticamente el package** segun el nombre del AAB:
+- Si el archivo contiene "admin" en el nombre -> `cl.baqueanonatales.admin`
+- Si no -> `cl.baqueanonatales`
+
+Comandos canonicos sin cambios:
+
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/app/upload_to_play.py /tmp/app-admin-v3.aab internal"
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/app/upload_to_play.py /tmp/app-client-vX.aab internal"
+
+**Permisos del service account:**
+
+El service account `play-publisher@baqueano-natales-prod.iam.gserviceaccount.com` fue
+actualizado para tener **Admin total sobre TODAS las apps** de Studio Digital 360
+(en vez de solo Baqueano Natales). Esto cubre la app admin + futuras apps.
+
+**Gotcha aprendido:**
+
+Al invitar un service account a Play Console, los permisos son **por app**.
+Cuando se crea una nueva app (ej: admin), hay que editar el acceso del service
+account y marcar la nueva app (o "Todas las apps"). El cambio tarda 5-30 min
+en propagarse a la API.
+
+**Deuda pendiente:**
+
+- [ ] Probar Baqueano Admin en celular real (login end-to-end).
+- [ ] Backup del JSON de service account admin a gestor (mismo JSON ya respaldado).
+- [ ] Sincronizar git del server con GitHub (server tiene commits locales).
+- [ ] Rotar secretos expuestos (SECRET_KEY, TOKEN_ENCRYPTION_KEY, PAT legacy).
+- [ ] CI/CD con GitHub Actions.
 ### 2026-10-14 (cont. 34) - BLOQUE 6 COMPLETO: App publicada en Play Store
 
 **Baqueano Natales está publicada, funciona end-to-end, y todo el pipeline de releases es automatizable.**
