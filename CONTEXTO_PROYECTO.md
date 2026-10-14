@@ -11,6 +11,61 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-14 (cont. 37) - CI/CD con GitHub Actions
+
+**Pipeline completo de integracion + deploy. Publicar una version es `git tag vX.Y.Z` + push.**
+
+**Implementacion (3 workflows):**
+
+- **`ci.yml`** — Push a main + PRs: `flutter analyze` + format check + tests. ~2 min.
+- **`build.yml`** — PRs + tags v*: compila AAB client + admin sin firmar (matrix paralelo). ~11 min.
+- **`release.yml`** — Solo tags v*: restaura keystore del secret + firma + sube a Play Store (internal). ~25 min (2 jobs secuenciales).
+
+**Primer release exitoso:**
+
+- Tag `v0.3.1` pusheado.
+- Release CLIENT: ✅ 12m51s.
+- Release ADMIN: ✅ 12m18s.
+- Ambas versiones subidas a Play Store internal testing.
+
+**Secrets cargados via `gh` CLI del server (sin instalar nada local):**
+
+- `ANDROID_KEYSTORE_BASE64` (3752 chars)
+- `ANDROID_STORE_PASSWORD` + `ANDROID_KEY_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `GOOGLE_SERVICE_ACCOUNT_JSON` (2385 chars)
+
+Cargados con un script Python via `gh secret set <NAME>` (stdin para los largos).
+
+**Pulido del bloque:**
+
+- `build.gradle.kts`: `signingConfigs.create("release")` y `buildTypes.release` gateados por `keystorePropertiesFile.exists()`. Sin keystore → AAB sin firmar (fix del NPE en `build.yml`).
+- `ci.yml` / `build.yml` / `release.yml`: `ubuntu-latest` → `ubuntu-24.04`, `actions/checkout@v4` → `@v5`, `actions/setup-java@v4` → `@v5`.
+- `release.yml`: `track: internal` → `tracks: internal` (formato nuevo de `r0adkll/upload-google-play`).
+- `docs/CICD.md`: guia completa del pipeline.
+
+**Flujo canonico para publicar:**
+
+    # 1. Bump version en pubspec.yaml (el +N siempre incrementa)
+    # 2. git push origin main
+    # 3. git tag vX.Y.Z && git push origin vX.Y.Z
+    # 4. Los workflows se encargan del resto
+
+**Commits:**
+
+- `730993d` ci: agregar workflows de GitHub Actions (CI + Build + Release)
+- `7d16f1c` chore(release): fix workflow + bump version a 0.3.1+4
+- `75ecbe8` ci: pulir workflows + fix gradle signing + docs CICD
+
+**Deuda menor:**
+
+- Actualizar `flutter test` cuando existan tests (hoy no hay).
+- Notificaciones Slack/email al fallar un release.
+
+**Pendientes globales:**
+
+- Rotacion de secretos expuestos.
+- Ops Dashboard en la app admin (Fase 1 read-only, ~2-3 h).
 ### 2026-10-14 (cont. 36) - Bloque C: git server <-> GitHub <-> Windows alineados
 
 **Los 3 entornos sincronizados en el mismo commit. Working tree limpio en todos.**
