@@ -11,6 +11,45 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-14 (cont. 33) - Play Publisher API (upload automatizado de AABs)
+
+**Pipeline completo de publicacion desde el server. Se acabo el upload manual por browser.**
+
+**Implementacion:**
+
+- **Service account GCP**: `play-publisher@baqueano-natales-prod.iam.gserviceaccount.com`
+- **Permisos**: Admin total en Play Console sobre `Baqueano Natales`.
+- **JSON key**: `/home/deploy/baqueano-natales/backend/secrets/play-publisher.json` (chmod 600, gitignored).
+- **API habilitada**: `androidpublisher.googleapis.com` en proyecto `baqueano-natales-prod`.
+- **Libs instaladas**: `google-api-python-client==2.149.0`, `google-auth==2.36.0`, `google-auth-httplib2==0.2.0` (agregadas a requirements.txt).
+- **Script**: `backend/app/upload_to_play.py` (~120 lineas).
+
+**Primer uso exitoso:**
+
+- `clientProd` AAB v2 (versionCode=2) subido via API.
+- Release publicada directo en internal testing (status=completed).
+- Firebase SHA-1 de Google registrado → Google Sign-In funciona en release.
+
+**Comandos canonicos (todo desde el server):**
+
+    scp flutter/build/app/outputs/bundle/clientProdRelease/app-clientProd-release.aab deploy@104.129.59.151:/tmp/app-vX.aab
+    ssh deploy@104.129.59.151 "docker cp /tmp/app-vX.aab baqueano_backend_prod:/tmp/app-vX.aab"
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/upload_to_play.py /tmp/app-vX.aab internal"
+
+**Para adminProd (proximo):**
+
+- Crear app "Baqueano Admin" en Play Console (mismo service account, mismos permisos).
+- Mismo script, cambiar `PACKAGE_NAME` a `cl.baqueanonatales.admin` (o parametrizar).
+- Subir el AAB `app-adminProd-release.aab`.
+
+**Gotchas aprendidos:**
+
+- El endpoint `edits.tracks().update()` permite **1 sola release completed** por track. La nueva reemplaza la anterior automaticamente.
+- La API `androidpublisher` tarda 2-5 min en propagar despues de habilitarla.
+- `backend/app/` **no esta montado** en el container → usar `docker cp` para el script + rebuild para persistir.
+
+**Commits:**
+- (pendiente) `feat(play-api): script de upload de AABs a Play Console desde el server`
 ### 2026-10-13 (cont. 32) - Bloque 6: AAB release (clientProd + adminProd)
 
 **Release signing real. Los 2 AABs de producción construidos y firmados con keystore propio.**

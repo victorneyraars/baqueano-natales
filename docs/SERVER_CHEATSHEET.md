@@ -712,6 +712,87 @@ nginx los ve por el bind mount.
 **/usr/share/nginx/legal es efimero sin bind mount**: si se hace `docker cp` a esa ruta y
 no hay mount, el contenido se pierde al recrear el container. Solucion: bind mount en
 `docker-compose.yml`.
+
+## Google Play Publisher API (upload automatizado)
+
+Subida de AABs a Play Console **desde el server, sin tocar Play Console**.
+Usa un service account con permisos de admin en Studio Digital 360.
+
+### Arquitectura
+
+| Componente | Ubicacion |
+|---|---|
+| Service account GCP | `play-publisher@baqueano-natales-prod.iam.gserviceaccount.com` |
+| JSON key (secreto) | `/home/deploy/baqueano-natales/backend/secrets/play-publisher.json` (chmod 600) |
+| API habilitada | `androidpublisher.googleapis.com` en proyecto `baqueano-natales-prod` |
+| Script | `backend/app/upload_to_play.py` (dentro del container: `/app/upload_to_play.py`) |
+| Permiso Play Console | Admin (todos los permisos) sobre `Baqueano Natales` |
+
+### Flujo tipico (build → upload → publicar)
+
+    # 1. En Windows: build del AAB
+    flutter build appbundle --flavor clientProd --release -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
+
+    # 2. Subir al server
+    scp flutter/build/app/outputs/bundle/clientProdRelease/app-clientProd-release.aab deploy@104.129.59.151:/tmp/app-vX.aab
+
+    # 3. Copiar al container + correr script
+    ssh deploy@104.129.59.151 "docker cp /tmp/app-vX.aab baqueano_backend_prod:/tmp/app-vX.aab"
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/upload_to_play.py /tmp/app-vX.aab internal"
+
+    # 4. La release se publica DIRECTAMENTE (status=completed).
+    #    Los testers reciben la actualizacion en 5-30 min.
+
+### Comandos del script
+
+    # Publicar en internal testing (default)
+    python3 /app/upload_to_play.py /tmp/app.aab internal
+
+    # Publicar en internal testing pero como BORRADOR (para revisar)
+    python3 /app/upload_to_play.py /tmp/app.aab internal --draft
+
+    # Publicar en prueba cerrada (alpha)
+    python3 /app/upload_to_play.py /tmp/app.aab alpha
+
+    # Publicar en produccion
+    python3 /app/upload_to_play.py /tmp/app.aab production
+
+### Reglas del track internal
+
+- **Solo 1 release "completed" por vez**. La nueva reemplaza a la anterior.
+- Si subis como `--draft`, la draft coexiste con la completed anterior hasta que la publiques.
+- El script maneja esto automaticamente: envia SOLO la nueva release en el body.
+
+### Rotacion del service account key
+
+- Rotar cada 6-12 meses (Google te lo va a recordar).
+- Crear nueva key en GCP → descargar JSON → `scp` al server → `chmod 600` → borrar la key vieja en GCP.
+- Auditar keys: https://console.cloud.google.com/iam-admin/serviceaccounts/details/.../keys
+
+### Gotchas
+
+**API androidpublisher no habilitada al primer intento**:
+    HttpError 403: "Google Play Android Developer API has not been used in project ... or it is disabled"
+Fix: habilitar en https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com?project=baqueano-natales-prod
+(esperar 2-5 min para propagacion, luego reintentar)
+
+**"Only one completed release is allowed"**:
+    HttpError 400 cuando el script intenta publicar 2 releases en el mismo track.
+Fix: enviar SOLO la nueva release en el array (no las viejas).
+
+**Service account no aparece en Play Console**:
+    Al invitar, el email `...@...iam.gserviceaccount.com` puede tardar hasta 24-48h.
+    En la practica suele ser 5-30 min. Esperar y reintentar.
+
+**Script no persiste al recrear container**:
+    `backend/app/` NO esta montado como volumen. El script vive en el HOST y se
+    copia con `docker cp` al container. Para persistirlo permanentemente, hay que
+    rebuildear la imagen (ya incluido en `Dockerfile` si esta en `backend/app/`).
+
+**Libs Python (google-api-python-client)**:
+    Se agregan al `requirements.txt` para que queden persistidas en el rebuild.
+    Si se instalan con `pip install` directo en el container, se pierden al recrear.
+
 ## Google Play Console
 
 | Item | Valor |
