@@ -79,7 +79,6 @@ jobs:
           releaseFiles: flutter/build/app/outputs/bundle/clientProdRelease/*.aab
           track: internal
           status: completed
-          whatsNewDirectory: .github/release-notes/
 
       - name: Cleanup keystore
         if: always()
