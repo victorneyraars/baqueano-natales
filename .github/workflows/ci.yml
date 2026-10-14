@@ -1,0 +1,55 @@
+name: CI
+
+# Corre en cada push a main y en cada PR
+# Objetivo: feedback rapido (<2 min). NO compila, NO sube nada.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela runs anteriores del mismo branch (ahorra minutos)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze Flutter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter 3.47.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+        working-directory: flutter
+
+      - name: Verificar formato (warning, no falla)
+        run: |
+          dart format --output=none --set-exit-if-changed . || \
+            echo "::warning::Hay archivos sin formatear. Corre 'dart format .' localmente."
+        working-directory: flutter
+        continue-on-error: true
+
+      - name: Flutter analyze
+        run: flutter analyze
+        working-directory: flutter
+
+      - name: Correr tests (si existen)
+        run: |
+          if [ -d test ] && [ "$(find test -name '*_test.dart' | wc -l)" -gt 0 ]; then
+            flutter test --reporter github
+          else
+            echo "::notice::No hay tests en test/, se omite 'flutter test'"
+          fi
+        working-directory: flutter
