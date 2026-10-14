@@ -133,6 +133,22 @@ class Settings(BaseSettings):
     RECORDATORIOS_WORKER_ENABLED: bool = True
     RECORDATORIOS_WORKER_INTERVAL_SEC: int = 3600  # 1 hora
 
+    # ------------------------------------------------------------------
+    # Ops Dashboard (integracion GitHub Actions + Play Console)
+    # ------------------------------------------------------------------
+    GITHUB_OPS_TOKEN: str = ""
+    GITHUB_OPS_REPO: str = "victorneyraars/baqueano-natales"
+    GITHUB_API_BASE: str = "https://api.github.com"
+    GITHUB_OPS_CACHE_TTL_SEC: int = 20
+
+    # Paquetes de las apps para Play Console
+    PLAY_PACKAGE_CLIENT: str = "cl.baqueanonatales"
+    PLAY_PACKAGE_ADMIN: str = "cl.baqueanonatales.admin"
+
+    # Links de opt-in (internal testing) para compartir con testers
+    PLAY_OPT_IN_CLIENT: str = "https://play.google.com/apps/internaltest/4701406488817338834"
+    PLAY_OPT_IN_ADMIN: str = "https://play.google.com/apps/internaltest/4700564668101923540"
+
     @property
     def admin_emails_list(self) -> list[str]:
         """Lista de emails admin parseados."""

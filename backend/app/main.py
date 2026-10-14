@@ -74,6 +74,9 @@ from app.modules.social.routes import (
     router_admin as social_admin_router,
 )
 from app.modules.social.worker import start_worker, stop_worker
+# Ops Dashboard (admin — CI/CD, tracks, health)
+from app.modules.ops.routes import router as ops_admin_router
+from app.modules.ops import services_github as ops_services_github
 from app.modules.oficios.worker import (
     start_worker as start_recordatorios_worker,
     stop_worker as stop_recordatorios_worker,
@@ -105,6 +108,11 @@ async def lifespan(app: FastAPI):
     # Detener el worker
     stop_worker()
     stop_recordatorios_worker()
+    # Cerrar el cliente HTTP del Ops Dashboard (httpx best practice)
+    try:
+        await ops_services_github.close_http_client()
+    except Exception as e:
+        logger.warning(f"Error cerrando ops.http_client: {e}")
 
     logger.info("Cerrando Baqueano Natales API")
 
@@ -178,6 +186,9 @@ app.include_router(oficios_reportes_prestador_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_cliente_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_prestador_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")
+
+# Ops Dashboard (admin — solo lectura, Fase 1)
+app.include_router(ops_admin_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------
