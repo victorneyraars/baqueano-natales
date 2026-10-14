@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eliminar cuenta - Baqueano Natales</title>
+<meta name="description" content="Baqueano Natales - Servicios, oficios y comercios de Puerto Natales.">
+<meta name="robots" content="index, follow">
+<style>
+  :root {
+    --bg-dark: #0E2B41;
+    --bg-darker: #091625;
+    --accent: #FFC738;
+    --accent-soft: #FFEBB0;
+    --text: #E8EEF4;
+    --text-muted: #A4B4C4;
+    --border: #1A4A6E;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: linear-gradient(160deg, #143F5C 0%, #0E2B41 55%, #091625 100%);
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #143F5C 0%, #091625 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .logo svg { width: 40px; height: 40px; }
+  .brand {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .brand-sub {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .meta {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 40px;
+    margin-bottom: 16px;
+    color: var(--accent-soft);
+    letter-spacing: -0.3px;
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+  p { margin-bottom: 14px; color: var(--text); }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+  a:hover { border-bottom-color: var(--accent); }
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+  strong { color: #FFFFFF; font-weight: 600; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    background: rgba(9,22,37,0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 14px;
+  }
+  th {
+    background: rgba(20,63,92,0.6);
+    color: var(--accent-soft);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  td {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+  }
+  blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 12px 20px;
+    background: rgba(255,199,56,0.06);
+    border-radius: 4px;
+    margin: 20px 0;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  code {
+    background: rgba(9,22,37,0.6);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent-soft);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(255,199,56,0.15);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 0.3px;
+  }
+  @media (max-width: 600px) {
+    .container { padding: 24px 16px 60px; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 19px; }
+    table { font-size: 13px; }
+    th, td { padding: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="oro" x1="256" y1="80" x2="256" y2="470" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#FFEBB0"/>
+            <stop offset="0.5" stop-color="#FFC738"/>
+            <stop offset="1" stop-color="#F0A200"/>
+          </linearGradient>
+        </defs>
+        <path d="M232,48 L240.82,87.18 L280,96 L240.82,104.82 L232,144 L223.18,104.82 L184,96 L223.18,87.18 Z" fill="url(#oro)"/>
+        <path d="M288,364 L300.13,417.87 L354,430 L300.13,442.13 L288,496 L275.87,442.13 L222,430 L275.87,417.87 Z" fill="url(#oro)"/>
+        <path d="M78,228 L86.82,267.18 L126,276 L86.82,284.82 L78,324 L69.18,284.82 L30,276 L69.18,267.18 Z" fill="url(#oro)"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand">Baqueano Natales</div>
+      <div class="brand-sub">Puerto Natales · Chile</div>
+    </div>
+  </header>
+<span class="badge">Privacidad</span>
+<h1>Eliminar tu cuenta de Baqueano Natales</h1>
+<p class="meta">En <strong>Baqueano Natales</strong> respetamos tu derecho a la privacidad y al control de tus datos personales.</p>
+
+<h2>Opción 1: Desde la App (recomendado)</h2>
+<ol>
+<li>Abre la App <strong>Baqueano Natales</strong></li>
+<li>Ve a <strong>Perfil</strong> (icono en la esquina inferior derecha)</li>
+<li>Toca <strong>Configuración</strong></li>
+<li>Selecciona <strong>Eliminar mi cuenta</strong></li>
+<li>Confirma la eliminación</li>
+</ol>
+<p>Tu cuenta y datos personales serán eliminados dentro de <strong>30 días</strong> de la solicitud.</p>
+
+<h2>Opción 2: Por correo electrónico</h2>
+<p>Si no puedes acceder a la App, envía un correo a:</p>
+<blockquote><strong>contacto@baqueanonatales.com</strong></blockquote>
+<p>Incluyendo:</p>
+<ul>
+<li>Asunto: <code>Solicitud de eliminación de cuenta</code></li>
+<li>Tu nombre completo</li>
+<li>El correo electrónico asociado a tu cuenta de Baqueano Natales</li>
+</ul>
+<p>Procesaremos tu solicitud dentro de <strong>10 días hábiles</strong>.</p>
+
+<h2>Qué datos se eliminan</h2>
+<ul>
+<li>Datos de perfil (nombre, apellido, foto)</li>
+<li>Correo electrónico</li>
+<li>Número de teléfono</li>
+<li>Dirección</li>
+<li>Historial de órdenes y reservas</li>
+<li>Fotos subidas</li>
+<li>Token de notificaciones</li>
+</ul>
+
+<h2>Qué datos se conservan</h2>
+<ul>
+<li>Datos anonimizados con fines estadísticos (sin vinculación a tu identidad)</li>
+<li>Datos requeridos por obligaciones legales (plazos legales aplicables)</li>
+</ul>
+
+<h2>Contacto</h2>
+<p>Si tienes dudas sobre el proceso de eliminación:</p>
+<blockquote><strong>contacto@baqueanonatales.com</strong></blockquote>
+  <footer>
+    © 2026 Baqueano Natales · <a href="/legal/privacidad">Privacidad</a> · <a href="/legal/terminos">Términos</a> · <a href="/legal/eliminar-cuenta">Eliminar cuenta</a>
+  </footer>
+</div>
+</body>
+</html>

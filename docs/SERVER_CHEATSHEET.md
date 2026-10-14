@@ -674,6 +674,44 @@ Rclone remotes (pendiente de portar el script de backup del legacy):
 Ver `CONTEXTO_PROYECTO.md` seccion "Secretos expuestos" para la lista completa.
 
 
+
+## Paginas legales estaticas (nginx)
+
+Las 3 paginas legales se sirven directamente desde nginx, sin pasar por el backend.
+
+### URLs
+
+    https://api.baqueanonatales.com/legal/privacidad
+    https://api.baqueanonatales.com/legal/terminos
+    https://api.baqueanonatales.com/legal/eliminar-cuenta
+
+### Arquitectura
+
+    Host:      /home/deploy/baqueano-natales/deploy/legal/*.html
+    Mount:     ./deploy/legal:/usr/share/nginx/legal:ro  (docker-compose.yml, servicio nginx)
+    Location:  /legal/ -> alias /usr/share/nginx/legal/  (conf.d/api.conf, server HTTPS)
+
+### Actualizar una pagina
+
+1. Editar el `.html` en el repo (`docs/playstore/legal/`).
+2. Copiar al server:
+       scp docs/playstore/legal/privacidad.html deploy@104.129.59.151:/home/deploy/baqueano-natales/deploy/legal/
+3. **No requiere restart de nginx** — el bind mount refleja el cambio al instante.
+
+### Gotchas aprendidos (2026-10-13)
+
+**conf.d/*.conf NO admite `location` suelto**: los archivos en `conf.d/` se incluyen a nivel
+`http {}`. Un bloque `location` debe ir dentro de un `server {}`. Si se pone suelto:
+    nginx: [emerg] "location" directive is not allowed here in /etc/nginx/conf.d/X.conf:2
+Fix: insertar el `location` dentro del `server {}` existente en `api.conf`.
+
+**conf.d/ es read-only desde el container**: el mount `./deploy/nginx/conf.d:/etc/nginx/conf.d`
+es `:ro`. No se puede `docker cp` hacia adentro. Los cambios se hacen en el host (RW) y
+nginx los ve por el bind mount.
+
+**/usr/share/nginx/legal es efimero sin bind mount**: si se hace `docker cp` a esa ruta y
+no hay mount, el contenido se pierde al recrear el container. Solucion: bind mount en
+`docker-compose.yml`.
 ## Google Play Console
 
 | Item | Valor |
