@@ -11,6 +11,52 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-14 (cont. 36) - Bloque C: git server <-> GitHub <-> Windows alineados
+
+**Los 3 entornos sincronizados en el mismo commit. Working tree limpio en todos.**
+
+**Problema resuelto:**
+
+El server llevaba 15+ commits atras (`6a1a03c`) con cambios locales sin commitear que quedaron de los bloques anteriores (Bluetooth setup, legal pages, Play Publisher API). Riesgo de perder trabajo + conflictos al pushear desde Windows.
+
+**Solucion aplicada:**
+
+1. **`.gitignore` reforzado** (server + repo): agregados `backend/secrets/` y `deploy/legal/`.
+   - **CRITICO**: `play-publisher.json` (JSON key del service account) NO estaba ignorado -> riesgo de commit accidental. Ahora sí.
+
+2. **Backup pre-sync**: copia de los 4 archivos a `/tmp/pre-sync-backup-20261014/` en el server.
+
+3. **Stash + pull + pop**: los cambios locales se guardaron con `git stash`, se hizo `git pull --rebase` (15 commits), y se aplicó el stash de vuelta.
+
+4. **Commit consolidado** (`6d9b396`):
+   - `.gitignore`: agregados backend/secrets/ + deploy/legal/
+   - `docker-compose.yml`: bind mount ./deploy/legal:/usr/share/nginx/legal:ro
+   - `deploy/nginx/conf.d/api.conf`: location /legal/ (privacidad, terminos, eliminacion)
+   - `backend/requirements.txt`: google-api-python-client, google-auth, google-auth-httplib2
+
+5. **Pull en Windows**: fast-forward, sin conflictos.
+
+**Estado final (verificado):**
+
+    Windows:  6d9b396 (HEAD)
+    Server:   6d9b396 (HEAD)
+    GitHub:   6d9b396 (origin/main)
+    Working tree: limpio en ambos lados.
+
+**Commits relevantes del dia:**
+
+- `6d9b396` infra: proteger secrets + bind mount legal + libs google-play-api
+- `05e75ef` feat(play-api): admin publicado (v3) + script multi-package
+- `94d20bb` feat(flutter): icono morado especifico para flavors admin
+- `6466e0f` docs(brand): brand kit para Baqueano Admin
+- `5a33223` docs(cheatsheet): corregir path del script upload_to_play.py
+- `be7b1ff` docs: cierre Bloque 6 - app publicada en Play Store
+
+**Pendiente global:**
+
+- Rotacion de secretos expuestos (SECRET_KEY, TOKEN_ENCRYPTION_KEY, PAT legacy, Facebook app secret).
+- CI/CD con GitHub Actions.
+- Features de producto (mapa, delivery, carta QR, recompensas).
 ### 2026-10-14 (cont. 35) - Bloque 7: Baqueano Admin publicado en Play Store
 
 **Ambas apps publicadas: cliente + admin. Dupla completa operativa.**
