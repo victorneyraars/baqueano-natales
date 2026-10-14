@@ -87,3 +87,5 @@ deploy/nginx/certs/
 
 # --- Backups de compose/nginx (temporales, no commitear) ---
 *.backup-*
+backend/secrets/
+deploy/legal/
