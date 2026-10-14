@@ -61,8 +61,9 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        // Solo creamos la config si el keystore existe (evita NPE en build.yml sin keystore)
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
@@ -73,7 +74,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Solo firmamos si hay keystore disponible
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
