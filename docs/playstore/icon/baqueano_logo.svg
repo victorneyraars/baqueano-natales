@@ -1,0 +1,18 @@
+<svg width="1100" height="320" viewBox="0 0 1100 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="30" y1="30" x2="270" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#143F5C"/><stop offset="0.55" stop-color="#0E2B41"/><stop offset="1" stop-color="#091625"/></linearGradient>
+    <linearGradient id="oro" x1="150" y1="70" x2="150" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFEBB0"/><stop offset="0.5" stop-color="#FFC738"/><stop offset="1" stop-color="#F0A200"/></linearGradient>
+    <radialGradient id="halo"><stop offset="0" stop-color="#FFD36B" stop-opacity="0.55"/><stop offset="1" stop-color="#FFD36B" stop-opacity="0"/></radialGradient>
+    <clipPath id="c"><rect x="30" y="40" width="240" height="240" rx="54"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)"><rect x="30" y="40" width="240" height="240" fill="url(#bg)"/><circle cx="126" cy="96" r="32" fill="url(#halo)" opacity="0.5"/><circle cx="158" cy="232" r="43" fill="url(#halo)" opacity="0.5"/><circle cx="78" cy="174" r="32" fill="url(#halo)" opacity="0.5"/><circle cx="230" cy="152" r="27" fill="url(#halo)" opacity="0.5"/><circle cx="180" cy="190" r="16" fill="url(#halo)" opacity="0.5"/><path d="M126.00,76.00 L129.68,92.32 L146.00,96.00 L129.68,99.68 L126.00,116.00 L122.32,99.68 L106.00,96.00 L122.32,92.32 Z" fill="url(#oro)"/><path d="M158.00,205.00 L162.96,227.04 L185.00,232.00 L162.96,236.96 L158.00,259.00 L153.04,236.96 L131.00,232.00 L153.04,227.04 Z" fill="url(#oro)"/><path d="M78.00,154.00 L81.68,170.32 L98.00,174.00 L81.68,177.68 L78.00,194.00 L74.32,177.68 L58.00,174.00 L74.32,170.32 Z" fill="url(#oro)"/><path d="M230.00,135.00 L233.13,148.87 L247.00,152.00 L233.13,155.13 L230.00,169.00 L226.87,155.13 L213.00,152.00 L226.87,148.87 Z" fill="url(#oro)"/><path d="M180.00,180.00 L181.84,188.16 L190.00,190.00 L181.84,191.84 L180.00,200.00 L178.16,191.84 L170.00,190.00 L178.16,188.16 Z" fill="url(#oro)"/></g>
+  <text x="308" y="176" font-family="Georgia, 'Times New Roman', serif" font-size="94" font-weight="700" fill="#0D1B2A">Baqueano</text>
+  <g>
+    <line x1="310" y1="212" x2="346" y2="212" stroke="#F0A200" stroke-width="4" stroke-linecap="round"/>
+    <text x="358" y="224" font-family="'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="600" fill="#5A7280" letter-spacing="9">NATALES</text>
+    <line x1="590" y1="212" x2="626" y2="212" stroke="#F0A200" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="310" y="262" font-family="'Helvetica Neue', Arial, sans-serif" font-size="23" fill="#7A909C">Tu guía en la Patagonia: te lleva y te trae de todo.</text>
+</svg>
