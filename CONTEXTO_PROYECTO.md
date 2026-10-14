@@ -11,6 +11,69 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-14 (cont. 34) - BLOQUE 6 COMPLETO: App publicada en Play Store
+
+**Baqueano Natales está publicada, funciona end-to-end, y todo el pipeline de releases es automatizable.**
+
+**Estado final del Bloque 6:**
+
+| Componente | Estado |
+|---|---|
+| Keystore de release | `D:\dev\baqueano-keys\baqueano-release.jks` (fuera del repo) |
+| AABs firmados | clientProd 58.24 MB, adminProd 58.18 MB |
+| Ficha de Play Store | Completa (ícono, feature graphic, 4 screenshots, descripciones, categoría, contacto, privacy policy) |
+| Formularios Play | Data safety, Content rating, Público objetivo, Acceso, Anuncios, etc. |
+| Play App Signing | Activado, SHA-1 de Google: `D1:29:F6:FE:96:1B:C3:D5:F5:01:74:47:53:07:2D:CE:B3:7D:79:7B` |
+| Firebase | SHA-1 de Google registrado, `google-services.json` actualizado |
+| App en Play Store | **Build 2 (versionCode=2) disponible para verificadores internos** |
+| Google Sign-In | **Funciona end-to-end en celular real** |
+| Pipeline de uploads | API Play Publisher funcional (script `upload_to_play.py`) |
+| Compatibilidad | 19,277 dispositivos Android |
+
+**Service account Play Publisher:**
+
+- Email: `play-publisher@baqueano-natales-prod.iam.gserviceaccount.com`
+- JSON key: `/home/deploy/baqueano-natales/backend/secrets/play-publisher.json` (chmod 600)
+- Permisos: Admin total sobre `Baqueano Natales`
+- API: `androidpublisher.googleapis.com` habilitada
+
+**Flujo de releases automatizado:**
+
+    # Build
+    flutter build appbundle --flavor clientProd --release -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
+
+    # Upload al server
+    scp flutter/build/app/outputs/bundle/clientProdRelease/app-clientProd-release.aab deploy@104.129.59.151:/tmp/app-vX.aab
+
+    # Publicar
+    ssh deploy@104.129.59.151 "docker cp /tmp/app-vX.aab baqueano_backend_prod:/tmp/app-vX.aab"
+    ssh deploy@104.129.59.151 "docker exec baqueano_backend_prod python3 /app/upload_to_play.py /tmp/app-vX.aab internal"
+
+**Commits del bloque (7):**
+
+- `87f8a55` docs: Firebase CLI + permisos admin
+- `05215d1` feat(flutter): 4 flavors
+- `b6ccd4b` feat(flutter): release signing + AABs
+- `3ff77b4` docs(cheatsheet): gotchas Bloque 6
+- `db9a53e` docs(play-console): cuenta Studio Digital 360
+- `595ca07` docs(brand): icono + SVG + README
+- `850f7dd` feat(legal): paginas legales + nginx /legal/
+- `25ee37f` feat(play-api): script upload
+- `93198a7` chore(flutter): google-services.json + version bump
+
+**Deuda pendiente del Bloque 6:**
+
+- [ ] Subir **adminProd** a Play Store (crear app "Baqueano Admin" — mismo flujo).
+- [ ] Rebuild backend en server para persistir `upload_to_play.py` (via Dockerfile).
+- [ ] Copiar el service account JSON a gestor del owner (backup).
+- [ ] Rotar el service account key cada 6-12 meses.
+
+**Pendientes del proyecto (fuera de Bloque 6):**
+
+- Rotación de secretos expuestos (SECRET_KEY, TOKEN_ENCRYPTION_KEY, etc.).
+- Revocar PATs legacy.
+- CI/CD con GitHub Actions.
+- Fase 4/5 completas del roadmap.
 ### 2026-10-14 (cont. 33) - Play Publisher API (upload automatizado de AABs)
 
 **Pipeline completo de publicacion desde el server. Se acabo el upload manual por browser.**
