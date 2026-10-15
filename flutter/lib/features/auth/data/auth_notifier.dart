@@ -146,7 +146,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Limpia el mensaje de error (útil después de mostrarlo).
   void clearError() {
     if (state.errorMessage != null) {
-      state = AuthState.unauthenticated();
+      state = const AuthState.unauthenticated();
     }
   }
 }

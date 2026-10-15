@@ -1,0 +1,121 @@
+{
+  // ===== Dart / Flutter =====
+  "dart.flutterSdkPath": "D:\\dev\\flutter",
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  "dart.closingLabels": true,
+  "dart.showTodos": true,
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "dart.enableSdkFormatter": true,
+  "dart.lineLength": 100,
+
+  // ===== Editor =====
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "editor.rulers": [100],
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.indentation": true,
+  "editor.stickyScroll.enabled": true,
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "boundary",
+  "editor.suggestSelection": "first",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+
+  // ===== Formatter por lenguaje =====
+  "[dart]": {
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.rulers": [100]
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.tabSize": 2
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.rulers": [80]
+  },
+
+  // ===== Explorador de archivos =====
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/.idea": true,
+    "**/build": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/*.iml": true
+  },
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "*.dart": "${capture}.g.dart, ${capture}.freezed.dart",
+    "pubspec.yaml": ".flutter-plugins, .flutter-plugins-dependencies, .metadata, analysis_options.yaml, pubspec.lock",
+    "README.md": "CONTRIBUTING.md, CODE_OF_CONDUCT.md, LICENSE*"
+  },
+
+  // ===== Git =====
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.branchSortOrder": "committerdate",
+  "gitlens.currentLine.enabled": false,
+  "gitlens.hovers.currentLine.over": "line",
+
+  // ===== Spell checker (espanol + ingles) =====
+  "cSpell.language": "en,es",
+  "cSpell.words": [
+    "baqueano",
+    "baqueanonatales",
+    "natales",
+    "prestador",
+    "prestadores",
+    "oficio",
+    "oficios",
+    "comercio",
+    "comercios",
+    "afiche",
+    "afiches",
+    "categorias",
+    "Riverpod",
+    "GoRouter",
+    "pubspec",
+    "dartdefine",
+    "appbundle",
+    "flavor"
+  ],
+
+  // ===== Files =====
+  "files.associations": {
+    "*.dart": "dart",
+    "analysis_options.yaml": "yaml"
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // ===== Terminal =====
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cwd": "${workspaceFolder}/flutter",
+
+  // ===== Search =====
+  "search.exclude": {
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/.git": true,
+    "**/*.g.dart": true,
+    "**/*.freezed.dart": true
+  }
+}

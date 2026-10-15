@@ -1,0 +1,53 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Client Dev",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter",
+      "program": "lib/main_client.dart",
+      "args": [
+        "--flavor", "clientDev",
+        "--dart-define-from-file=dart_defines/client_dev.json"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "Client Prod (debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter",
+      "program": "lib/main_client.dart",
+      "args": [
+        "--flavor", "clientProd",
+        "--dart-define-from-file=dart_defines/client_prod.json"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "Admin Dev",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter",
+      "program": "lib/main_admin.dart",
+      "args": [
+        "--flavor", "adminDev",
+        "--dart-define-from-file=dart_defines/admin_dev.json"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "Admin Prod (debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter",
+      "program": "lib/main_admin.dart",
+      "args": [
+        "--flavor", "adminProd",
+        "--dart-define-from-file=dart_defines/admin_prod.json"
+      ],
+      "flutterMode": "debug"
+    }
+  ]
+}

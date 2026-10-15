@@ -31,8 +31,13 @@ htmlcov/
 build/
 *.iml
 .idea/
-.vscode/
-
+# VS Code - config del equipo (versionada)
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+.vscode/*.local.json
 # --- Node ---
 node_modules/
 npm-debug.log*

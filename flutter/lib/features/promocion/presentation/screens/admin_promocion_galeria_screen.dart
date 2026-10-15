@@ -75,40 +75,40 @@ class _PlantillaCard extends StatelessWidget {
   _Visual _visual() {
     switch (plantilla.id) {
       case 'nuevo_servicio':
-        return _Visual(
+        return const _Visual(
           icon: Icons.new_releases,
-          bg: const Color(0xFF16a34a),
+          bg: Color(0xFF16a34a),
           fg: Colors.white,
         );
       case 'oferta':
-        return _Visual(
+        return const _Visual(
           icon: Icons.local_fire_department,
-          bg: const Color(0xFFf97316),
+          bg: Color(0xFFf97316),
           fg: Colors.white,
         );
       case 'destacado':
-        return _Visual(
+        return const _Visual(
           icon: Icons.workspace_premium,
-          bg: const Color(0xFF16a34a),
-          fg: const Color(0xFFfbbf24),
+          bg: Color(0xFF16a34a),
+          fg: Color(0xFFfbbf24),
         );
       case 'evento':
-        return _Visual(
+        return const _Visual(
           icon: Icons.event,
-          bg: const Color(0xFF7c3aed),
+          bg: Color(0xFF7c3aed),
           fg: Colors.white,
         );
       case 'profesional':
-        return _Visual(
+        return const _Visual(
           icon: Icons.format_quote,
-          bg: const Color(0xFFf1f5f9),
-          fg: const Color(0xFF16a34a),
+          bg: Color(0xFFf1f5f9),
+          fg: Color(0xFF16a34a),
         );
       case 'lanzamiento':
-        return _Visual(
+        return const _Visual(
           icon: Icons.rocket_launch,
-          bg: const Color(0xFF7c3aed),
-          fg: const Color(0xFFdcfce7),
+          bg: Color(0xFF7c3aed),
+          fg: Color(0xFFdcfce7),
         );
       default:
         return _Visual(

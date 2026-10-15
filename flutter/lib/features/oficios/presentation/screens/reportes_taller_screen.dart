@@ -209,19 +209,19 @@ class _ContenidoReporte extends StatelessWidget {
         _KpisGrid(kpis: reporte.kpis),
         const SizedBox(height: 20),
         if (reporte.serieMensual.isNotEmpty) ...[
-          _SeccionTitulo('Ordenes por mes'),
+          const _SeccionTitulo('Ordenes por mes'),
           const SizedBox(height: 8),
           _ChartSerieMensual(serie: reporte.serieMensual),
           const SizedBox(height: 20),
         ],
         if (reporte.topServicios.isNotEmpty) ...[
-          _SeccionTitulo('Top servicios'),
+          const _SeccionTitulo('Top servicios'),
           const SizedBox(height: 4),
           for (final s in reporte.topServicios) _FilaServicio(s: s),
           const SizedBox(height: 20),
         ],
         if (reporte.topClientes.isNotEmpty) ...[
-          _SeccionTitulo('Top clientes'),
+          const _SeccionTitulo('Top clientes'),
           const SizedBox(height: 4),
           for (final c in reporte.topClientes) _FilaCliente(c: c),
         ],

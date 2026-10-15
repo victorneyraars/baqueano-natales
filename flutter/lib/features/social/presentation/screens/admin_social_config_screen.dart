@@ -1,4 +1,4 @@
-﻿/// Pantalla admin: configuracion global de publicacion en redes.
+/// Pantalla admin: configuracion global de publicacion en redes.
 ///
 /// Permite:
 /// - Activar/desactivar la publicacion automatica
@@ -147,7 +147,7 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
       padding: const EdgeInsets.all(16),
       children: [
         // --- Seccion: Publicacion automatica ---
-        _SectionTitle(title: 'Publicacion automatica'),
+        const _SectionTitle(title: 'Publicacion automatica'),
         Card(
           child: Column(
             children: [
@@ -166,7 +166,7 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
         const SizedBox(height: 16),
 
         // --- Seccion: Redes ---
-        _SectionTitle(title: 'Redes'),
+        const _SectionTitle(title: 'Redes'),
         Card(
           child: Column(
             children: [
@@ -197,7 +197,7 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
         const SizedBox(height: 16),
 
         // --- Seccion: Destino ---
-        _SectionTitle(title: 'Destino'),
+        const _SectionTitle(title: 'Destino'),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -247,7 +247,7 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
         const SizedBox(height: 24),
 
         // --- Seccion: Acciones ---
-        _SectionTitle(title: 'Acciones'),
+        const _SectionTitle(title: 'Acciones'),
         FilledButton.icon(
           onPressed: (_hayCambios && !_saving) ? _guardar : null,
           icon: _saving

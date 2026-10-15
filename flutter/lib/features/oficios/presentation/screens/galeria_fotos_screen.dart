@@ -258,7 +258,7 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
               child: const Icon(Icons.tune),
             ),
             tooltip: 'Filtrar por momento',
-            onPressed: () => _abrirFiltro(),
+            onPressed: _abrirFiltro,
           ),
           IconButton(
             icon: const Icon(Icons.refresh),

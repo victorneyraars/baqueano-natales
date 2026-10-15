@@ -1,0 +1,74 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter: analyze",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["analyze"],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": ["$dart-analyze"],
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Flutter: analyze --fatal-infos",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["analyze", "--fatal-infos"],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": ["$dart-analyze"],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Flutter: pub get",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["pub", "get"],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: clean",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["clean"],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: test",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["test"],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: build APK (clientDev debug)",
+      "type": "shell",
+      "command": "flutter",
+      "args": [
+        "build", "apk", "--debug",
+        "--flavor", "clientDev",
+        "-t", "lib/main_client.dart",
+        "--dart-define-from-file=dart_defines/client_dev.json"
+      ],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: build AAB (adminProd release)",
+      "type": "shell",
+      "command": "flutter",
+      "args": [
+        "build", "appbundle", "--release",
+        "--flavor", "adminProd",
+        "-t", "lib/main_admin.dart",
+        "--dart-define-from-file=dart_defines/admin_prod.json"
+      ],
+      "options": { "cwd": "${workspaceFolder}/flutter" },
+      "problemMatcher": []
+    }
+  ]
+}

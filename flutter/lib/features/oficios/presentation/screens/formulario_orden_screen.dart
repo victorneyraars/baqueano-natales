@@ -305,11 +305,11 @@ class _BuscadorCliente extends ConsumerWidget {
         TextField(
           controller: controller,
           onChanged: onChanged,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Buscar cliente por nombre o email',
             hintText: 'Min 2 caracteres',
-            prefixIcon: const Icon(Icons.search),
-            border: const OutlineInputBorder(),
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
             helperText: 'Ej: juan, perez, juan@mail.com',
           ),
         ),

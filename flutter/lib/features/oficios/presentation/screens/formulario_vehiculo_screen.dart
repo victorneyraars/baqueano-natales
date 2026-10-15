@@ -187,7 +187,7 @@ class _FormularioVehiculoScreenState
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _Seccion('Identificacion'),
+            const _Seccion('Identificacion'),
             _campo(
               controller: _patenteCtrl,
               label: 'Patente *',
@@ -249,7 +249,7 @@ class _FormularioVehiculoScreenState
               },
             ),
             const SizedBox(height: 16),
-            _Seccion('Estado'),
+            const _Seccion('Estado'),
             _campo(
               controller: _kmCtrl,
               label: 'Kilometraje actual',
@@ -264,7 +264,7 @@ class _FormularioVehiculoScreenState
               textCapitalization: TextCapitalization.characters,
             ),
             const SizedBox(height: 16),
-            _Seccion('Personalizacion'),
+            const _Seccion('Personalizacion'),
             _campo(
               controller: _aliasCtrl,
               label: 'Alias (opcional)',

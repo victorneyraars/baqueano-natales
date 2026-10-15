@@ -409,7 +409,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
               runSpacing: 4,
               children: [
                 if (pub.tieneImagen)
-                  _Meta(icon: Icons.image, text: 'Con imagen'),
+                  const _Meta(icon: Icons.image, text: 'Con imagen'),
                 if (pub.intentos > 0)
                   _Meta(
                     icon: Icons.refresh,

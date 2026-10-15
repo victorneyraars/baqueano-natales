@@ -374,7 +374,7 @@ class _Editor extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Chips de tamano
-        _SectionTitle('Tamano'),
+        const _SectionTitle('Tamano'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -390,7 +390,7 @@ class _Editor extends StatelessWidget {
         const SizedBox(height: 24),
 
         // Formulario
-        _SectionTitle('Contenido'),
+        const _SectionTitle('Contenido'),
         const SizedBox(height: 8),
         ...plantilla.todosLosParams.map((p) {
           final esRequerido = plantilla.paramsRequeridos.contains(p);
@@ -414,7 +414,7 @@ class _Editor extends StatelessWidget {
 
         // Regenerar
         FilledButton.icon(
-          onPressed: generando ? null : () => onGenerar(),
+          onPressed: generando ? null : onGenerar,
           icon: generando
               ? const SizedBox(
                   width: 18,
@@ -431,7 +431,7 @@ class _Editor extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: descargando ? null : () => onDescargar(),
+                onPressed: descargando ? null : onDescargar,
                 icon: descargando
                     ? const SizedBox(
                         width: 18,
@@ -445,7 +445,7 @@ class _Editor extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: descargando ? null : () => onCompartir(),
+                onPressed: descargando ? null : onCompartir,
                 icon: const Icon(Icons.share),
                 label: const Text('Compartir'),
               ),
@@ -456,7 +456,7 @@ class _Editor extends StatelessWidget {
 
         // Publicar en redes (full width, primario)
         FilledButton.icon(
-          onPressed: publicando ? null : () => onPublicar(),
+          onPressed: publicando ? null : onPublicar,
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF16a34a),
             minimumSize: const Size.fromHeight(48),
