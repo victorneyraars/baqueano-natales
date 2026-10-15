@@ -19,6 +19,7 @@ import 'package:baqueano_natales/features/admin/presentation/screens/admin_comer
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_comercio_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
+import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_estado_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_cuentas_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
@@ -257,7 +258,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'admin-notificaciones-stats',
         builder: (context, state) =>
             const AdminNotificacionesStatsScreen(),
-      ),
+        ),
+
+        // Admin - Ops Dashboard (GitHub Actions + Play Console)
+        GoRoute(
+          path: '/admin/ops',
+          name: 'admin-ops',
+          builder: (context, state) => const OpsEstadoScreen(),
+        ),
 
       // =========================================================
       // Comercios â€” pÃºblico

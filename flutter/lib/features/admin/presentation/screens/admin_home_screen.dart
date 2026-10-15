@@ -251,6 +251,12 @@ class AdminHomeScreen extends ConsumerWidget {
               onTap: () => context.push('/admin/notificaciones/stats'),
             ),
 
+            _AdminCard(
+              icon: Icons.monitor_heart,
+              title: 'Ops Dashboard',
+              subtitle: 'CI/CD, runs de GitHub, releases en Play',
+              onTap: () => context.push('/admin/ops'),
+            ),
             const _AdminCard(
               icon: Icons.people_outline,
               title: 'Usuarios',
