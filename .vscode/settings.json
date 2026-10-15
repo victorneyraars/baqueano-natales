@@ -108,6 +108,7 @@
 
   // ===== Terminal =====
   "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.scrollback": 10000,
   "terminal.integrated.cwd": "${workspaceFolder}/flutter",
 
   // ===== Search =====
