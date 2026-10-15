@@ -11,6 +11,75 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-15 (cont. 38) - Bloque 4: Ops Dashboard Flutter (Fase 1 completa)
+
+**La app admin ya tiene el Ops Dashboard end-to-end: 5 endpoints consumidos, pantalla responsive, wire al home.**
+
+**Entregables:**
+
+- **Bloque 4a (domain models)** — `flutter/lib/features/ops_admin/domain/ops_models.dart` (543 lineas)
+  - 11 tipos: `RunInfo`, `StepInfo`, `JobInfo`, `RunDetail`, `RunsResponse`, `TrackVersion`, `AppTracks`, `TracksResponse`, `AppLinks`, `LinksResponse`, `ComponentHealth`, `SystemHealth`
+  - 3 enums con `fromRaw` defensivo (fallback `unknown`): `WorkflowRunStatus`, `WorkflowRunConclusion`, `ComponentStatus`
+  - Getters de UI: `RunInfo.duracionHumana`, `TrackVersion.trackLabel`, `SystemHealth.allOk`
+  - Parsing tolerante a nulls/campos faltantes (helpers `_asInt`, `_asString`, `_asDateTime`, `_asListOfMap`, `_asMap`)
+
+- **Bloque 4b (data)** — `flutter/lib/features/ops_admin/data/`
+  - `ops_repository.dart` (5 metodos: health, runs, runDetail, tracks, links)
+  - `ops_providers.dart` (`opsRepositoryProvider` + 5 FutureProviders, `opsRunsProvider` family con `RunsParams` inmutable)
+
+- **Bloque 4c (presentation + wire)** — `flutter/lib/features/ops_admin/presentation/screens/ops_estado_screen.dart` (~630 lineas)
+  - Header con estado consolidado (ok/atencion + stats 24h)
+  - Componentes del sistema (iconos por status: ok/degraded/down/unknown)
+  - Ultimo release exitoso (nombre, run number, duracion)
+  - Lista de ultimos 10 runs con icono por conclusion
+  - Links de descarga (chips opt-in + Play Store con `url_launcher`)
+  - Auto-refresh cada 30s con `Timer` (pausado en background via `WidgetsBindingObserver`)
+  - Pull-to-refresh manual + vista error con retry
+  - Responsive: phone 1 col / tablet 2 cols (Row + Expanded)
+  - `core/widgets/responsive_layout.dart` creado (no existia) — regla 11 canonica
+  - `app_router.dart`: import + GoRoute `/admin/ops`
+  - `admin_home_screen.dart`: card Ops Dashboard (icon `monitor_heart`) antes de Usuarios
+
+**Config VS Code a nivel industria (bonus):**
+
+- `.vscode/extensions.json` — 11 extensiones recomendadas (Dart, Flutter, ErrorLens, GitLens, spell-checker ES, snippets)
+- `.vscode/settings.json` — format on save, organize imports, file nesting, ruler 100, spell-checker ES, terminal scrollback 10000, terminal PowerShell
+- `.vscode/launch.json` — 4 configs de debug (clientDev, clientProd, adminDev, adminProd)
+- `.vscode/tasks.json` — 7 tasks (analyze, analyze --fatal-infos, pub get, clean, test, build APK, build AAB)
+- `.gitignore` — bloque de excepciones para versionar `.vscode/` + soporte `*.local.json`
+- `docs/VSCODE_SETUP.md` — guia completa del setup
+
+**Lints estrictos (`analysis_options.yaml`):**
+
+- Reglas de bajo ruido/alto valor: `prefer_const`, `prefer_final`, `avoid_print`, `prefer_single_quotes`, `always_declare_return_types`, `use_super_parameters`, `avoid_dynamic_calls`
+- Se dejaron FUERA del lint: `prefer_relative_imports`, `directives_ordering`, `sort_constructors_first` (churn sin valor en un proyecto maduro)
+- `dart fix --apply`: 26 fixes automaticos en 9 archivos (prefer_const_constructors, unnecessary_lambdas)
+- `flutter analyze`: `No issues found!`
+
+**Regla de oro actualizada para la sesion:**
+
+- **VS Code para Flutter, MobaXterm para SSH al server.** Nunca usar la terminal de MobaXterm para Flutter (mete variables MSYS que rompen `flutter analyze` con "Unable to determine engine version").
+
+**Commits:**
+
+- `3b7b48a` feat(ops): modelos de dominio del Ops Dashboard (Fase 1 read-only)
+- `12560bf` chore(vscode): configuracion de workspace Flutter + lints estrictos
+- `1a25b48` feat(ops): repository + providers del Ops Dashboard (Bloque 4b)
+- `3e12f74` feat(ops): pantalla Ops Dashboard + wire al admin (Bloque 4c)
+- `34f0a57` chore(vscode): agregar scrollback 10000 a la terminal integrada
+
+**Estado del Ops Dashboard:**
+
+- **Fase 1 (read-only): COMPLETA end-to-end.**
+- Backend: 5 endpoints admin OK (health, runs, runDetail, tracks, links).
+- Frontend: pantalla completa + wire + auto-refresh.
+- **Pendiente Fase 2** (del roadmap del modulo ops): trigger de releases desde la app (crea tag), migrar a GitHub App, tabla `ops_audit_log`.
+
+**Proximo paso sugerido:**
+
+- Probar la pantalla end-to-end en emulador admin (`flutter run --flavor adminDev -t lib/main_admin.dart --dart-define-from-file=dart_defines/admin_dev.json`).
+- Tag `v0.3.4` para publicar la nueva version (CI/CD toma el tag y publica en Play internal).
+
 ### 2026-10-14 (cont. 37) - CI/CD con GitHub Actions
 
 **Pipeline completo de integracion + deploy. Publicar una version es `git tag vX.Y.Z` + push.**
