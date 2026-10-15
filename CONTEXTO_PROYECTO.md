@@ -11,6 +11,69 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-15 (cont. 39) - Entorno de desarrollo a nivel industria + Ops Dashboard verificado
+
+**Setup de VS Code + lints + optimizaciones de Windows. Flutter analyze paso de 10-266s a 4.87s.**
+
+**Bloque 4 completo (Ops Dashboard):**
+
+- Bloque 4a, 4b, 4c: domain models + repository + providers + pantalla responsive + wire al home admin.
+- Auto-refresh 30s pausado en background, pull-to-refresh, vista error con retry.
+- `ResponsiveLayout` creado en `core/widgets/` (no existia).
+- Commit `3e12f74`.
+
+**Config VS Code a nivel industria:**
+
+- `.vscode/extensions.json` (11 extensiones: Dart, Flutter, ErrorLens, GitLens, spell-checker ES, snippets).
+- `.vscode/settings.json` (format on save, organize imports, file nesting, ruler 100, spell-checker ES, terminal scrollback 10000).
+- `.vscode/launch.json` (4 configs de debug por flavor).
+- `.vscode/tasks.json` (7 tasks: analyze, pub get, clean, test, build APK, build AAB).
+- `.gitignore`: bloque de excepciones para versionar `.vscode/` + soporte `*.local.json`.
+- `docs/VSCODE_SETUP.md` (guia del setup).
+- Commits `12560bf` + `34f0a57`.
+
+**Lints estrictos (`flutter/analysis_options.yaml`):**
+
+- Reglas de bajo ruido/alto valor (prefer_const, prefer_final, avoid_print, siempre tipos de retorno).
+- Se dejaron FUERA: `prefer_relative_imports`, `directives_ordering`, `sort_constructors_first` (churn sin valor).
+- `dart fix --apply`: 26 fixes en 9 archivos.
+- `flutter analyze`: `No issues found!` (522 issues → 0 tras ajustar reglas).
+
+**Optimizaciones del sistema (Windows):**
+
+- **Windows Defender exclusiones aplicadas** (9 rutas + 11 procesos).
+  - Impacto medido: `flutter analyze` paso de 10-266s a **4.87s**.
+  - MsMpEng habia acumulado 2400s de CPU en una sesion (40 min de CPU quemados).
+- **Limpieza de disco C:** liberados **20.8 GB**:
+  - Downloads: 6.74 GB (instaladores ya usados).
+  - Mitchell OnDemand → D:\Mitchell OnDemand\: 4.09 GB.
+  - VirtualBox VM Win10_ATorch borrada: 12.2 GB.
+  - C: paso de 33.4 GB → 54.2 GB libres (14% → 22.8%).
+
+**Documentacion nueva:**
+
+- `docs/DEV_ENVIRONMENT.md`: hardware, software, reglas de uso, exclusiones Defender, optimizaciones VS Code, troubleshooting, changelog del doc.
+
+**Regla de oro actualizada:**
+
+- **VS Code para Flutter, MobaXterm para SSH al server.** Nunca usar la terminal de MobaXterm para Flutter (hereda variables MSYS que rompen `flutter analyze` con "Unable to determine engine version").
+
+**Commits de la sesion (8):**
+
+- `3b7b48a` feat(ops): modelos de dominio del Ops Dashboard (Fase 1 read-only)
+- `12560bf` chore(vscode): configuracion de workspace Flutter + lints estrictos
+- `1a25b48` feat(ops): repository + providers del Ops Dashboard (Bloque 4b)
+- `3e12f74` feat(ops): pantalla Ops Dashboard + wire al admin (Bloque 4c)
+- `34f0a57` chore(vscode): agregar scrollback 10000 a la terminal integrada
+- `47a7f8c` docs(contexto): changelog Bloque 4 - Ops Dashboard Flutter (Fase 1 completa)
+- (este commit) docs(dev): entorno de desarrollo + optimizaciones Windows
+
+**Pendientes para proxima sesion:**
+
+- Probar la pantalla Ops Dashboard en emulador o device real (el AVD `Pixel6_API34_Play` puede necesitar recrearse).
+- Tag `v0.3.4` para publicar en Play internal (CI/CD toma el tag y publica en ~25 min).
+- Fase 2 del modulo ops: trigger de releases desde la app + migrar a GitHub App.
+
 ### 2026-10-15 (cont. 38) - Bloque 4: Ops Dashboard Flutter (Fase 1 completa)
 
 **La app admin ya tiene el Ops Dashboard end-to-end: 5 endpoints consumidos, pantalla responsive, wire al home.**
