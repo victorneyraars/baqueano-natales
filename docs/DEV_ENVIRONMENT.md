@@ -169,3 +169,71 @@ Estás corriendo Flutter desde MobaXterm o una terminal con variables MSYS.
 
 - **2026-10-15**: creación inicial. Diagnóstico + exclusiones Defender +
   limpieza C: + reglas de uso.
+
+---
+
+## VS Code Remote SSH (2026-10-16)
+
+**Herramienta adoptada** para editar el backend del server sin scripts
+ni heredocs de PowerShell. Elimina el 90% de los errores de escaping
+y line endings.
+
+### Instalacion
+
+1. VS Code (Windows): Ctrl+Shift+X -> buscar "Remote - SSH"
+   (Microsoft) -> Install.
+2. F1 -> "Remote-SSH: Add New SSH Host..." -> pegar:
+       ssh deploy@104.129.59.151
+3. F1 -> "Remote-SSH: Connect to Host..." -> elegir 104.129.59.151.
+4. Se abre una nueva ventana de VS Code conectada al server.
+5. File -> Open Folder -> /home/deploy/baqueano-natales.
+
+### Uso diario
+
+Vas a tener 2 ventanas de VS Code:
+
+| Ventana | Titulo | Para que |
+|---|---|---|
+| Windows | baqueano-natales [Administrator] | Editar Flutter, correr flutter run/analyze |
+| SSH | baqueano-natales [SSH: 104.129.59.151] | Editar backend, correr docker, git, scripts |
+
+**Regla de oro:**
+- Backend -> ventana SSH (Ctrl+S edita directo en el server).
+- Flutter -> ventana Windows.
+- No mezclar.
+
+### Terminales
+
+- Ventana Windows -> PowerShell local (PS D:\dev\...).
+- Ventana SSH -> bash del server (deploy@baqueano-natales-prod:...).
+
+### Extensiones remotas recomendadas
+
+En la ventana SSH, instalar:
+- Python (Microsoft) - esencial para editar backend.
+- YAML (Red Hat) - para editar archivos YAML.
+- GitLens (opcional).
+
+NO instalar Dart/Flutter del lado remoto - el server no compila Flutter.
+
+### Por que esto es mejor que heredocs
+
+| Antes (heredoc + SSH) | Ahora (Remote SSH) |
+|---|---|
+| content = @"..."@ + base64 + SSH + CRLF/LF | Ctrl+S |
+| 3-10 min por edicion, ~30% de errores | 5 seg por edicion, ~0% de errores |
+| No se veian los archivos del server | Explorer con el arbol completo |
+| Terminal Windows con ssh delante | Terminal bash directa |
+
+### Errores que ya no van a pasar
+
+- CRLF vs LF al editar archivos (VS Code usa el del archivo).
+- @" que se cierra por contenido mal escapado.
+- .Replace(a, b, 1) que no existe en .NET.
+- -replace de PowerShell interpretado como regex.
+- Heredoc PYEOF que se corta por SSH anidado.
+
+### Reinstalar / reconectar
+
+- Reabrir VS Code y F1 -> Remote-SSH: Connect to Host... -> 104.129.59.151.
+- O usar Remote Explorer (extension opcional) para un panel con hosts guardados.
