@@ -11,6 +11,74 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 46) - Fase 2e del modulo ops: auto-bump + VS Code Remote SSH
+
+**Auto-bump de pubspec.yaml + adopcion de Remote SSH. El release trigger queda 100% funcional end-to-end.**
+
+**Fase 2e - Auto-bump de pubspec.yaml (backend):**
+
+Resuelve el gap critico del flujo: el workflow Release lee la version de `pubspec.yaml`, no del tag. Sin auto-bump, el tag decia `v0.3.5` pero la app publicada tenia la version vieja.
+
+**Nuevo servicio `services_repo.py`:**
+
+- `bump_pubspec_and_push(version_name, version_code, branch, user_email)`:
+  - Lee HEAD + tree + contenido de pubspec via GitHub API.
+  - Crea blob + tree + commit + update ref en 7 requests atomicos.
+  - `force=false` -> si alguien pusheo entre medio, tira 409 (race-safe).
+  - `RepoWriteError` con `http_status` para errores user-friendly.
+
+**Modificado `services_release.py` (`ejecutar_release`):**
+
+- Antes de crear el tag, llama a `bump_pubspec_and_push`.
+- El tag se crea sobre el **NUEVO commit** (post-bump).
+- Audit log con **ambos SHAs**: `head_sha_preview` + `head_sha_post_bump`.
+- Si el bump falla, se registra en audit y se aborta sin taggear.
+
+**Test end-to-end verificado:**
+
+- Preview `v9.9.10` -> `target_version=9.9.10+8`.
+- Trigger -> commit nuevo `3a92c14` (bump a 9.9.10+8) + tag `v9.9.10` sobre el nuevo commit.
+- Audit log con trazabilidad completa (`8211818 -> 3a92c14`).
+- Cleanup completo: workflow cancelado, tag borrado, main revertido.
+
+**Impacto real:**
+
+Desde la app admin, publicar `0.3.5` genera commit con pubspec `0.3.5+8` + tag `v0.3.5` **sincronizados**. El workflow usa la version correcta.
+
+**VS Code Remote SSH adoptado:**
+
+- Herramienta nueva para editar backend sin heredocs + PowerShell.
+- `Ctrl+S` edita directo en el server.
+- Documentado en `docs/DEV_ENVIRONMENT.md` (seccion nueva).
+- Regla de oro actualizada: Backend -> ventana SSH, Flutter -> ventana Windows.
+
+**Bug encontrado y fixeado:**
+
+- El commit `18e7857` quedo **incompleto** (solo `services_repo.py`).
+- Causa: `git reset --hard` durante el cleanup del test revirtio `services_release.py`.
+- Fix: commit `ab26ab8` re-aplico los cambios.
+- Leccion: `git reset --hard` es peligroso con cambios sin commitear. Verificar con `git stash` antes de correrlo.
+
+**Commits:**
+
+- `18e7857` feat(ops): auto-bump de pubspec.yaml antes de taggear (Fase 2e)
+- `ab26ab8` fix(ops): re-aplicar auto-bump en services_release.py
+
+**Estado del modulo ops (Fase 2 COMPLETA + extendida):**
+
+- 2a: audit log.
+- 2b: preview endpoint.
+- 2c: trigger endpoint (4 safety rails).
+- 2d: frontend completo.
+- 2e: auto-bump pubspec + push atomico.
+
+**Fase 3 (roadmap):** live streaming (SSE) sobre audit log + webhooks GitHub.
+
+**Deuda tecnica documentada:**
+
+- Migracion de PAT a GitHub App (sub-fase 2f).
+- Considerar flow de "revert commit" en lugar de `--force push` cuando haya equipo trabajando en paralelo.
+
 ### 2026-10-16 (cont. 45) - Fase 2d del modulo ops + FASE 2 COMPLETA
 
 **Frontend del release trigger + prueba end-to-end en emulador. El feature es 100% usable.**
