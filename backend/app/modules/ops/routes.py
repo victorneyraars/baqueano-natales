@@ -19,10 +19,12 @@ from app.modules.ops import (
     services_health,
     services_links,
     services_play,
+    services_quick_links,
 )
 from app.modules.ops.deps import AdminUser
 from app.modules.ops.schemas import (
     LinksResponse,
+    QuickLinksResponse,
     RunDetail,
     RunsResponse,
     SystemHealth,
@@ -98,3 +100,14 @@ async def listar_tracks(admin: AdminUser) -> TracksResponse:
 async def obtener_links(admin: AdminUser) -> LinksResponse:
     """Links de descarga de las 2 apps."""
     return services_links.obtener_links()
+
+@router.get(
+    "/quick-links",
+    response_model=QuickLinksResponse,
+    summary="Quick links a dashboards externos",
+    description="Links directos a Play Console, GitHub, Cloudflare, RackNerd.",
+)
+async def obtener_quick_links_endpoint(admin: AdminUser) -> QuickLinksResponse:
+    """Quick links agrupados por categoria."""
+    return services_quick_links.obtener_quick_links()
+

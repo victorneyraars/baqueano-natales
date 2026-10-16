@@ -10,6 +10,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Configuración central de la aplicación."""
+    # ============================================================
+    # Ops Dashboard - Quick Links
+    # ============================================================
+    PLAY_CONSOLE_DEV_ID: str = "5489050729101024675"
+    PLAY_CONSOLE_APP_ID_CLIENT: str = ""
+    PLAY_CONSOLE_APP_ID_ADMIN: str = "4973778958369099895"
+    CLOUDFLARE_DASHBOARD_URL: str = "https://dash.cloudflare.com"
+    RACKNERD_DASHBOARD_URL: str = "https://my.racknerd.com"
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

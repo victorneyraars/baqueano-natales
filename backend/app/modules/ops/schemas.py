@@ -152,3 +152,31 @@ class SystemHealth(BaseModel):
 
     # Links de descarga (atajo)
     links: LinksResponse
+
+# ============================================================
+# Quick links (accesos rapidos a dashboards externos)
+# ============================================================
+class QuickLink(BaseModel):
+    """Un link a un dashboard o herramienta externa."""
+
+    id: str
+    label: str
+    description: str | None = None
+    url: str
+    icon: str = Field(description="Nombre semantico del icono")
+
+
+class QuickLinkCategory(BaseModel):
+    """Una categoria de links (ej. Play Console, GitHub)."""
+
+    id: str
+    label: str
+    icon: str
+    links: list[QuickLink]
+
+
+class QuickLinksResponse(BaseModel):
+    """Respuesta con todas las categorias y links."""
+
+    categories: list[QuickLinkCategory]
+
