@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.core.config import settings
-from app.modules.ops import services_github
+from app.modules.ops import services_github, services_repo
 from app.modules.ops.schemas import (
     ReleasePreviewRequest,
     ReleasePreviewResponse,
@@ -317,10 +317,53 @@ async def ejecutar_release(
         },
     )
 
-    # 5. Crear tag en GitHub (dispara workflow Release)
+    # 5. Bump pubspec.yaml + push (para que el workflow use la version nueva)
+    try:
+        bump_result = await services_repo.bump_pubspec_and_push(
+            version_name=version_name,
+            version_code=next_version_code,
+            branch=branch,
+            user_email=user_email,
+        )
+    except services_repo.RepoWriteError as e:
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        await services_audit.registrar(
+            db,
+            user_id=user_id,
+            user_email=user_email,
+            action="release.trigger",
+            status="error",
+            target=target_tag,
+            payload={
+                "version_name": version_name,
+                "next_version_code": next_version_code,
+                "head_sha": current_sha,
+                "branch": branch,
+            },
+            error_message=f"Fallo al bumpear pubspec: {e.message}",
+            duration_ms=duration_ms,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise ReleaseTriggerError(
+            f"No se pudo actualizar pubspec.yaml: {e.message}",
+            http_status=e.http_status,
+        ) from e
+
+    bumped_sha = bump_result["commit_sha"]
+    logger.info(
+        "ops.release.pubspec_bumped",
+        extra={
+            "old_sha": current_sha,
+            "new_sha": bumped_sha,
+            "no_change": bump_result.get("no_change", False),
+        },
+    )
+
+    # 6. Crear tag en GitHub (sobre el NUEVO commit con pubspec actualizado)
     tag_result = await services_github.create_tag(
         tag_name=target_tag,
-        sha=current_sha,
+        sha=bumped_sha,
         message=f"Release {target_tag} desde Ops Dashboard",
     )
 
@@ -362,8 +405,10 @@ async def ejecutar_release(
         payload={
             "version_name": version_name,
             "next_version_code": next_version_code,
-            "head_sha": current_sha,
+            "head_sha_preview": current_sha,
+            "head_sha_post_bump": bumped_sha,
             "branch": branch,
+            "no_change": bump_result.get("no_change", False),
         },
         result={"tag_ref": tag_result.get("ref", "")},
         duration_ms=duration_ms,
@@ -385,7 +430,7 @@ async def ejecutar_release(
 
     return ReleaseTriggerResponse(
         tag=target_tag,
-        commit_sha=current_sha,
+        commit_sha=bumped_sha,
         workflow_name=RELEASE_WORKFLOW_NAME,
         estimated_duration_min=ESTIMATED_RELEASE_DURATION_MIN,
         github_url=f"https://github.com/{settings.GITHUB_OPS_REPO}/actions",
