@@ -329,3 +329,74 @@ async def obtener_ultimo_run_exitoso(workflow_name: str = "Release") -> RunInfo 
     except Exception as e:
         logger.error("ops.github.last_success_error", extra={"error": str(e)})
         return None
+
+
+# ============================================================
+# Fase 2 - Funciones de lectura para el release preview
+# ============================================================
+async def get_ref(ref: str) -> dict[str, Any] | None:
+    """Lee un ref (tag o branch). Devuelve {ref, object: {sha, type}} o None."""
+    try:
+        client = _get_http_client()
+        r = await client.get(f"/repos/{settings.GITHUB_OPS_REPO}/git/ref/{ref}")
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        return r.json()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return None
+        logger.error("ops.github.get_ref_error", extra={"ref": ref, "status": e.response.status_code})
+        return None
+    except Exception as e:
+        logger.error("ops.github.get_ref_unexpected", extra={"ref": ref, "error": str(e)})
+        return None
+
+
+async def tag_exists(tag_name: str) -> bool:
+    """True si el tag ya existe en el repo."""
+    ref = await get_ref(f"tags/{tag_name}")
+    return ref is not None
+
+
+async def get_head_commit(branch: str = "main") -> dict[str, Any] | None:
+    """Devuelve {sha, message, date} del ultimo commit del branch."""
+    try:
+        client = _get_http_client()
+        r = await client.get(
+            f"/repos/{settings.GITHUB_OPS_REPO}/commits/{branch}",
+            params={"per_page": 1},
+        )
+        r.raise_for_status()
+        data = r.json()
+        commit = data.get("commit", {})
+        return {
+            "sha": data.get("sha", ""),
+            "message": commit.get("message", "").split("\n")[0][:200],
+            "date": commit.get("committer", {}).get("date"),
+        }
+    except Exception as e:
+        logger.error("ops.github.get_head_error", extra={"branch": branch, "error": str(e)})
+        return None
+
+
+async def get_file_content(path: str, ref: str = "main") -> str | None:
+    """Lee un archivo del repo. Devuelve el contenido (decodificado) o None."""
+    import base64
+    try:
+        client = _get_http_client()
+        r = await client.get(
+            f"/repos/{settings.GITHUB_OPS_REPO}/contents/{path}",
+            params={"ref": ref},
+        )
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        data = r.json()
+        if data.get("encoding") == "base64":
+            content = base64.b64decode(data["content"]).decode("utf-8")
+            return content
+        return None
+    except Exception as e:
+        logger.error("ops.github.get_file_error", extra={"path": path, "error": str(e)})
+        return None

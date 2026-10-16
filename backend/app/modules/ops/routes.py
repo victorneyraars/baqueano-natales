@@ -20,10 +20,13 @@ from app.modules.ops import (
     services_links,
     services_play,
     services_quick_links,
+    services_release,
 )
 from app.modules.ops.deps import AdminUser
 from app.modules.ops.schemas import (
     LinksResponse,
+    ReleasePreviewRequest,
+    ReleasePreviewResponse,
     QuickLinksResponse,
     RunDetail,
     RunsResponse,
@@ -111,3 +114,23 @@ async def obtener_quick_links_endpoint(admin: AdminUser) -> QuickLinksResponse:
     """Quick links agrupados por categoria."""
     return services_quick_links.obtener_quick_links()
 
+
+# ============================================================
+# Fase 2b - Release preview (dry-run)
+# ============================================================
+@router.post(
+    "/release/preview",
+    response_model=ReleasePreviewResponse,
+    summary="Preview de un release (dry-run)",
+    description=(
+        "Valida que se pueda taggear (tag libre, versionCode mayor a Play, "
+        "HEAD accesible, pubspec parseable) y devuelve un preview_token "
+        "firmado (5 min de validez) para ejecutar el release despues."
+    ),
+)
+async def preview_release(
+    request: ReleasePreviewRequest,
+    admin: AdminUser,
+) -> ReleasePreviewResponse:
+    """Genera un preview del release sin ejecutar nada."""
+    return await services_release.generar_preview(request, admin.id)

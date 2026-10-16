@@ -180,3 +180,57 @@ class QuickLinksResponse(BaseModel):
 
     categories: list[QuickLinkCategory]
 
+
+# ============================================================
+# Fase 2 - Release trigger (preview + confirm)
+# ============================================================
+class ReleasePreviewRequest(BaseModel):
+    """Input para pedir el preview de un release."""
+
+    version_name: str = Field(
+        description="Version sin '+N', ej. '0.3.5'",
+        pattern=r"^\d+\.\d+\.\d+$",
+    )
+    branch: str = Field(default="main", description="Branch a taggear")
+
+
+class ValidationCheck(BaseModel):
+    """Una validacion previa al release."""
+
+    name: str
+    status: Literal["ok", "warning", "error"]
+    detail: str | None = None
+
+
+class ReleasePreviewResponse(BaseModel):
+    """Preview de lo que va a pasar si se ejecuta el release."""
+
+    # Versiones calculadas
+    current_version: str = Field(description="Ej. '0.3.4+7'")
+    target_version: str = Field(description="Ej. '0.3.5+8'")
+    target_tag: str = Field(description="Ej. 'v0.3.5'")
+    next_version_code: int
+
+    # Estado del branch objetivo
+    head_sha: str
+    head_commit_message: str
+    head_commit_age_minutes: int | None = None
+
+    # Validaciones
+    validations: list[ValidationCheck]
+    can_proceed: bool = Field(description="True si no hay validaciones en 'error'")
+
+    # Estimaciones
+    estimated_duration_min: int
+    workflow_name: str = Field(description="Workflow que se va a disparar")
+
+    # Preview token (firma lo que el usuario vio)
+    preview_token: str
+    expires_at: datetime
+
+
+class ReleaseTriggerRequest(BaseModel):
+    """Input para ejecutar el release (2c). Requiere el preview_token previo."""
+
+    preview_token: str
+    confirm: str = Field(description="Debe ser exactamente 'CONFIRMAR'")
