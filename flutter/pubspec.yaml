@@ -1,8 +1,7 @@
 name: baqueano_natales
 description: "Baqueano Natales - Superapp regional (cliente + admin)"
 publish_to: 'none'
-version: 0.3.3+6
-
+version: 0.3.4+7
 environment:
   sdk: ^3.13.0
 
