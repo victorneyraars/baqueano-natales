@@ -11,6 +11,73 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 45) - Fase 2d del modulo ops + FASE 2 COMPLETA
+
+**Frontend del release trigger + prueba end-to-end en emulador. El feature es 100% usable.**
+
+**Que se entrego (2d):**
+
+- **Models Dart** (`ops_models.dart`):
+  - `ValidationStatus` enum (ok/warning/error).
+  - `ValidationCheck` (name, status, detail).
+  - `ReleasePreview` (versiones + validaciones + preview_token + expires_at).
+  - `ReleaseTrigger` (tag, sha, workflow, github_url, audit_log_id, message).
+  - Getters: `errorCount`, `warningCount`.
+
+- **Repository** (`ops_repository.dart`):
+  - `releasePreview(versionName, branch)` -> POST `/release/preview`.
+  - `releaseTrigger(previewToken)` -> POST `/release/trigger` (con `confirm: 'CONFIRMAR'` automatico).
+
+- **Providers** (`ops_providers.dart`):
+  - `ReleasePreviewParams` (inmutable, family param).
+  - `opsReleasePreviewProvider` (family).
+
+- **Pantalla** (`ops_release_screen.dart`, ~450 lineas):
+  - Form con validacion de version_name (X.Y.Z).
+  - Boton "Generar preview" -> muestra el preview.
+  - Preview card con: versiones (actual -> nueva), tag, versionCode, workflow, duracion, commit a taggear.
+  - Validaciones con iconos verde/naranja/rojo.
+  - Boton "Publicar release" (disabled si can_proceed=false).
+  - Modal de confirmacion con input `CONFIRMAR` (habilitado solo si matchea exacto).
+  - Trigger -> resultado con tag, sha, github_url + boton "Ver workflow en GitHub".
+
+- **Wire**:
+  - Ruta `/admin/ops/release` en `app_router.dart`.
+  - Boton `rocket_launch` en el AppBar del Ops Dashboard.
+
+**Verificado end-to-end en emulador Android 14:**
+
+- Pantalla carga correctamente.
+- Form valida inputs invalidos.
+- Preview de `0.3.5`: current `0.3.4+7` -> target `0.3.5+8`, tag `v0.3.5`, 4 validaciones OK, boton "Publicar release" habilitado (verde).
+- Preview de `0.3.4`: detecta "tag duplicado" en rojo, boton deshabilitado (gris).
+- `flutter analyze`: No issues found! (3.5s).
+
+**Estado del modulo ops (Fase 2 COMPLETA):**
+
+- **Fase 1 (read-only):** health + runs + tracks + links + quick-links.
+- **Fase 2 (acciones):**
+  - 2a: audit log (tabla `ops_audit_log`).
+  - 2b: preview endpoint (dry-run).
+  - 2c: trigger endpoint (crea tag + dispara workflow + 4 safety rails).
+  - 2d: frontend completo.
+- **Fase 3 (roadmap):** live streaming (SSE) sobre audit log + webhooks GitHub.
+
+**Commits:**
+
+- `d789561` feat(ops): Fase 2d - pantalla de release trigger en Flutter (frontend)
+
+**Deuda tecnica documentada:**
+
+- Migracion de PAT a GitHub App (sub-fase 2e).
+- Documentar procedimiento "Remote SSH + git apply" en lugar de heredoc + string replace.
+
+**Lecciones de la sesion (sobre los errores de edicion):**
+
+- El patron heredoc `@'...'@` + `.Replace()` es fragil: CRLF vs LF, escapado de strings, regex.
+- Mejor patron: VS Code Remote SSH o git apply (patches).
+- Ver seccion nueva en `docs/DEV_ENVIRONMENT.md` (proxima).
+
 ### 2026-10-16 (cont. 44) - Fase 2b + 2c del modulo ops (release trigger)
 
 **Preview + trigger de releases desde el Ops Dashboard. 4 safety rails. Auditado.**
