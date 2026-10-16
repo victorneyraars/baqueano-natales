@@ -11,6 +11,68 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 43) - Fase 2a del modulo ops: audit log
+
+**Primera sub-fase de la Fase 2 (trigger de releases desde la app). Base para auditoria + live streaming (Fase 3).**
+
+**Que se entrego:**
+
+- **Tabla `ops_audit_log`** (append-only):
+  - Quien: `user_id` (FK SET NULL), `user_email` (snapshot).
+  - Que: `action` (`release.trigger`, etc.), `target` (tag/track).
+  - Resultado: `status` (`pending|success|error|rejected|cancelled`), `error_message`.
+  - Detalle: `payload` (JSONB, sanitizado), `result` (JSONB), `duration_ms`.
+  - Contexto: `ip_address`, `user_agent`.
+  - Indexes: `action`, `created_at`, `status`, `user_id`.
+
+- **Servicio `services_audit.py`** con `registrar()`:
+  - **Best-effort**: nunca propaga excepcion, devuelve `None` si falla.
+  - **Sanitizacion automatica**: campos con `token|password|secret|authorization|pat|api_key|access_token|refresh_token` -> `"***"`.
+  - **Truncado**: payload strings 1KB, error 2KB, user_agent 500B.
+  - Soporta `db=None` (abre sesion propia, util para `BackgroundTasks` post-request).
+
+**Migracion Alembic `96ba32d7100d`:**
+
+- Aplicada en **dev** y **prod**.
+- Limpiada a mano (Alembic autogenerate traia ~30 cambios espurios en `usuarios`, `fcm_tokens`, `notification_logs`, `preferencias_notificacion`, `rate_limit_config`, `orden_fotos`).
+- `env.py` actualizado con `from app.modules.ops import models`.
+
+**Test end-to-end (dev):**
+
+- Insercion + lectura OK.
+- Sanitizacion OK: `{"token": "SHOULD_BE_SANITIZED"}` -> `{"token": "***"}`.
+- Best-effort OK: email de 500 chars -> `None`, sin propagar excepcion.
+
+**Bug encontrado (patron conocido):**
+
+`backend-prod` no tiene el volumen `./backend/app` montado (imagen autocontenida). Requiere rebuild despues de cambios en `backend/app/`. `backend-dev` si lo tiene. Es la misma asimetria que encontramos con quick-links.
+
+**Leccion operativa:**
+
+- **Dev**: `./backend/app` montado -> cambios en Python requieren restart (no rebuild) + a veces ni eso (hot reload no siempre dispara).
+- **Prod**: imagen autocontenida -> SIEMPRE rebuild + restart.
+
+**Lecciones tecnicas:**
+
+- `docker exec python3 script.py` falla con `ModuleNotFoundError: app` — el `-w /app` NO es suficiente, hay que usar `-e PYTHONPATH=/app`.
+- El patron "import de todos los modelos antes de AsyncSessionLocal" en scripts standalone es OBLIGATORIO (gotcha 4.3 del OPERATIVA_DEV).
+
+**Commits:**
+
+- `ae79e46` feat(ops): Fase 2a - tabla ops_audit_log + servicio de auditoria
+
+**Pendiente siguiente (Fase 2 continuacion):**
+
+- **2b**: endpoint `POST /admin/ops/release/preview` (dry-run).
+- **2c**: endpoint `POST /admin/ops/release` (trigger real, requiere `{"confirm": "CONFIRMAR"}` + rate limit 10 min + validaciones).
+- **2d**: frontend (boton + modal + historial).
+
+**Decision de diseno pendiente (confirmada):**
+
+- PAT fine-grained primero, migrar a GitHub App en fase separada (2e).
+- Preview obligatorio antes de trigger.
+- Audit solo de acciones que cambian estado (preview NO se audita -> mantiene log limpio).
+
 ### 2026-10-16 (cont. 42) - Scripts de deploy validados end-to-end
 
 **deploy-dev.sh y deploy-prod.sh probados y funcionando.**
