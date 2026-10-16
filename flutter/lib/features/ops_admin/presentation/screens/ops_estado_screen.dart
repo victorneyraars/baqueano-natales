@@ -127,6 +127,8 @@ class _VistaPhone extends ConsumerWidget {
         const _RunsCard(),
         const SizedBox(height: 16),
         _LinksCard(health: health),
+        const SizedBox(height: 16),
+        const _QuickLinksCard(),
         const SizedBox(height: 24),
       ],
     );
@@ -164,6 +166,8 @@ class _VistaTablet extends ConsumerWidget {
                   const _RunsCard(),
                   const SizedBox(height: 16),
                   _LinksCard(health: health),
+                  const SizedBox(height: 16),
+                  const _QuickLinksCard(),
                 ],
               ),
             ),
@@ -704,5 +708,193 @@ class _VistaError extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+// ============================================================
+// Quick links (accesos a dashboards externos)
+// ============================================================
+
+class _QuickLinksCard extends ConsumerWidget {
+  const _QuickLinksCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final linksAsync = ref.watch(opsQuickLinksProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Accesos directos',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Dashboards externos sin salir de la app',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            linksAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Text(
+                'Error: $e',
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.red),
+              ),
+              data: (resp) {
+                if (resp.categories.isEmpty) {
+                  return Text('Sin accesos', style: theme.textTheme.bodySmall);
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final cat in resp.categories) ...[
+                      _QuickLinkCategorySection(categoria: cat),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickLinkCategorySection extends StatelessWidget {
+  const _QuickLinkCategorySection({required this.categoria});
+
+  final QuickLinkCategory categoria;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Icon(_iconForQuickLink(categoria.icon), size: 16,
+                  color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                categoria.label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (final link in categoria.links) _QuickLinkTile(link: link),
+      ],
+    );
+  }
+}
+
+class _QuickLinkTile extends StatelessWidget {
+  const _QuickLinkTile({required this.link});
+
+  final QuickLink link;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => _abrirLink(context, link.url),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(_iconForQuickLink(link.icon), size: 20,
+                color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    link.label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (link.description != null && link.description!.isNotEmpty)
+                    Text(
+                      link.description!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _abrirLink(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || url.isEmpty) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir: $url')),
+      );
+    }
+  }
+}
+
+IconData _iconForQuickLink(String nombre) {
+  switch (nombre) {
+    case 'people':
+      return Icons.people_outline;
+    case 'rocket':
+      return Icons.rocket_launch_outlined;
+    case 'shop':
+      return Icons.shop_outlined;
+    case 'git':
+      return Icons.code;
+    case 'play':
+      return Icons.play_circle_outline;
+    case 'tag':
+      return Icons.local_offer_outlined;
+    case 'bug':
+      return Icons.bug_report_outlined;
+    case 'cloud':
+      return Icons.cloud_outlined;
+    case 'server':
+      return Icons.dns_outlined;
+    case 'health':
+      return Icons.monitor_heart_outlined;
+    case 'dashboard':
+      return Icons.dashboard_outlined;
+    default:
+      return Icons.link;
   }
 }

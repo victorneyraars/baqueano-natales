@@ -79,3 +79,10 @@ final opsLinksProvider = FutureProvider<LinksResponse>((ref) async {
   final repo = ref.read(opsRepositoryProvider);
   return repo.links();
 });
+// ==================== Quick Links ====================
+
+/// Quick links a dashboards externos (Play Console, GitHub, etc.).
+final opsQuickLinksProvider = FutureProvider<QuickLinksResponse>((ref) async {
+  final repo = ref.read(opsRepositoryProvider);
+  return repo.quickLinks();
+});

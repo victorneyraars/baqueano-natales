@@ -541,3 +541,74 @@ class SystemHealth {
       components.isNotEmpty &&
       components.every((c) => c.status == ComponentStatus.ok);
 }
+// ============================================================
+// Quick links (accesos rapidos a dashboards externos)
+// ============================================================
+
+/// Un link a un dashboard o herramienta externa.
+class QuickLink {
+  final String id;
+  final String label;
+  final String? description;
+  final String url;
+  final String icon;
+
+  const QuickLink({
+    required this.id,
+    required this.label,
+    this.description,
+    this.url = '',
+    this.icon = '',
+  });
+
+  factory QuickLink.fromJson(Map<String, dynamic> json) {
+    return QuickLink(
+      id: _asString(json['id']) ?? '',
+      label: _asString(json['label']) ?? '',
+      description: _asString(json['description']),
+      url: _asString(json['url']) ?? '',
+      icon: _asString(json['icon']) ?? '',
+    );
+  }
+}
+
+/// Una categoria de links (ej. Play Console, GitHub).
+class QuickLinkCategory {
+  final String id;
+  final String label;
+  final String icon;
+  final List<QuickLink> links;
+
+  const QuickLinkCategory({
+    required this.id,
+    required this.label,
+    this.icon = '',
+    this.links = const [],
+  });
+
+  factory QuickLinkCategory.fromJson(Map<String, dynamic> json) {
+    return QuickLinkCategory(
+      id: _asString(json['id']) ?? '',
+      label: _asString(json['label']) ?? '',
+      icon: _asString(json['icon']) ?? '',
+      links: _asListOfMap(json['links'])
+          .map(QuickLink.fromJson)
+          .toList(growable: false),
+    );
+  }
+}
+
+/// Respuesta con todas las categorias y links.
+class QuickLinksResponse {
+  final List<QuickLinkCategory> categories;
+
+  const QuickLinksResponse({this.categories = const []});
+
+  factory QuickLinksResponse.fromJson(Map<String, dynamic> json) {
+    return QuickLinksResponse(
+      categories: _asListOfMap(json['categories'])
+          .map(QuickLinkCategory.fromJson)
+          .toList(growable: false),
+    );
+  }
+}

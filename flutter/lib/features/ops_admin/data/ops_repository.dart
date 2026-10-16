@@ -107,4 +107,18 @@ class OpsRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+  /// Quick links a dashboards externos (Play Console, GitHub, Cloudflare, etc.).
+  Future<QuickLinksResponse> quickLinks() async {
+    try {
+      final res = await _dio.get('$_base/quick-links');
+      return QuickLinksResponse.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }
