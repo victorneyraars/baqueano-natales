@@ -325,6 +325,68 @@ usar `core.security.create_access_token()`, no armar el payload a mano.
 
 ---
 
+## Flujo canonico de deploy backend (ACTUALIZADO 2026-10-16)
+
+**Regla de oro:** despues de cada `git pull` en el server, SIEMPRE rebuild + restart del backend.
+
+**Motivo:** el hot reload de uvicorn NO es confiable en mounts de volumen. El codigo nuevo queda en disco pero el proceso sigue corriendo la version vieja. Sintoma: el endpoint devuelve 404 aunque el archivo exista y el container diga "healthy".
+
+### Opcion A - Scripts de deploy (RECOMENDADO)
+
+    # DEV
+    ssh deploy@104.129.59.151 "bash ~/baqueano-natales/scripts/deploy-dev.sh"
+
+    # PROD (pide escribir "CONFIRMAR")
+    ssh deploy@104.129.59.151 "bash ~/baqueano-natales/scripts/deploy-prod.sh"
+
+Los scripts hacen todo: `git pull` + `build` + `up -d` + `healthcheck`. Si el healthcheck falla, sale con codigo != 0 y muestra los logs.
+
+### Opcion B - Comandos manuales
+
+    # DEV
+    ssh deploy@104.129.59.151 "cd ~/baqueano-natales && \
+      git pull --rebase origin main && \
+      docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend-dev && \
+      docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend-dev"
+
+    # PROD
+    ssh deploy@104.129.59.151 "cd ~/baqueano-natales && \
+      git pull --rebase origin main && \
+      docker compose -f docker-compose.yml -f docker-compose.prod.yml build backend-prod && \
+      docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend-prod"
+
+### Nombres de servicio (IMPORTANTE)
+
+| Entorno | Servicio | Container |
+|---|---|---|
+| Dev  | `backend-dev`  | `baqueano_backend_dev`  |
+| Prod | `backend-prod` | `baqueano_backend_prod` |
+
+**NO existe** el servicio `backend` (es un error comun). Siempre usar `-dev` o `-prod`.
+
+### Verificar que el deploy tomo el codigo nuevo
+
+    # El container debe decir "Up X seconds" (no "25 hours")
+    ssh deploy@104.129.59.151 "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep backend"
+
+    # El endpoint nuevo debe responder
+    curl.exe -s https://api-dev.baqueanonatales.com/health
+
+### Cuando rebuildea automatico vs cuando no
+
+**REBUILD obligatorio si:**
+- Hubo cambios en `backend/` (Python).
+- Hubo cambios en `requirements.txt` (dependencias nuevas).
+- Hubo cambios en el `Dockerfile`.
+
+**RESTART simple alcanza si:**
+- Solo cambiaste `.env` (recrear container: `up -d` sin `build`).
+- Solo tocaste archivos fuera de `backend/` (docs, flutter).
+
+**Nada si:**
+- Solo commiteaste docs sin tocar backend.
+
+---
 ## Worker social (Etapa 3)
 
 Worker in-process con APScheduler que procesa la cola publicaciones_sociales
