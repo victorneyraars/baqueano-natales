@@ -86,3 +86,36 @@ final opsQuickLinksProvider = FutureProvider<QuickLinksResponse>((ref) async {
   final repo = ref.read(opsRepositoryProvider);
   return repo.quickLinks();
 });
+// ==================== Fase 2 - Release ====================
+
+/// Parametros del preview (inmutables).
+class ReleasePreviewParams {
+  const ReleasePreviewParams({
+    required this.versionName,
+    this.branch = 'main',
+  });
+
+  final String versionName;
+  final String branch;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReleasePreviewParams &&
+          runtimeType == other.runtimeType &&
+          versionName == other.versionName &&
+          branch == other.branch;
+
+  @override
+  int get hashCode => Object.hash(versionName, branch);
+}
+
+/// Preview de un release (family por params).
+final opsReleasePreviewProvider =
+    FutureProvider.family<ReleasePreview, ReleasePreviewParams>((ref, params) async {
+  final repo = ref.read(opsRepositoryProvider);
+  return repo.releasePreview(
+    versionName: params.versionName,
+    branch: params.branch,
+  );
+});

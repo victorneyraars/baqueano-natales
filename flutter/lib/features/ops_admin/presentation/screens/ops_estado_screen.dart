@@ -14,6 +14,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -83,6 +84,11 @@ class _OpsEstadoScreenState extends ConsumerState<OpsEstadoScreen>
       appBar: AppBar(
         title: const Text('Ops Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.rocket_launch),
+            tooltip: 'Publicar nueva version',
+            onPressed: () => context.push('/admin/ops/release'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refrescar todo',

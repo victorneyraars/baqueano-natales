@@ -20,6 +20,7 @@ import 'package:baqueano_natales/features/admin/presentation/screens/admin_detal
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
 import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_estado_screen.dart';
+import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_release_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_cuentas_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
@@ -265,6 +266,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/admin/ops',
           name: 'admin-ops',
           builder: (context, state) => const OpsEstadoScreen(),
+        ),
+
+        // Admin - Ops Release (crear tag + disparar workflow)
+        GoRoute(
+          path: '/admin/ops/release',
+          name: 'admin-ops-release',
+          builder: (context, state) => const OpsReleaseScreen(),
         ),
 
       // =========================================================

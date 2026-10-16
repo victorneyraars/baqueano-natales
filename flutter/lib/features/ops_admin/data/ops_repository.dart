@@ -121,4 +121,52 @@ class OpsRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+  // ==================== Fase 2 - Release ====================
+
+  /// Preview de un release (dry-run). Valida + calcula versiones.
+  Future<ReleasePreview> releasePreview({
+    required String versionName,
+    String branch = 'main',
+  }) async {
+    try {
+      final res = await _dio.post(
+        '$_base/release/preview',
+        data: {
+          'version_name': versionName,
+          'branch': branch,
+        },
+      );
+      return ReleasePreview.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Ejecuta el release: crea el tag en GitHub.
+  Future<ReleaseTrigger> releaseTrigger({
+    required String previewToken,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '$_base/release/trigger',
+        data: {
+          'preview_token': previewToken,
+          'confirm': 'CONFIRMAR',
+        },
+      );
+      return ReleaseTrigger.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

@@ -612,3 +612,145 @@ class QuickLinksResponse {
     );
   }
 }
+// ============================================================
+// Fase 2 - Release preview + trigger
+// ============================================================
+
+/// Estado de una validacion previa al release.
+enum ValidationStatus {
+  ok,
+  warning,
+  error;
+
+  static ValidationStatus fromRaw(String? raw) {
+    switch (raw) {
+      case 'ok':
+        return ValidationStatus.ok;
+      case 'warning':
+        return ValidationStatus.warning;
+      case 'error':
+        return ValidationStatus.error;
+      default:
+        return ValidationStatus.error;
+    }
+  }
+}
+
+/// Una validacion previa al release.
+class ValidationCheck {
+  final String name;
+  final ValidationStatus status;
+  final String? detail;
+
+  const ValidationCheck({
+    required this.name,
+    this.status = ValidationStatus.error,
+    this.detail,
+  });
+
+  factory ValidationCheck.fromJson(Map<String, dynamic> json) {
+    return ValidationCheck(
+      name: _asString(json['name']) ?? '',
+      status: ValidationStatus.fromRaw(_asString(json['status'])),
+      detail: _asString(json['detail']),
+    );
+  }
+}
+
+/// Preview de un release (respuesta del endpoint).
+class ReleasePreview {
+  final String currentVersion;
+  final String targetVersion;
+  final String targetTag;
+  final int nextVersionCode;
+
+  final String headSha;
+  final String headCommitMessage;
+  final int? headCommitAgeMinutes;
+
+  final List<ValidationCheck> validations;
+  final bool canProceed;
+
+  final int estimatedDurationMin;
+  final String workflowName;
+
+  final String previewToken;
+  final DateTime? expiresAt;
+
+  const ReleasePreview({
+    this.currentVersion = '',
+    this.targetVersion = '',
+    this.targetTag = '',
+    this.nextVersionCode = 0,
+    this.headSha = '',
+    this.headCommitMessage = '',
+    this.headCommitAgeMinutes,
+    this.validations = const [],
+    this.canProceed = false,
+    this.estimatedDurationMin = 0,
+    this.workflowName = '',
+    this.previewToken = '',
+    this.expiresAt,
+  });
+
+  factory ReleasePreview.fromJson(Map<String, dynamic> json) {
+    return ReleasePreview(
+      currentVersion: _asString(json['current_version']) ?? '',
+      targetVersion: _asString(json['target_version']) ?? '',
+      targetTag: _asString(json['target_tag']) ?? '',
+      nextVersionCode: _asInt(json['next_version_code']) ?? 0,
+      headSha: _asString(json['head_sha']) ?? '',
+      headCommitMessage: _asString(json['head_commit_message']) ?? '',
+      headCommitAgeMinutes: _asInt(json['head_commit_age_minutes']),
+      validations: _asListOfMap(json['validations'])
+          .map(ValidationCheck.fromJson)
+          .toList(growable: false),
+      canProceed: json['can_proceed'] == true,
+      estimatedDurationMin: _asInt(json['estimated_duration_min']) ?? 0,
+      workflowName: _asString(json['workflow_name']) ?? '',
+      previewToken: _asString(json['preview_token']) ?? '',
+      expiresAt: _asDateTime(json['expires_at']),
+    );
+  }
+
+  /// Cantidad de validaciones con error.
+  int get errorCount =>
+      validations.where((v) => v.status == ValidationStatus.error).length;
+
+  /// Cantidad de validaciones con warning.
+  int get warningCount =>
+      validations.where((v) => v.status == ValidationStatus.warning).length;
+}
+
+/// Respuesta del trigger de release.
+class ReleaseTrigger {
+  final String tag;
+  final String commitSha;
+  final String workflowName;
+  final int estimatedDurationMin;
+  final String githubUrl;
+  final String auditLogId;
+  final String message;
+
+  const ReleaseTrigger({
+    this.tag = '',
+    this.commitSha = '',
+    this.workflowName = '',
+    this.estimatedDurationMin = 0,
+    this.githubUrl = '',
+    this.auditLogId = '',
+    this.message = '',
+  });
+
+  factory ReleaseTrigger.fromJson(Map<String, dynamic> json) {
+    return ReleaseTrigger(
+      tag: _asString(json['tag']) ?? '',
+      commitSha: _asString(json['commit_sha']) ?? '',
+      workflowName: _asString(json['workflow_name']) ?? '',
+      estimatedDurationMin: _asInt(json['estimated_duration_min']) ?? 0,
+      githubUrl: _asString(json['github_url']) ?? '',
+      auditLogId: _asString(json['audit_log_id']) ?? '',
+      message: _asString(json['message']) ?? '',
+    );
+  }
+}
