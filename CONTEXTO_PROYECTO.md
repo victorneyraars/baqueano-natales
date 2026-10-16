@@ -11,6 +11,49 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 42) - Scripts de deploy validados end-to-end
+
+**deploy-dev.sh y deploy-prod.sh probados y funcionando.**
+
+**Tests ejecutados:**
+
+1. **deploy-dev.sh** con marker de test:
+   - Marker commiteado en `services_quick_links.py`.
+   - Script corrido: pull + build + recreate + healthcheck.
+   - Resultado: `DEPLOY OK`. Container recreado correctamente.
+
+2. **deploy-prod.sh** con cancelacion:
+   - Input "no" al prompt.
+   - Resultado: `Cancelado.` + exit 1. Prod NO se toco. ✅
+
+**Bug encontrado y resuelto:**
+
+El healthcheck original tenia 5s de timeout y fallaba con `502`. Uvicorn tarda ~15s en arrancar (imports + DB + workers). Los scripts ahora hacen retry cada 3s hasta 60s.
+
+**Comportamiento correcto del script (idempotente):**
+
+- **Si hay codigo nuevo**: `Recreated` + `Started` → recarga el codigo.
+- **Si no hay cambios**: `Running` → no toca el container.
+
+**Commits:**
+
+- `b959ef4` fix(scripts): retry en healthcheck hasta 60s
+- `0c07385` chore(ops): deploy test marker (2026-10-16 02:01:52) — temporal
+- `b2de665` chore(ops): limpiar marker de test de deploy
+
+**Estado:**
+
+- Regla "siempre rebuild+restart despues de git pull en el server" ahora esta automatizada.
+- El bug del backend desactualizado (que encontramos con quick-links) queda prevenido para el futuro.
+
+**Uso diario:**
+
+    # Dev
+    ssh deploy@104.129.59.151 "bash ~/baqueano-natales/scripts/deploy-dev.sh"
+
+    # Prod (pide escribir CONFIRMAR)
+    ssh deploy@104.129.59.151 "bash ~/baqueano-natales/scripts/deploy-prod.sh"
+
 ### 2026-10-16 (cont. 41) - Release v0.3.4 publicado en Play Store
 
 **Release v0.3.4 firmado, subido y publicado en Play Store internal testing.**
