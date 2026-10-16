@@ -11,6 +11,60 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-15 (cont. 40) - Quick links a dashboards externos (Ops Dashboard)
+
+**El Ops Dashboard ahora tiene "Accesos directos": 15 links a Play Console, GitHub e Infraestructura. Escalable desde el backend.**
+
+**Backend:**
+
+- `schemas.py`: nuevos modelos `QuickLink`, `QuickLinkCategory`, `QuickLinksResponse`.
+- `services_quick_links.py` (nuevo): construye los links desde settings.
+- `routes.py`: nuevo endpoint `GET /admin/ops/quick-links`.
+- `config.py`: 5 settings nuevos (`PLAY_CONSOLE_DEV_ID`, `PLAY_CONSOLE_APP_ID_CLIENT`, `PLAY_CONSOLE_APP_ID_ADMIN`, `CLOUDFLARE_DASHBOARD_URL`, `RACKNERD_DASHBOARD_URL`).
+
+**Frontend:**
+
+- `ops_models.dart`: modelos espejo (`QuickLink`, `QuickLinkCategory`, `QuickLinksResponse`).
+- `ops_repository.dart`: metodo `quickLinks()`.
+- `ops_providers.dart`: `opsQuickLinksProvider`.
+- `ops_estado_screen.dart`: card `_QuickLinksCard` con iconos semanticos + tiles clickeables.
+
+**Categorias (15 links):**
+
+- **Play Console** (7): testers client, internal client, testers admin, internal admin, Play Store client, Play Store admin, console general.
+- **GitHub** (4): repo, actions, releases, issues.
+- **Infraestructura** (4): cloudflare, racknerd, health prod, health dev.
+
+**Escalabilidad:**
+
+Agregar un link nuevo = solo editar `services_quick_links.py` (backend). El frontend renderiza generico segun la respuesta del backend. **Cero cambios en Flutter.**
+
+**Bug encontrado y resuelto (importante):**
+
+El backend dev no tenia el modulo `ops` deployado — el codigo estaba en GitHub pero el proceso de uvicorn llevaba 25h corriendo con la version anterior. El hot reload no se disparo.
+
+**Causa:** `git pull` en el server trae el codigo nuevo al disco, pero no reinicia el proceso de uvicorn. Aunque `./backend/app` este montado como volumen, uvicorn no recarga sin `--reload` explicito o reinicio del container.
+
+**Solucion aplicada:**
+
+    ssh deploy@104.129.59.151 "cd ~/baqueano-natales && \
+      git pull --rebase origin main && \
+      docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend-dev && \
+      docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend-dev"
+
+**Regla nueva:** despues de cada `git pull` en el server, SIEMPRE rebuild + restart del backend correspondiente. El nombre del servicio en dev es `backend-dev` (no `backend`).
+
+**Commits:**
+
+- `08f2fb1` feat(ops): quick links a dashboards externos (backend)
+- `3e2b9f5` feat(ops): quick links a dashboards externos (Play Console, GitHub, Infra)
+
+**Pendiente siguiente:**
+
+- Scripts `scripts/deploy-dev.sh` + `scripts/deploy-prod.sh` para automatizar rebuild+restart (evita el error humano).
+- Documentar el flujo canonico de deploy en `SERVER_CHEATSHEET.md`.
+- Tag `v0.3.4` para publicar.
+
 ### 2026-10-15 (cont. 39) - Entorno de desarrollo a nivel industria + Ops Dashboard verificado
 
 **Setup de VS Code + lints + optimizaciones de Windows. Flutter analyze paso de 10-266s a 4.87s.**
