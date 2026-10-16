@@ -11,6 +11,60 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 41) - Release v0.3.4 publicado en Play Store
+
+**Release v0.3.4 firmado, subido y publicado en Play Store internal testing.**
+
+**Contenido del release:**
+
+- Ops Dashboard (Fase 1 read-only) completo.
+- Quick Links: 15 accesos directos a Play Console, GitHub, Infraestructura.
+- Config VS Code a nivel industria + lints estrictos.
+- Optimizaciones Windows (Defender exclusiones + limpieza disco).
+
+**Pipeline CI/CD:**
+
+- **Release CLIENT a Play Store**: `11m47s` (build + firma + upload).
+- **Release ADMIN a Play Store**: `11m29s` (build + firma + upload).
+- **Total: ~23 min** (secuencial para no saturar Play Store API).
+- Run ID: `38829519703`.
+
+**Version:**
+
+- `pubspec.yaml`: `0.3.4+7` (versionCode 7).
+- Ambas apps (client + admin) publicadas como versionCode 7.
+
+**Prevencion de bug (nuevo bloque):**
+
+Encontrado y resuelto: el backend dev no tenia el modulo `ops` deployado — el codigo estaba en GitHub pero el proceso uvicorn llevaba 25h corriendo la version vieja.
+
+**Fix aplicado:**
+
+- `scripts/deploy-dev.sh` (nuevo): pull + build + up -d + healthcheck.
+- `scripts/deploy-prod.sh` (nuevo): igual pero pide escribir "CONFIRMAR".
+- Seccion "Flujo canonico de deploy backend" en `SERVER_CHEATSHEET.md`.
+- Regla nueva: despues de cada `git pull` en el server, SIEMPRE rebuild + restart.
+
+**Commits del bloque:**
+
+- `08f2fb1` feat(ops): quick links a dashboards externos (backend)
+- `3e2b9f5` feat(ops): quick links a dashboards externos (Play Console, GitHub, Infra)
+- `2cb6c88` docs(contexto): changelog quick links del Ops Dashboard (cont. 40)
+- `b327e63` chore(release): bump version a 0.3.4+7 (tag v0.3.4)
+- `12af481` feat(scripts): deploy-dev.sh y deploy-prod.sh para automatizar backend
+- `9a39a5d` docs(cheatsheet): flujo canonico de deploy backend
+
+**Estado:**
+
+- App admin con Ops Dashboard + Quick Links disponible en Play Store internal (versionCode 7).
+- Backend prod/dev healthy con el nuevo endpoint `/admin/ops/quick-links`.
+
+**Proximo paso:**
+
+- Probar los scripts de deploy-dev.sh y deploy-prod.sh end-to-end.
+- Sesion dedicada: rotacion de secretos expuestos (SECRET_KEY, TOKEN_ENCRYPTION_KEY, Facebook app secret).
+- Fase 2 del modulo ops: trigger de releases desde la app.
+
 ### 2026-10-15 (cont. 40) - Quick links a dashboards externos (Ops Dashboard)
 
 **El Ops Dashboard ahora tiene "Accesos directos": 15 links a Play Console, GitHub e Infraestructura. Escalable desde el backend.**
