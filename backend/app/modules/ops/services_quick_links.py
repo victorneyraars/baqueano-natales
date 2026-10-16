@@ -1,3 +1,5 @@
+# DEPLOY_TEST_2026-10-16 02:01:52
+
 """Quick links a dashboards externos (Play Console, GitHub, Cloudflare, etc.)."""
 from app.core.config import settings
 from app.modules.ops.schemas import QuickLink, QuickLinkCategory, QuickLinksResponse
