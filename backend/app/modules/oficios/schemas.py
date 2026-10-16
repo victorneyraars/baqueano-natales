@@ -388,6 +388,8 @@ class TurnoListItemResponse(BaseModel):
     estado: str
     motivo: str | None
     orden_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
 
 
 # =========================================================
