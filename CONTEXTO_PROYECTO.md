@@ -11,6 +11,66 @@
 
 ## 📋 Changelog reciente
 
+### 2026-10-16 (cont. 44) - Fase 2b + 2c del modulo ops (release trigger)
+
+**Preview + trigger de releases desde el Ops Dashboard. 4 safety rails. Auditado.**
+
+**Fase 2b - Preview (dry-run):**
+
+- `POST /admin/ops/release/preview` con `{version_name, branch}`.
+- Valida: pubspec parseable, tag libre, versionCode > max en Play, HEAD accesible.
+- Calcula: current_version, target_version, next_version_code, target_tag.
+- Devuelve `preview_token` (JWT firmado, TTL 5 min, nonce, issuer).
+- Si falla alguna validacion -> `can_proceed=false` + detalle por check.
+- Endpoint: 400/422/401 en casos de input invalido o sin auth.
+
+**Fase 2c - Trigger real:**
+
+- `POST /admin/ops/release/trigger` con `{preview_token, confirm}`.
+- **4 safety rails**:
+  1. `confirm == "CONFIRMAR"` exacto.
+  2. `preview_token` firmado (valida firma + issuer + user + TTL).
+  3. `head_sha` no cambio entre preview y trigger.
+  4. Rate limit: 1 release por user cada 10 min.
+- Crea el tag en GitHub (`POST /git/refs`) -> dispara workflow Release.
+- Registra en `ops_audit_log` (action=release.trigger, status=success/error).
+- Devuelve: tag, commit_sha, workflow_name, github_url, audit_log_id, message.
+
+**Test end-to-end (dev) verificado:**
+
+- Sin confirm -> 400.
+- Preview token falso -> 400 (`Invalid crypto padding`).
+- Preview v9.9.9 -> can_proceed=true, target=9.9.9+8.
+- Trigger real -> tag v9.9.9 creado en GitHub + workflow Release disparado + audit log registrado (861ms).
+- Re-trigger inmediato -> 429 rate limit.
+- Cleanup: tag + workflow cancelado.
+
+**Token de GitHub verificado:**
+
+- OAuth scopes: `admin:public_key, gist, read:org, repo`.
+- Permisos: push=True, admin=True, pull=True.
+- PAT fine-grained con escritura OK.
+
+**Lecciones tecnicas:**
+
+- **PyJWT, no python-jose**: el proyecto usa `pyjwt==2.10.1`. El `ALGORITHM` esta en `settings.ALGORITHM`, no como constante top-level.
+- **Patron del heredoc anidado**: `docker exec python3 << 'PYEOF'` dentro de un script bash es fragil. Mejor escribir el `.py` en el host + `docker cp` + `docker exec -e PYTHONPATH=/app python3 /tmp/x.py`.
+- **Cleanup de tag**: el `gh api DELETE` via SSH desde el server hacia GitHub funciona si se corre desde Windows/PowerShell, no desde dentro del script bash remoto (SSH anidado falla con host key verification).
+
+**Commits:**
+
+- `d7772d5` feat(ops): Fase 2b - endpoint release/preview (dry-run)
+- `094960f` feat(ops): Fase 2c - release trigger (crea tag + dispara workflow)
+
+**Pendiente siguiente (Fase 2 continuacion):**
+
+- **2d**: frontend Flutter (boton + modal preview + confirmacion + historial).
+- **2e**: migracion de PAT a GitHub App (fase separada).
+
+**Fase 3 (roadmap):**
+
+- Live streaming en la app movil (SSE sobre ops_audit_log + webhooks GitHub). Base ya lista.
+
 ### 2026-10-16 (cont. 43) - Fase 2a del modulo ops: audit log
 
 **Primera sub-fase de la Fase 2 (trigger de releases desde la app). Base para auditoria + live streaming (Fase 3).**
