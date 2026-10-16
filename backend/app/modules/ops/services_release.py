@@ -210,3 +210,188 @@ def _minutes_since(iso_date: str | None) -> int | None:
         return max(0, int(delta.total_seconds() / 60))
     except (ValueError, TypeError):
         return None
+
+# ============================================================
+# Fase 2c - Trigger real del release
+# ============================================================
+RATE_LIMIT_MINUTES = 10  # 1 release cada 10 min por user
+
+
+class ReleaseTriggerError(Exception):
+    """Error de validacion del trigger. El mensaje es user-friendly."""
+
+    def __init__(self, message: str, *, http_status: int = 400):
+        super().__init__(message)
+        self.message = message
+        self.http_status = http_status
+
+
+async def ejecutar_release(
+    request,
+    user_id: UUID,
+    user_email: str | None,
+    *,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    db=None,
+) -> "ReleaseTriggerResponse":
+    """Ejecuta el trigger de release con los 4 safety rails.
+
+    Raises:
+        ReleaseTriggerError: si falla alguna validacion.
+    """
+    import time
+    from app.modules.ops import services_audit
+    from app.modules.ops.services_preview_token import (
+        PreviewTokenError,
+        validar_preview_token,
+    )
+
+    t0 = time.monotonic()
+
+    # ---------- Safety rail #1: confirm exacto ----------
+    if request.confirm != "CONFIRMAR":
+        raise ReleaseTriggerError(
+            "Confirmacion incorrecta. Debe enviar {'confirm': 'CONFIRMAR'}.",
+            http_status=400,
+        )
+
+    # ---------- Safety rail #2: preview_token valido ----------
+    try:
+        payload = validar_preview_token(
+            request.preview_token,
+            expected_user_id=str(user_id),
+        )
+    except PreviewTokenError as e:
+        raise ReleaseTriggerError(
+            f"Preview token invalido: {e}",
+            http_status=400,
+        ) from e
+
+    version_name = payload["version_name"]
+    target_tag = payload["target_tag"]
+    next_version_code = int(payload["next_version_code"])
+    expected_sha = payload["head_sha"]
+    branch = payload["branch"]
+
+    # ---------- Safety rail #3: HEAD no cambio ----------
+    head_info = await services_github.get_head_commit(branch)
+    if head_info is None:
+        raise ReleaseTriggerError(
+            f"No se pudo leer el HEAD de {branch}.",
+            http_status=502,
+        )
+    current_sha = head_info["sha"]
+    if current_sha != expected_sha:
+        raise ReleaseTriggerError(
+            (
+                f"El HEAD de {branch} cambio desde el preview. "
+                f"Esperado: {expected_sha[:7]}, actual: {current_sha[:7]}. "
+                f"Genera un preview nuevo."
+            ),
+            http_status=409,
+        )
+
+    # ---------- Safety rail #4: rate limit ----------
+    ultimo = await services_audit.ultima_accion_exitosa(
+        action="release.trigger",
+        user_id=user_id,
+        ventana_minutos=RATE_LIMIT_MINUTES,
+    )
+    if ultimo is not None:
+        delta = _minutes_since(ultimo.isoformat() if hasattr(ultimo, 'isoformat') else str(ultimo))
+        if delta is not None and delta < RATE_LIMIT_MINUTES:
+            raise ReleaseTriggerError(
+                f"Rate limit: espera {RATE_LIMIT_MINUTES} min entre releases. "
+                f"Ultimo hace {delta} min.",
+                http_status=429,
+            )
+
+    # ---------- Todas las validaciones OK, ejecutar ----------
+    logger.info(
+        "ops.release.trigger_start",
+        extra={
+            "user_id": str(user_id),
+            "target_tag": target_tag,
+            "sha": current_sha,
+        },
+    )
+
+    # 5. Crear tag en GitHub (dispara workflow Release)
+    tag_result = await services_github.create_tag(
+        tag_name=target_tag,
+        sha=current_sha,
+        message=f"Release {target_tag} desde Ops Dashboard",
+    )
+
+    duration_ms = int((time.monotonic() - t0) * 1000)
+
+    if tag_result is None:
+        # Error al crear el tag
+        await services_audit.registrar(
+            db,
+            user_id=user_id,
+            user_email=user_email,
+            action="release.trigger",
+            status="error",
+            target=target_tag,
+            payload={
+                "version_name": version_name,
+                "next_version_code": next_version_code,
+                "head_sha": current_sha,
+                "branch": branch,
+            },
+            error_message="Fallo al crear tag en GitHub",
+            duration_ms=duration_ms,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise ReleaseTriggerError(
+            f"No se pudo crear el tag {target_tag} en GitHub. Revisar logs.",
+            http_status=502,
+        )
+
+    # 6. Audit log: exito
+    audit_entry = await services_audit.registrar(
+        db,
+        user_id=user_id,
+        user_email=user_email,
+        action="release.trigger",
+        status="success",
+        target=target_tag,
+        payload={
+            "version_name": version_name,
+            "next_version_code": next_version_code,
+            "head_sha": current_sha,
+            "branch": branch,
+        },
+        result={"tag_ref": tag_result.get("ref", "")},
+        duration_ms=duration_ms,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    logger.info(
+        "ops.release.trigger_success",
+        extra={
+            "user_id": str(user_id),
+            "target_tag": target_tag,
+            "duration_ms": duration_ms,
+        },
+    )
+
+    # 7. Respuesta
+    from app.modules.ops.schemas import ReleaseTriggerResponse
+
+    return ReleaseTriggerResponse(
+        tag=target_tag,
+        commit_sha=current_sha,
+        workflow_name=RELEASE_WORKFLOW_NAME,
+        estimated_duration_min=ESTIMATED_RELEASE_DURATION_MIN,
+        github_url=f"https://github.com/{settings.GITHUB_OPS_REPO}/actions",
+        audit_log_id=str(audit_entry.id) if audit_entry else "",
+        message=(
+            f"Tag {target_tag} creado. Workflow Release corriendo en GitHub. "
+            f"Duracion estimada: ~{ESTIMATED_RELEASE_DURATION_MIN} min."
+        ),
+    )

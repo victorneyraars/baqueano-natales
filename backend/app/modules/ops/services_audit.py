@@ -116,3 +116,45 @@ async def registrar(
             extra={"action": action, "error": str(e)},
         )
         return None
+
+# ============================================================
+# Helpers de consulta (para rate limit)
+# ============================================================
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import select
+
+
+async def ultima_accion_exitosa(
+    *,
+    action: str,
+    user_id: UUID,
+    ventana_minutos: int,
+) -> datetime | None:
+    """Devuelve el created_at de la ultima accion exitosa del user.
+
+    Solo considera acciones dentro de la ventana. Devuelve None si no hay.
+
+    Uso tipico: rate limiting del release trigger (1 cada 10 min).
+    """
+    try:
+        desde = datetime.now(timezone.utc) - timedelta(minutes=ventana_minutos)
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(OpsAuditLog.created_at)
+                .where(
+                    OpsAuditLog.action == action,
+                    OpsAuditLog.user_id == user_id,
+                    OpsAuditLog.status == "success",
+                    OpsAuditLog.created_at >= desde,
+                )
+                .order_by(OpsAuditLog.created_at.desc())
+                .limit(1)
+            )
+            result = (await session.execute(stmt)).scalar_one_or_none()
+            return result
+    except Exception as e:
+        logger.exception(
+            "ops.audit.ultima_accion_error",
+            extra={"action": action, "error": str(e)},
+        )
+        return None

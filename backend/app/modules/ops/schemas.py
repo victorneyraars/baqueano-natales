@@ -234,3 +234,14 @@ class ReleaseTriggerRequest(BaseModel):
 
     preview_token: str
     confirm: str = Field(description="Debe ser exactamente 'CONFIRMAR'")
+
+class ReleaseTriggerResponse(BaseModel):
+    """Respuesta del trigger de release."""
+
+    tag: str = Field(description="Tag creado, ej. 'v0.3.5'")
+    commit_sha: str = Field(description="SHA del commit taggeado")
+    workflow_name: str
+    estimated_duration_min: int
+    github_url: str = Field(description="URL del repo para ver el workflow corriendo")
+    audit_log_id: str = Field(description="ID del registro en ops_audit_log")
+    message: str = Field(description="Mensaje de exito")

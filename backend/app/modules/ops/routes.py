@@ -12,7 +12,7 @@ Endpoints:
 
 No hay endpoints de escritura en Fase 1. Ver README.md para el roadmap.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.modules.ops import (
     services_github,
@@ -22,11 +22,14 @@ from app.modules.ops import (
     services_quick_links,
     services_release,
 )
+from app.modules.ops.services_release import ReleaseTriggerError
 from app.modules.ops.deps import AdminUser
 from app.modules.ops.schemas import (
     LinksResponse,
     ReleasePreviewRequest,
     ReleasePreviewResponse,
+    ReleaseTriggerRequest,
+    ReleaseTriggerResponse,
     QuickLinksResponse,
     RunDetail,
     RunsResponse,
@@ -134,3 +137,36 @@ async def preview_release(
 ) -> ReleasePreviewResponse:
     """Genera un preview del release sin ejecutar nada."""
     return await services_release.generar_preview(request, admin.id)
+
+
+# ============================================================
+# Fase 2c - Release trigger (crea el tag y dispara el workflow)
+# ============================================================
+@router.post(
+    "/release/trigger",
+    response_model=ReleaseTriggerResponse,
+    summary="Ejecutar un release (crea tag en GitHub)",
+    description=(
+        "Crea el tag en GitHub lo que dispara el workflow Release. "
+        "Requiere el preview_token previo (firmado, 5 min de validez) + "
+        "confirm='CONFIRMAR'. Rate limit: 1 release cada 10 min."
+    ),
+)
+async def trigger_release(
+    request: ReleaseTriggerRequest,
+    admin: AdminUser,
+    http_request: Request,
+) -> ReleaseTriggerResponse:
+    """Ejecuta el release: crea el tag en GitHub."""
+    ip = http_request.client.host if http_request.client else None
+    user_agent = http_request.headers.get("user-agent")
+    try:
+        return await services_release.ejecutar_release(
+            request,
+            admin.id,
+            admin.email,
+            ip_address=ip,
+            user_agent=user_agent,
+        )
+    except ReleaseTriggerError as e:
+        raise HTTPException(status_code=e.http_status, detail=e.message) from e

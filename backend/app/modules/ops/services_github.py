@@ -400,3 +400,56 @@ async def get_file_content(path: str, ref: str = "main") -> str | None:
     except Exception as e:
         logger.error("ops.github.get_file_error", extra={"path": path, "error": str(e)})
         return None
+
+# ============================================================
+# Fase 2c - Funciones de escritura para el release trigger
+# ============================================================
+async def create_tag(
+    tag_name: str,
+    sha: str,
+    message: str = "",
+) -> dict[str, Any] | None:
+    """Crea un tag ligero apuntando a un commit.
+
+    Dispara workflows si el tag matchea el filtro (ej. v*).
+    Devuelve la respuesta de GitHub ({ref, object: {sha, type}}) o None.
+    """
+    try:
+        client = _get_http_client()
+        r = await client.post(
+            f"/repos/{settings.GITHUB_OPS_REPO}/git/refs",
+            json={
+                "ref": f"refs/tags/{tag_name}",
+                "sha": sha,
+            },
+        )
+        if r.status_code == 422:
+            # Ya existe (race condition o validacion fallida)
+            logger.warning(
+                "ops.github.create_tag_conflict",
+                extra={"tag": tag_name, "status": 422, "body": r.text[:300]},
+            )
+            return None
+        r.raise_for_status()
+        data = r.json()
+        logger.info(
+            "ops.github.tag_created",
+            extra={"tag": tag_name, "sha": sha},
+        )
+        return data
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "ops.github.create_tag_http_error",
+            extra={
+                "tag": tag_name,
+                "status": e.response.status_code,
+                "body": e.response.text[:300],
+            },
+        )
+        return None
+    except Exception as e:
+        logger.exception(
+            "ops.github.create_tag_unexpected",
+            extra={"tag": tag_name, "error": str(e)},
+        )
+        return None
