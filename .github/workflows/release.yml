@@ -1,17 +1,13 @@
 name: Release
 
-# Se dispara SOLO con tags v* (ej: v0.4.0).
-# Firma el AAB con el keystore real y lo sube a Google Play (internal track).
-#
-# Secrets requeridos:
-#   ANDROID_KEYSTORE_BASE64   (base64 del .jks)
-#   ANDROID_STORE_PASSWORD
-#   ANDROID_KEY_PASSWORD
-#   ANDROID_KEY_ALIAS
-#   GOOGLE_SERVICE_ACCOUNT_JSON (JSON del service account de Play Publisher)
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'versionCode a descargar (vacío = extraer de pubspec.yaml)'
+        required: false
 
 jobs:
   release-client:
@@ -54,12 +50,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          cat > android/key.properties <<EOF
-          storePassword=$STORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=upload-keystore.jks
-          EOF
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/key.properties
         working-directory: flutter
 
       - name: Build AAB firmado (client)
@@ -71,7 +63,8 @@ jobs:
             --dart-define-from-file=dart_defines/client_prod.json
         working-directory: flutter
 
-      - name: Subir a Play Store (internal)
+      - name: Subir a Play Store (internal) - solo push de tag
+        if: github.event_name == 'push'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -79,6 +72,35 @@ jobs:
           releaseFiles: flutter/build/app/outputs/bundle/clientProdRelease/*.aab
           tracks: internal
           status: completed
+
+      - name: Instalar dependencias Python
+        run: pip install google-api-python-client google-auth google-auth-httplib2
+
+      - name: Configurar credenciales Google
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > /tmp/google-sa.json
+
+      - name: Descargar APK firmado por Google (client)
+        run: |
+          if [ -n "${{ github.event.inputs.version_code }}" ]; then
+            VERSION_CODE="${{ github.event.inputs.version_code }}"
+          else
+            VERSION_CODE=$(grep '^version:' flutter/pubspec.yaml | sed 's/.*+//')
+          fi
+          echo "versionCode a descargar: $VERSION_CODE"
+          python scripts/download_signed_apk.py \
+            --json-key /tmp/google-sa.json \
+            --package-name cl.baqueanonatales \
+            --version-code "$VERSION_CODE" \
+            --output /tmp/prod-client.apk
+
+      - name: Copiar APK firmado a servidor (client)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "/tmp/prod-client.apk"
+          target: "/home/deploy/baqueano-natales/deploy/apks/prod-client.apk"
 
       - name: Cleanup keystore
         if: always()
@@ -126,12 +148,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          cat > android/key.properties <<EOF
-          storePassword=$STORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=upload-keystore.jks
-          EOF
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/key.properties
         working-directory: flutter
 
       - name: Build AAB firmado (admin)
@@ -143,7 +161,8 @@ jobs:
             --dart-define-from-file=dart_defines/admin_prod.json
         working-directory: flutter
 
-      - name: Subir a Play Store (internal)
+      - name: Subir a Play Store (internal) - solo push de tag
+        if: github.event_name == 'push'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -151,6 +170,35 @@ jobs:
           releaseFiles: flutter/build/app/outputs/bundle/adminProdRelease/*.aab
           tracks: internal
           status: completed
+
+      - name: Instalar dependencias Python
+        run: pip install google-api-python-client google-auth google-auth-httplib2
+
+      - name: Configurar credenciales Google
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > /tmp/google-sa.json
+
+      - name: Descargar APK firmado por Google (admin)
+        run: |
+          if [ -n "${{ github.event.inputs.version_code }}" ]; then
+            VERSION_CODE="${{ github.event.inputs.version_code }}"
+          else
+            VERSION_CODE=$(grep '^version:' flutter/pubspec.yaml | sed 's/.*+//')
+          fi
+          echo "versionCode a descargar: $VERSION_CODE"
+          python scripts/download_signed_apk.py \
+            --json-key /tmp/google-sa.json \
+            --package-name cl.baqueanonatales.admin \
+            --version-code "$VERSION_CODE" \
+            --output /tmp/prod-admin.apk
+
+      - name: Copiar APK firmado a servidor (admin)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "/tmp/prod-admin.apk"
+          target: "/home/deploy/baqueano-natales/deploy/apks/prod-admin.apk"
 
       - name: Cleanup keystore
         if: always()
