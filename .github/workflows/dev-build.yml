@@ -1,12 +1,17 @@
 name: Dev Build + Firebase App Distribution
+
 on:
   workflow_dispatch:
     inputs:
       flavor:
+        description: 'Flavor a buildear'
         required: true
         default: 'clientDev'
         type: choice
-        options: [clientDev, adminDev, both]
+        options:
+          - clientDev
+          - adminDev
+          - both
 
 jobs:
   build-client:
@@ -14,12 +19,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
-        with: { distribution: 'zulu', java-version: '17' }
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.47.6', channel: 'stable', cache: true }
-      - run: flutter pub get
+        with:
+          flutter-version: '3.47.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
         working-directory: flutter
+        run: flutter pub get
+
       - name: Restore keystore
         working-directory: flutter/android
         env:
@@ -30,28 +45,54 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/baqueano-release.jks
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
-          echo "=== key.properties generado (keys, no valores) ==="
-          grep -o '^[a-zA-Z]*=' key.properties || true
-      - run: flutter build apk --release --flavor clientDev -t lib/main_client.dart --dart-define-from-file=dart_defines/client_dev.json
+
+      - name: Build clientDev APK
         working-directory: flutter
-      - uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID_CLIENT_DEV }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk
-          groups: dev-testers
+        run: |
+          flutter build apk --release --flavor clientDev \
+            -t lib/main_client.dart \
+            --dart-define-from-file=dart_defines/client_dev.json
+
+      - name: Debug — listar APKs generados
+        working-directory: flutter
+        run: find build -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload to Firebase (clientDev)
+        working-directory: flutter
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_CLIENT_DEV }}
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
+          APK=$(find build -name "*clientdev*release*.apk" -o -name "*clientDev*release*.apk" | head -1)
+          echo "APK encontrado: $APK"
+          if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
+          npx -y firebase-tools appdistribution:distribute "$APK" \
+            --app "$FIREBASE_APP_ID" \
+            --groups dev-testers \
+            --project baqueano-natales-prod
 
   build-admin:
     if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'both'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
-        with: { distribution: 'zulu', java-version: '17' }
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.47.6', channel: 'stable', cache: true }
-      - run: flutter pub get
+        with:
+          flutter-version: '3.47.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
         working-directory: flutter
+        run: flutter pub get
+
       - name: Restore keystore
         working-directory: flutter/android
         env:
@@ -62,13 +103,29 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/baqueano-release.jks
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
-          echo "=== key.properties generado (keys, no valores) ==="
-          grep -o '^[a-zA-Z]*=' key.properties || true
-      - run: flutter build apk --release --flavor adminDev -t lib/main_admin.dart --dart-define-from-file=dart_defines/admin_dev.json
+
+      - name: Build adminDev APK
         working-directory: flutter
-      - uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID_ADMIN_DEV }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk
-          groups: dev-testers
+        run: |
+          flutter build apk --release --flavor adminDev \
+            -t lib/main_admin.dart \
+            --dart-define-from-file=dart_defines/admin_dev.json
+
+      - name: Debug — listar APKs generados
+        working-directory: flutter
+        run: find build -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload to Firebase (adminDev)
+        working-directory: flutter
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_ADMIN_DEV }}
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
+          APK=$(find build -name "*admindev*release*.apk" -o -name "*adminDev*release*.apk" | head -1)
+          echo "APK encontrado: $APK"
+          if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
+          npx -y firebase-tools appdistribution:distribute "$APK" \
+            --app "$FIREBASE_APP_ID" \
+            --groups dev-testers \
+            --project baqueano-natales-prod
