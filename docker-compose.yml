@@ -54,6 +54,7 @@ services:
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/apks:/usr/share/nginx/apks:ro
       - ./deploy/nginx/certs:/etc/nginx/certs:ro
       - ./deploy/legal:/usr/share/nginx/legal:ro
       - nginx_cache:/var/cache/nginx
