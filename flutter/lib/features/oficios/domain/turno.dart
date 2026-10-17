@@ -50,8 +50,8 @@ class Turno {
     required this.fechaInicio,
     required this.duracionMin,
     required this.estado,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.motivo,
     this.notasCliente,
     this.notasPrestador,
@@ -65,8 +65,8 @@ class Turno {
   final DateTime fechaInicio;
   final int duracionMin;
   final EstadoTurno estado;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   final String? motivo;
   final String? notasCliente;
@@ -86,12 +86,17 @@ class Turno {
       fechaInicio: DateTime.parse(json['fecha_inicio'] as String).toLocal(),
       duracionMin: json['duracion_min'] as int? ?? 30,
       estado: EstadoTurno.fromValue(json['estado'] as String?),
-      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
-      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+      createdAt: _parseFechaOpcional(json['created_at']),
+      updatedAt: _parseFechaOpcional(json['updated_at']),
       motivo: json['motivo'] as String?,
       notasCliente: json['notas_cliente'] as String?,
       notasPrestador: json['notas_prestador'] as String?,
       ordenId: json['orden_id'] as String?,
     );
+  }
+
+  static DateTime? _parseFechaOpcional(dynamic v) {
+    if (v is String) return DateTime.tryParse(v)?.toLocal();
+    return null;
   }
 }
