@@ -22,14 +22,16 @@ jobs:
         working-directory: flutter
       - name: Restore keystore
         working-directory: flutter/android
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/baqueano-release.jks
-          cat > key.properties <<EOF
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=baqueano-release.jks
-          EOF
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
+          echo "=== key.properties generado (keys, no valores) ==="
+          grep -o '^[a-zA-Z]*=' key.properties || true
       - run: flutter build apk --release --flavor clientDev -t lib/main_client.dart --dart-define-from-file=dart_defines/client_dev.json
         working-directory: flutter
       - uses: wzieba/Firebase-Distribution-Github-Action@v1
@@ -52,14 +54,16 @@ jobs:
         working-directory: flutter
       - name: Restore keystore
         working-directory: flutter/android
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/baqueano-release.jks
-          cat > key.properties <<EOF
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=baqueano-release.jks
-          EOF
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
+          echo "=== key.properties generado (keys, no valores) ==="
+          grep -o '^[a-zA-Z]*=' key.properties || true
       - run: flutter build apk --release --flavor adminDev -t lib/main_admin.dart --dart-define-from-file=dart_defines/admin_dev.json
         working-directory: flutter
       - uses: wzieba/Firebase-Distribution-Github-Action@v1
