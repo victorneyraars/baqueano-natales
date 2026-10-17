@@ -91,7 +91,9 @@ jobs:
             --json-key /tmp/google-sa.json \
             --package-name cl.baqueanonatales \
             --version-code "$VERSION_CODE" \
-            --output /tmp/prod-client.apk
+            --output /tmp/prod-client.apk \
+            --max-retries 20 \
+            --delay 30
 
       - name: Copiar APK firmado a servidor (client)
         uses: appleboy/scp-action@v0.1.7
@@ -189,7 +191,9 @@ jobs:
             --json-key /tmp/google-sa.json \
             --package-name cl.baqueanonatales.admin \
             --version-code "$VERSION_CODE" \
-            --output /tmp/prod-admin.apk
+            --output /tmp/prod-admin.apk \
+            --max-retries 20 \
+            --delay 30
 
       - name: Copiar APK firmado a servidor (admin)
         uses: appleboy/scp-action@v0.1.7
