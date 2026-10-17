@@ -64,6 +64,7 @@ jobs:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
           APK=$(find build -name "*clientdev*release*.apk" -o -name "*clientDev*release*.apk" | head -1)
           echo "APK encontrado: $APK"
           if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
@@ -122,6 +123,7 @@ jobs:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
           APK=$(find build -name "*admindev*release*.apk" -o -name "*adminDev*release*.apk" | head -1)
           echo "APK encontrado: $APK"
           if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
