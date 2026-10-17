@@ -4,10 +4,12 @@ Descarga el APK universal firmado por Google Play para una versionCode dada.
 Utiliza la Google Play Developer API de forma robusta (con reintentos).
 """
 import argparse
+import io
 import time
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES = ['https://www.googleapis.com/auth/androidpublisher']
 
@@ -56,7 +58,7 @@ def main():
     if not apk_info:
         raise Exception("❌ Error: Google no generó el APK a tiempo.")
 
-    # Descarga del APK
+    # Descarga del APK (usando MediaIoBaseDownload — forma canónica Google)
     download_id = apk_info['downloadId']
     print(f"Descargando APK (downloadId: {download_id})...")
     
@@ -66,10 +68,20 @@ def main():
         downloadId=download_id
     )
     
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+        if status:
+            print(f"   Progreso: {int(status.progress() * 100)}%")
+    
+    content = fh.getvalue()
     with open(args.output, 'wb') as f:
-        f.write(request.execute().getcontent())
-        
-    print(f"✅ APK guardado exitosamente en {args.output}")
+        f.write(content)
+    
+    size_mb = len(content) / (1024 * 1024)
+    print(f"✅ APK guardado en {args.output} ({size_mb:.1f} MB)")
 
 if __name__ == '__main__':
     main()
