@@ -3612,3 +3612,15 @@ en producción**.
 ---
 
 **Fin del documento de contexto.**
+### 2026-10-17 - Fase 1: Distribución Dev a celulares (Firebase App Distribution) + Fixes H8/H9/H10/H11
+
+**Creado el pipeline de CI/CD para probar en celulares reales sin PC.**
+
+- **H8 (P1, fixeado)**: `Turno.fromJson` fallaba porque `TurnoListItemResponse` no enviaba `created_at`/`updated_at`. Se agregaron al schema y se hizo el parseo defensivo en Flutter.
+- **Fase 1 (Completada)**: Workflow `.github/workflows/dev-build.yml` que compila `clientDev`/`adminDev` en release y sube la APK a Firebase App Distribution.
+- **H9 (fixeado)**: Heredoc con `${{ secrets.X }}` inline corrompía el `key.properties` si el password tenía caracteres especiales. Se cambió a `env:` + `printf`.
+- **H10 (fixeado)**: APK path hardcodeado (`app-clientDev-release.apk`) fallaba por case-sensitivity. Se cambió a búsqueda dinámica con `find`.
+- **H11 (fixeado)**: `firebase-tools` no autenticaba. Se agregó `export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json`.
+- **Secrets nuevos**: `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_APP_ID_CLIENT_DEV`, `FIREBASE_APP_ID_ADMIN_DEV`.
+- **Rol GCP**: Se agregó `Firebase App Distribution Admin` al service account.
+

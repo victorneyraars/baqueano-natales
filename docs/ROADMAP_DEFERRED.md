@@ -162,3 +162,11 @@ Cada una es un bloque de 1-2 sesiones.
 - **Al agregar un item nuevo:** documentar en la seccion correspondiente.
 
 Fin del documento.
+
+## Mejoras UI/UX y Automatizaciones (Post-Fase 1)
+
+- **H4 (UX, P2)**: Card de usuario en Home sin `onTap` (debería navegar a perfil).
+- **H6 (Perf, P2)**: Doble llamada a `auth/me` y `POST /fcm-token` al restaurar sesión.
+- **H7 (UX, P2)**: Notificaciones in-app sin distinción visual entre leídas y no leídas.
+- **H1 (UX, P3)**: Home en landscape/tablet sin grid responsive (1 sola columna).
+- **NUEVO (Feature, P3)**: Trigger de "Dev Build" desde la app Admin (Nivel 1: botón a GitHub Actions / Nivel 2: endpoint + modal).
