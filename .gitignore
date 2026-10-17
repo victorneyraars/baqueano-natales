@@ -94,3 +94,6 @@ deploy/nginx/certs/
 *.backup-*
 backend/secrets/
 deploy/legal/
+
+# APKs de desarrollo (se generan en CI y se sirven por Nginx)
+deploy/apks/*.apk
