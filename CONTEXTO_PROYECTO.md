@@ -3766,3 +3766,33 @@ en producción**.
 
 **Backup:** `/tmp/web-backup-20261018-023355/` (rollback disponible si se necesita).
 
+
+### 2026-10-18 (cont. 50) - Home alineada con features reales + página /descargar
+
+**Home reconstruida: honesta, alineada con lo que la app hace hoy.**
+
+**Problemas del home anterior:**
+- Mencionaba "Movilidad a Torres del Paine y aeropuerto" (no existe).
+- Promocionaba "Delivery", "Hospedajes", "Menú QR" (no existen).
+- Rol "Conductor o Transfer" (no existe).
+- Link `/descargar` roto (404).
+- Phone mockup mostraba features que no funcionan.
+
+**Home nueva (commit `e6ed364`):**
+- Hero: "Encuentra al experto que necesitas hoy" (oficios reales).
+- Servicios: Oficios + Agenda + Comercios (lo que sí funciona).
+- CTAs hacia `/locales` y `/descargar`.
+- "Próximamente": Movilidad, Delivery, Hospedajes, Menú QR (transparente).
+- Links legales en el footer.
+- Phone mockup con cards reales de la app (Oficios, Órdenes, Turnos, Comercios).
+
+**Página `/descargar.astro` (nueva):**
+- Link directo al APK dev.
+- Instrucciones de instalación (3 pasos).
+- Versión DEV (cuando haya prod, se cambia a `prod-client.apk`).
+
+**Verificado:**
+- Home, /descargar, /locales: HTTP 200.
+- Copy alineado con la app real.
+- 0 menciones a Torres del Paine / Aeropuerto / Delivery.
+
