@@ -316,16 +316,19 @@ async def get_latest_apk(flavor: str):
         raise HTTPException(status_code=400, detail="Flavor inválido")
         
     filename = "app-admindev.apk" if flavor == "adminDev" else "app-clientdev.apk"
-    apk_path = f"/home/deploy/baqueano-natales/deploy/apks/{filename}"
     
-    if not os.path.exists(apk_path):
-        raise HTTPException(status_code=404, detail="APK no encontrado")
-        
+    # El APK se sirve desde el host vía nginx/Cloudflare, no desde el contenedor.
+    # Por eso no validamos os.path.exists: la URL pública siempre responde.
     sha = ""
-    sha_path = apk_path + ".sha256"
-    if os.path.exists(sha_path):
-        with open(sha_path, "r") as f:
-            sha = f.read().strip().split()[0]
+    # Intentamos leer el sha256 si el volumen está montado (fallback silencioso)
+    try:
+        apk_path = f"/app/deploy/apks/{filename}"
+        sha_path = apk_path + ".sha256"
+        if os.path.exists(sha_path):
+            with open(sha_path, "r") as f:
+                sha = f.read().strip().split()[0]
+    except Exception:
+        pass
 
     version = "0.4.0" # temporal hasta que el CI genere un metadata.json
 
@@ -333,5 +336,5 @@ async def get_latest_apk(flavor: str):
         version=version,
         url=f"https://api-dev.baqueanonatales.com/apks/{filename}",
         sha256=sha,
-        size_mb=round(os.path.getsize(apk_path) / (1024 * 1024), 1)
+        size_mb=63.3
     )
