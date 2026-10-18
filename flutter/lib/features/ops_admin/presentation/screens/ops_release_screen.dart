@@ -41,6 +41,8 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
   String? _suggestedVersion;
   String? _commitType;
   String? _commitMsg;
+  String? _currentVersion;
+  int? _nextVersionCode;
 
   @override
   void initState() {
@@ -91,6 +93,8 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
         _suggestedVersion = suggested;
         _commitType = type;
         _commitMsg = result.headCommitMessage;
+        _currentVersion = result.currentVersion;
+        _nextVersionCode = result.nextVersionCode;
         if (_versionController.text.isEmpty) {
           _versionController.text = suggested;
         }
@@ -249,7 +253,9 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Recomendación: $_suggestedVersion',
+                          _currentVersion != null && _nextVersionCode != null
+                              ? 'Actual: $_currentVersion  ➔  Nueva: $_suggestedVersion+$_nextVersionCode'
+                              : 'Recomendación: $_suggestedVersion',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
