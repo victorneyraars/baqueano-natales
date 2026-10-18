@@ -39,6 +39,8 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
   ReleaseTrigger? _triggerResult;
   String? _triggerError;
   String? _suggestedVersion;
+  String? _commitType;
+  String? _commitMsg;
 
   @override
   void initState() {
@@ -64,10 +66,31 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
       final major = int.tryParse(parts[0]);
       final minor = int.tryParse(parts[1]);
       if (major == null || minor == null) return;
-      final suggested = '$major.${minor + 1}.0';
+      final patch = int.tryParse(parts[2]) ?? 0;
+      final msg = result.headCommitMessage.toLowerCase();
+      
+      String type = 'patch (fix)';
+      String suggested = '$major.$minor.${patch + 1}';
+      
+      if (msg.contains('breaking change') || msg.contains('!:')) {
+        type = 'major (breaking)';
+        suggested = '${major + 1}.0.0';
+      } else if (msg.startsWith('feat') || msg.contains('feat:') || msg.contains('feat(')) {
+        type = 'minor (feature)';
+        suggested = '$major.${minor + 1}.0';
+      } else if (msg.startsWith('fix') || msg.contains('fix:') || msg.contains('fix(')) {
+        type = 'patch (fix)';
+        suggested = '$major.$minor.${patch + 1}';
+      } else {
+        type = 'patch (default)';
+        suggested = '$major.$minor.${patch + 1}';
+      }
+
       if (!mounted) return;
       setState(() {
         _suggestedVersion = suggested;
+        _commitType = type;
+        _commitMsg = result.headCommitMessage;
         if (_versionController.text.isEmpty) {
           _versionController.text = suggested;
         }
@@ -174,28 +197,73 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ----- Sugerencia automatica de version -----
+          // ----- Asistente SemVer -----
           if (_suggestedVersion != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.auto_awesome,
-                      size: 16, color: theme.colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Sugerencia: $_suggestedVersion',
-                      style: theme.textTheme.bodySmall,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome,
+                          size: 18, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Asistente SemVer',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _versionController.text = _suggestedVersion!;
-                      });
-                    },
-                    child: const Text('Usar'),
+                  const SizedBox(height: 8),
+                  if (_commitMsg != null) ...[
+                    Text(
+                      'Último commit: $_commitMsg',
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (_commitType != null)
+                    Text(
+                      'Detectado: $_commitType',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Recomendación: $_suggestedVersion',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      FilledButton.tonal(
+                        onPressed: () {
+                          setState(() {
+                            _versionController.text = _suggestedVersion!;
+                          });
+                        },
+                        child: const Text('Usar'),
+                      ),
+                    ],
                   ),
                 ],
               ),
