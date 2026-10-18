@@ -274,6 +274,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/admin/ops/release',
           name: 'admin-ops-release',
           builder: (context, state) => const OpsReleaseScreen(),
+        ),
 
         // Admin - Analytics (Cloudflare Web Analytics)
         GoRoute(
