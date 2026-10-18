@@ -8,9 +8,6 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-    REVALIDATE_API_KEY: str = ""
-    VERCEL_BYPASS_TOKEN: str = ""
-    PUBLIC_WEB_URL: str = "https://www.baqueanonatales.com"
 class Settings(BaseSettings):
     """Configuración central de la aplicación."""
     # ============================================================
@@ -90,6 +87,8 @@ class Settings(BaseSettings):
     AVATAR_STORAGE_PATH: str = "/app/media/avatars"
     PUBLIC_API_URL: str = "https://api.baqueanonatales.com"
     PUBLIC_WEB_URL: str = "https://www.baqueanonatales.com"
+    REVALIDATE_API_KEY: str = ""
+    VERCEL_BYPASS_TOKEN: str = ""
     PUBLIC_MEDIA_URL: str = "https://dev-api.baqueanonatales.com"
     MAX_AVATAR_SIZE_BYTES: int = 5 * 1024 * 1024  # 5 MB
 

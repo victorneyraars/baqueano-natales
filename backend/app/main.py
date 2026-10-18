@@ -77,8 +77,8 @@ from app.modules.social.worker import start_worker, stop_worker
 # Ops Dashboard (admin — CI/CD, tracks, health)
 from app.modules.ops.routes import router as ops_admin_router
 from app.modules.ops import services_github as ops_services_github
-from app.modules.oficios.worker import (
 from app.modules.ops.revalidate import router as revalidate_router
+from app.modules.oficios.worker import (
 
     start_worker as start_recordatorios_worker,
     stop_worker as stop_recordatorios_worker,
