@@ -144,6 +144,15 @@ class Settings(BaseSettings):
     RECORDATORIOS_WORKER_ENABLED: bool = True
     RECORDATORIOS_WORKER_INTERVAL_SEC: int = 3600  # 1 hora
 
+    # ----------------------------------------------------------------
+    # Worker de cleanup automático (ops)
+    # ----------------------------------------------------------------
+    CLEANUP_WORKER_ENABLED: bool = True
+    # Intervalo entre ciclos (segundos). Default: 24h.
+    CLEANUP_WORKER_INTERVAL_SEC: int = 86400
+    # Si es True, solo detecta y loguea, no modifica nada.
+    CLEANUP_DRY_RUN: bool = False
+
     # ------------------------------------------------------------------
     # Ops Dashboard (integracion GitHub Actions + Play Console)
     # ------------------------------------------------------------------

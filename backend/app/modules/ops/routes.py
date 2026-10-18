@@ -1,3 +1,4 @@
+from app.modules.ops import services_cleanup
 """Endpoints admin del Ops Dashboard (solo lectura — Fase 1).
 
 Todos requieren rol `admin`. Los endpoints están diseñados para ser
@@ -170,3 +171,54 @@ async def trigger_release(
         )
     except ReleaseTriggerError as e:
         raise HTTPException(status_code=e.http_status, detail=e.message) from e
+
+# ============================================================
+# Cleanup de datos incompletos
+# ============================================================
+
+@router.get(
+    "/cleanup/preview",
+    summary="Preview del cleanup (dry-run)",
+    description="Muestra qué registros con datos incompletos se detectarían, sin modificar nada.",
+)
+async def cleanup_preview(
+    user: AdminUser,
+    db: DbSession,
+) -> dict:
+    """Dry-run del cleanup. No modifica nada."""
+    resultado = await services_cleanup.ejecutar_cleanup(db, dry_run=True)
+    return resultado
+
+
+@router.post(
+    "/cleanup",
+    summary="Ejecutar cleanup manualmente",
+    description="Sanitiza registros verificados con datos incompletos. Solo admins.",
+)
+async def cleanup_run(
+    user: AdminUser,
+    db: DbSession,
+) -> dict:
+    """Ejecuta el cleanup real. Sanitiza prestadores, loguea comercios."""
+    from datetime import datetime, timezone
+
+    inicio = datetime.now(timezone.utc)
+    resultado = await services_cleanup.ejecutar_cleanup(db, dry_run=False)
+    await db.commit()
+
+    fin = datetime.now(timezone.utc)
+    duration_ms = int((fin - inicio).total_seconds() * 1000)
+
+    await services_audit.registrar(
+        db=db,
+        user_id=user.id,
+        user_email=user.email,
+        action="cleanup.run",
+        status="success",
+        target="prestadores+comercios",
+        result=resultado,
+        duration_ms=duration_ms,
+    )
+    await db.commit()
+
+    return resultado

@@ -78,6 +78,10 @@ from app.modules.social.worker import start_worker, stop_worker
 from app.modules.ops.routes import router as ops_admin_router
 from app.modules.ops import services_github as ops_services_github
 from app.modules.ops.revalidate import router as revalidate_router
+from app.modules.ops.worker import (
+    start_worker as start_cleanup_worker,
+    stop_worker as stop_cleanup_worker,
+)
 from app.modules.oficios.worker import (
 
     start_worker as start_recordatorios_worker,
@@ -104,12 +108,14 @@ async def lifespan(app: FastAPI):
     # No-op si SOCIAL_WORKER_ENABLED=false
     start_worker()
     start_recordatorios_worker()
+    start_cleanup_worker()
 
     yield
 
     # Detener el worker
     stop_worker()
     stop_recordatorios_worker()
+    stop_cleanup_worker()
     # Cerrar el cliente HTTP del Ops Dashboard (httpx best practice)
     try:
         await ops_services_github.close_http_client()
