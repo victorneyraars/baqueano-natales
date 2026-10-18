@@ -13,7 +13,12 @@ Endpoints:
 
 No hay endpoints de escritura en Fase 1. Ver README.md para el roadmap.
 """
-from fastapi import APIRouter, HTTPException, Query, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.db import get_db
 
 from app.modules.ops import (
     services_github,
@@ -25,6 +30,9 @@ from app.modules.ops import (
 )
 from app.modules.ops.services_release import ReleaseTriggerError
 from app.modules.ops.deps import AdminUser
+
+# Alias para type hint de DB
+DbSession = Annotated[AsyncSession, Depends(get_db)]
 from app.modules.ops.schemas import (
     LinksResponse,
     ReleasePreviewRequest,
