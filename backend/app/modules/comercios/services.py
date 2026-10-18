@@ -340,7 +340,10 @@ async def editar_comercio(
         comercio.motivo_rechazo = None
 
     await db.flush()
-    await db.refresh(comercio)
+    await db.refresh(comercio, attribute_names=["categoria"])
+    # Solo revalidar si el comercio está verificado (público)
+    if comercio.estado == EstadoComercio.VERIFICADO:
+        await _notificar_cambio_web(comercio)
     return comercio
 
 
@@ -504,6 +507,9 @@ async def setear_horarios(
         db.add(h)
         nuevos.append(h)
     await db.flush()
+    # Solo revalidar si el comercio está verificado (público)
+    if comercio.estado == EstadoComercio.VERIFICADO:
+        await _notificar_cambio_web(comercio)
     return nuevos
 
 
