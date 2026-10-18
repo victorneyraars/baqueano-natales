@@ -170,3 +170,20 @@ Fin del documento.
 - **H7 (UX, P2)**: Notificaciones in-app sin distinción visual entre leídas y no leídas.
 - **H1 (UX, P3)**: Home en landscape/tablet sin grid responsive (1 sola columna).
 - **NUEVO (Feature, P3)**: Trigger de "Dev Build" desde la app Admin (Nivel 1: botón a GitHub Actions / Nivel 2: endpoint + modal).
+
+## Backlog actualizado (post-sesión 2026-10-17)
+
+### Bugs pendientes (encontrados en audit)
+- **H4 (P2)**: Card de usuario en Home sin `onTap` (ir a perfil).
+- **H6 (P2)**: Doble llamada `auth/me` + `POST fcm-token` en restore.
+- **H7 (P2)**: Notificaciones in-app sin distinción visual leída/no leída.
+- **H1 (P3)**: Home landscape/tablet sin grid responsive.
+
+### Infra pendiente
+- **APK producción firmado por Google**: API `generatedapks` de Google Play devuelve HTTP 204 (no materializa APK universal). Documentado, se retomará cuando Google arregle o cuando haya tiempo de implementar fastlane.
+- **Trigger dev-build desde app Admin**: Nivel 1 (link a GitHub Actions) o Nivel 2 (endpoint + modal).
+
+### Deuda técnica menor
+- El paso `Debug — listar APKs generados` quedó en el workflow (útil para debug, se puede quitar).
+- `scripts/register_sha1_firebase.py` tiene argumento `--keystore-b64` que ya no se usa (siempre pasamos `--sha1` directo).
+

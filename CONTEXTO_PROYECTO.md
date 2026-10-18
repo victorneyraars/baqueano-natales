@@ -3624,3 +3624,52 @@ en producción**.
 - **Secrets nuevos**: `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_APP_ID_CLIENT_DEV`, `FIREBASE_APP_ID_ADMIN_DEV`.
 - **Rol GCP**: Se agregó `Firebase App Distribution Admin` al service account.
 
+
+### 2026-10-17 - Sesión épica: App Store privado + APK firmado + Login en device
+
+**De bugs en producción a infraestructura de nivel industrial en un día.**
+
+**H8 (P1) cerrado:**
+- Backend: `created_at`/`updated_at` agregados a `TurnoListItemResponse`.
+- Frontend: `_parseFechaOpcional()` defensivo en `Turno.fromJson`.
+- Verificado end-to-end en emulador + device real.
+
+**App Store privado creado:**
+- Nginx sirviendo `https://api-dev.baqueanonatales.com/apks/` con autoindex.
+- Bind mount `./deploy/apks:/usr/share/nginx/apks:ro` en docker-compose.
+- Ruta pública: `app-clientdev.apk` + `.sha256` + `app-admindev.apk`.
+
+**Pipeline de distribución con bundletool:**
+- Workflow `.github/workflows/dev-build.yml` reescrito.
+- Compila AAB → extrae APK universal con `roberteggl/bundletool-action@v1.0.0` → firma con upload key → genera SHA-256 → sube a servidor vía SCP → renombra.
+- Sin dependencia de la API `generatedapks` de Google (que devuelve HTTP 204).
+
+**SHA-1 registrado automáticamente en Firebase:**
+- Script `scripts/register_sha1_firebase.py` (Firebase Management API).
+- Extrae SHA-1 con `apksigner` en el workflow.
+- Registra en `cl.baqueanonatales.dev` y `.admin.dev` (idempotente).
+- Google Sign-In funciona en APK sideloaded firmado con upload key.
+
+**Bugs resueltos en el camino:**
+- H9 (heredoc corrompía passwords) → `printf` + `env:` vars.
+- H10 (path case-sensitive) → `find` dinámico.
+- H11 (Firebase sin credenciales) → `GOOGLE_APPLICATION_CREDENTIALS`.
+- H12 (API generatedapks HTTP 204) → abandonada, reemplazada por bundletool.
+- H13 (scp creaba carpeta) → `target: .../apks/` + rename SSH.
+- H14 (keytool no lee v2/v3) → `apksigner verify --print-certs`.
+- H15 (gh secret get no existe) → pasar SHA-1 directo.
+- H16 (login falla por SHA-1) → registro automático en Firebase.
+
+**Commits relevantes:**
+- `350d6de` fix(turnos): created_at/updated_at en schema
+- `88ec3ad` fix(oficios): Turno.fromJson tolerante
+- `5ee46a9` feat(ci): bundletool para APK universal
+- `982ea2c` fix(ci): MediaIoBaseDownload
+- `0d6d581` fix(ci): retry HTTP 204
+- `78e96d7` feat(ci): registrar SHA-1 automáticamente
+
+**Infra nueva:**
+- `deploy/apks/` (bind mount en Nginx, gitignored).
+- `/usr/share/nginx/apks/` (alias público).
+- `apksigner` instalado en servidor (para verificar certificados).
+
