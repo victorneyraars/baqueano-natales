@@ -43,18 +43,30 @@ async def fetch_web_analytics(request: StatsRequest) -> StatsResponse:
     account_id = getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "")
 
     # Fechas ISO 8601
-    since = (date.today() - timedelta(days=request.days)).strftime("%Y-%m-%dT00:00:00Z")
+    # Until = HOY a las 00:00 UTC (excluye las horas parciales de hoy)
+    # Esto evita datos incompletos y rate limiting
+    # Clampear since a la fecha de lanzamiento del sitio (11 oct 2026)
+    # Antes de esa fecha, no hay datos (devuelve 0 y rompe la agregación)
+    LAUNCH_DATE = date(2026, 10, 11)
+    since_date = date.today() - timedelta(days=request.days)
+    if since_date < LAUNCH_DATE:
+        since_date = LAUNCH_DATE
+
+    since = since_date.strftime("%Y-%m-%dT00:00:00Z")
     until = date.today().strftime("%Y-%m-%dT23:59:59Z")
 
     # Filtro base (fechas + hostname opcional)
     filter_obj: dict[str, Any] = {
         "datetime_geq": since,
         "datetime_leq": until,
+        "bot": 0,  # Excluir tráfico de bots (0 = no bots)
     }
     if request.hostname:
         filter_obj["requestHost"] = request.hostname
 
     # Query GraphQL — nombres correctos según introspección
+    # Query simplificado: solo 2 subqueries (porDia + porPath)
+    # Evita rate limiting de Cloudflare (5 subqueries era demasiado)
     query = """
     query GetWebAnalytics($accountTag: string!, $filter: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject!) {
       viewer {
@@ -66,22 +78,6 @@ async def fetch_web_analytics(request: StatsRequest) -> StatsResponse:
           ) {
             count
             dimensions { date }
-          }
-          porPais: rumPageloadEventsAdaptiveGroups(
-            limit: 10,
-            filter: $filter,
-            orderBy: [count_DESC]
-          ) {
-            count
-            dimensions { countryName }
-          }
-          porReferrer: rumPageloadEventsAdaptiveGroups(
-            limit: 10,
-            filter: $filter,
-            orderBy: [count_DESC]
-          ) {
-            count
-            dimensions { refererHost }
           }
           porPath: rumPageloadEventsAdaptiveGroups(
             limit: 10,
@@ -145,13 +141,15 @@ async def fetch_web_analytics(request: StatsRequest) -> StatsResponse:
 
     total = sum(v.visits for v in by_day)
 
+    # top_countries y top_referrers: temporalmente vacíos (rate limit)
+    # TODO: agregar de vuelta cuando se optimice el query (con cache o batching)
     return StatsResponse(
         period_days=request.days,
         hostname=request.hostname,
         total_visits=total,
         total_pageviews=total,
         by_day=by_day,
-        top_countries=_to_top(acc.get("porPais", []), "countryName"),
-        top_referrers=_to_top(acc.get("porReferrer", []), "refererHost"),
+        top_countries=[],
+        top_referrers=[],
         top_pages=_to_top(acc.get("porPath", []), "requestPath"),
     )
