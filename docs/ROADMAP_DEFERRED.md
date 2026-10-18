@@ -229,3 +229,23 @@ Fin del documento.
 - `sync-locales.mjs` consulta `/catalogo/local/4` (404) — no se ejecuta en build pero se puede borrar.
 - El comercio `la-picada-de-natales` tiene todos los horarios como `cerrado: true` en prod. Se puede ajustar el seed.
 
+
+## Bypass de caché para APKs (implementado 2026-10-18)
+
+**Problema:** Cloudflare cacheaba archivos `.apk` (comportamiento por defecto). Al reemplazar un APK, seguía sirviendo la versión vieja (o un 404 cacheado) hasta que el cache expiraba.
+
+**Solución implementada (2 capas):**
+
+1. **Cache Rule en Cloudflare:**
+   - Nombre: `Bypass APKs`
+   - Expresión: `starts_with(http.request.uri.path, "/apks/")`
+   - Acción: `cache: false`
+   - ID: `4ab3e757be074b7ea62a0bdb9c5ba5f8`
+   - Creada vía API.
+
+2. **Cache-Control en Nginx (respaldo):**
+   - Agregado en `location /apks/` de `api.conf` y `api-dev.conf`:
+   - `add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";`
+
+**Resultado:** `cf-cache-status: DYNAMIC` en cada petición a `/apks/*`. Los APKs se sirven siempre desde el origen (server). No hace falta purgar manualmente tras cada actualización.
+
