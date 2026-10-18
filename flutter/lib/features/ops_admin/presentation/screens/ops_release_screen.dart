@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../widgets/apk_download_button.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -497,16 +498,44 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             ),
             const SizedBox(height: 16),
             // ----- Descarga e instalación in-app -----
-            const ApkDownloadButton(
-              flavor: 'adminDev',
-              label: 'Descargar e Instalar APK Admin (dev)',
-              icon: Icons.admin_panel_settings,
+            Row(
+              children: [
+                Expanded(
+                  child: const ApkDownloadButton(
+                    flavor: 'adminDev',
+                    label: 'Descargar e Instalar Admin',
+                    icon: Icons.admin_panel_settings,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Compartir link Admin',
+                  onPressed: () {
+                    Share.share('Descarga el APK de Admin (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-admindev.apk');
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            const ApkDownloadButton(
-              flavor: 'clientDev',
-              label: 'Descargar e Instalar APK Client (dev)',
-              icon: Icons.people,
+            Row(
+              children: [
+                Expanded(
+                  child: const ApkDownloadButton(
+                    flavor: 'clientDev',
+                    label: 'Descargar e Instalar Client',
+                    icon: Icons.people,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Compartir link Client',
+                  onPressed: () {
+                    Share.share('Descarga el APK de Client (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-clientdev.apk');
+                  },
+                ),
+              ],
             ),
           ],
         ),
