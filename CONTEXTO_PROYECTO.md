@@ -3878,3 +3878,40 @@ en producción**.
 | Admin agrega/modifica horarios | Webhook → Vercel regenera detalle |
 | Datos incompletos en DB (cron 24h) | Cleanup → sanitiza prestadores + audit log |
 
+
+### 2026-10-18 (cont. 55) - Rename a "Se Alquila Marido" (Fase 1 cerrada)
+
+**Primer paso del MVP "Se Alquila Marido". El prestador está renombrado y con SEO real.**
+
+**Decisión estratégica:**
+- "Se Alquila Marido" será la marca de oficios (mecánica primero, más oficios progresivamente).
+- Landing independiente en `sealquilamarido.com` (hosting: Vercel, mismo adapter que Baqueano).
+- Backend unificado: consume la API de Baqueano, sin duplicar código.
+- Branding: naranja/cobre + gris oscuro. Tono: profesional + cercano.
+
+**Fase 1 completada (rename en Baqueano):**
+
+- **DB**: `taller-mecanico-del-sur` → `se-alquila-marido` (nombre: "Se Alquila Marido").
+- **Mantenidos**: 12 servicios, 7 especialidades, reviews, historial, categoría.
+- **Backup previo**: `~/backups/pre-rename-20261018-044238/prestador_before_rename.json`.
+
+**Redirect 301 server-side:**
+- `src/pages/prestadores/[slug].astro` → redirect a `/prestadores/se-alquila-marido` cuando `slug === 'taller-mecanico-del-sur'`.
+- Verificado con `curl -I`: `Status: 301` + `Location: /prestadores/se-alquila-marido`.
+- Cloudflare purge aplicado.
+
+**Bugs encontrados:**
+- **Gotcha 4.3 (reinforced)**: scripts standalone necesitan importar TODOS los modelos relacionados antes de `db.commit()`. El error `NoReferencedTableError: reviews.orden_id` apareció al intentar renombrar sin importar `OrdenTrabajo` y compañía.
+
+**Estado actual:**
+- `/prestadores/se-alquila-marido` → `HTTP 200` con datos reales.
+- `/prestadores/taller-mecanico-del-sur` → `HTTP 301` → nuevo slug.
+- `/prestadores` (listado) → muestra "Se Alquila Marido".
+
+**Pendiente próxima sesión (Fase 2):**
+- Crear repo `se-alquila-marido-web` (Astro + @astrojs/vercel).
+- Landing con branding naranja/cobre.
+- Fetch a `api.baqueanonatales.com/api/v1/prestadores/se-alquila-marido`.
+- Deploy Vercel + DNS cutover (`sealquilamarido.com` → Vercel).
+- SEO local (JSON-LD `LocalBusiness` + cross-link con Baqueano).
+

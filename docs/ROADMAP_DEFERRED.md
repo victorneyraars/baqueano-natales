@@ -294,3 +294,29 @@ Fin del documento.
 - Mostrar historial de cleanups en el Ops Dashboard.
 - Alertas si el cleanup sanitiza >5 registros (posible ataque o bug masivo).
 
+
+## Se Alquila Marido — Roadmap
+
+### ✅ Fase 1 (2026-10-18)
+- Rename del prestador en Baqueano
+- Redirect 301 server-side
+- Backup DB
+
+### 🎯 Fase 2 (próxima sesión, ~2-3h)
+- Repo `se-alquila-marido-web` (GitHub)
+- `src/config/api.ts` (reuso de Baqueano)
+- `Layout.astro` con branding naranja/cobre
+- Landing: hero + servicios + reviews (fetch de Baqueano)
+- Deploy Vercel + DNS cutover
+- SEO local (JSON-LD, sitemap, meta)
+
+### 🔜 Fase 3 (cuando se sume más oficios)
+- Nuevas páginas: `/electricidad`, `/gasfiteria`, etc.
+- Cada oficio = 1 categoría en Baqueano + 1 sección en la landing
+- Mismo prestador (`se-alquila-marido`), distintos servicios
+
+### 🔜 Fase 4 (escalado)
+- Sumar empleados/contratistas como prestadores separados en Baqueano
+- "Se Alquila Marido" actúa como marca paraguas
+- Marketplace dentro del marketplace
+
