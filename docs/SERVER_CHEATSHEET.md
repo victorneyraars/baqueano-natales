@@ -1037,3 +1037,37 @@ El servidor (`104.129.59.151`) tiene salida a internet sin restricciones (no hay
 | HTTPS ISR Vercel | `200` |
 | HTTPS Google | `200` |
 
+
+## Gestión de Vercel (Frontend) desde el Servidor (verificado 2026-10-18)
+
+El servidor tiene la Vercel CLI instalada y autenticada (usuario `victorneyraars-6442`, equipo `studio-digital-360`). Esto permite gestionar el frontend (Astro) sin necesidad de entrar al dashboard web.
+
+### Comandos de verificación
+    vercel whoami             # Verifica la sesión activa
+    vercel projects ls        # Lista los proyectos del equipo
+    vercel env ls             # Lista variables de entorno (requiere estar en el dir del proyecto)
+
+### Flujo para modificar variables de entorno (sin intervención web)
+    # 1. Clonar el repo web si no está en el servidor
+    cd ~
+    gh repo clone victorneyraars/baqueano-natales-web
+    cd baqueano-natales-web
+
+    # 2. Agregar una variable a los 3 entornos (usando pipe para evitar prompts interactivos)
+    printf "VALOR_DE_LA_VARIABLE\n" | vercel env add NOMBRE_VARIABLE production --yes
+    printf "VALOR_DE_LA_VARIABLE\n" | vercel env add NOMBRE_VARIABLE preview --yes
+    printf "VALOR_DE_LA_VARIABLE\n" | vercel env add NOMBRE_VARIABLE development --yes
+
+    # 3. Si la variable ya existe, eliminarla primero
+    vercel env rm NOMBRE_VARIABLE production --yes
+
+### Flujo para forzar un redeploy (sin intervención web)
+    # 1. Obtener la URL del último deployment de producción
+    DEPLOY_URL=$(vercel ls --prod | grep -oE 'https://[^ ]+' | head -1)
+
+    # 2. Redeployar
+    vercel redeploy "$DEPLOY_URL" --yes
+
+### Generación de Tokens (si la CLI pierde la sesión)
+    vercel login                    # Flujo de dispositivo (se autoriza desde el navegador)
+    vercel tokens add "server-api"  # Genera un token y lo imprime en pantalla (guardar en ~/.vercel-env)
