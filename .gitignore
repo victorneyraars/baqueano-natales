@@ -97,3 +97,5 @@ deploy/legal/
 
 # APKs de desarrollo (se generan en CI y se sirven por Nginx)
 deploy/apks/*.apk
+deploy/apks/*.sha256
+deploy/apks/*.apk.sha256
