@@ -246,8 +246,11 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
   }
 
   Widget _buildPreviewCard(ThemeData theme, ReleasePreview preview) {
-    return Card(
-      child: Padding(
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,6 +348,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
