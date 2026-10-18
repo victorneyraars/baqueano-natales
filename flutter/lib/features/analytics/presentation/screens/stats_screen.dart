@@ -1,10 +1,11 @@
 /// Pantalla de estadísticas (Web Analytics).
 ///
 /// Muestra:
-/// - Cards de resumen (visits, pageviews)
-/// - Gráfico de barras (últimos N días)
-/// - Top países, referrers, páginas
+/// - Selector de sitio (todos / sealquilamarido / baqueano)
 /// - Selector de período (7/14/30 días)
+/// - Cards de resumen
+/// - Gráfico de barras por día
+/// - Top páginas, referrers, países
 /// - Pull-to-refresh
 library;
 
@@ -18,11 +19,7 @@ import 'package:baqueano_natales/features/analytics/domain/top_item.dart';
 import 'package:baqueano_natales/features/analytics/domain/visita_dia.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
-  const StatsScreen({super.key, this.hostname});
-
-  /// Si es null, muestra todos los sitios (admin).
-  /// Si tiene valor, filtra por ese hostname.
-  final String? hostname;
+  const StatsScreen({super.key});
 
   @override
   ConsumerState<StatsScreen> createState() => _StatsScreenState();
@@ -30,12 +27,13 @@ class StatsScreen extends ConsumerStatefulWidget {
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _days = 7;
+  String? _hostname = null;
 
   @override
   Widget build(BuildContext context) {
-    final asyncStats = widget.hostname == null
-        ? ref.watch(adminStatsProvider(_days))
-        : ref.watch(adminStatsProvider(_days));
+    final asyncStats = ref.watch(
+      adminStatsProvider((days: _days, hostname: _hostname)),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -44,8 +42,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.invalidate(adminStatsProvider(_days));
-              ref.invalidate(myStatsProvider(_days));
+              ref.invalidate(
+                adminStatsProvider((days: _days, hostname: _hostname)),
+              );
             },
             tooltip: 'Refrescar',
           ),
@@ -53,20 +52,25 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(adminStatsProvider(_days));
-          ref.invalidate(myStatsProvider(_days));
+          ref.invalidate(
+            adminStatsProvider((days: _days, hostname: _hostname)),
+          );
           await Future.delayed(const Duration(milliseconds: 300));
         },
         child: asyncStats.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, st) => _ErrorView(
             error: e,
-            onRetry: () => ref.invalidate(adminStatsProvider(_days)),
+            onRetry: () => ref.invalidate(
+              adminStatsProvider((days: _days, hostname: _hostname)),
+            ),
           ),
           data: (stats) => _StatsBody(
             stats: stats,
             days: _days,
+            hostname: _hostname,
             onDaysChanged: (d) => setState(() => _days = d),
+            onHostnameChanged: (h) => setState(() => _hostname = h),
           ),
         ),
       ),
@@ -78,35 +82,26 @@ class _StatsBody extends StatelessWidget {
   const _StatsBody({
     required this.stats,
     required this.days,
+    required this.hostname,
     required this.onDaysChanged,
+    required this.onHostnameChanged,
   });
 
   final StatsResponse stats;
   final int days;
+  final String? hostname;
   final ValueChanged<int> onDaysChanged;
+  final ValueChanged<String?> onHostnameChanged;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Selector de período
+        _SiteSelector(selected: hostname, onChanged: onHostnameChanged),
+        const SizedBox(height: 12),
         _PeriodSelector(days: days, onChanged: onDaysChanged),
         const SizedBox(height: 16),
-
-        // Header: hostname
-        if (stats.hostname != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              stats.hostname!,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-
-        // Cards de resumen
         Row(
           children: [
             Expanded(
@@ -129,8 +124,6 @@ class _StatsBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-
-        // Gráfico por día
         if (stats.byDay.isNotEmpty) ...[
           Text(
             'Visitas por día',
@@ -142,33 +135,56 @@ class _StatsBody extends StatelessWidget {
           _BarChart(byDay: stats.byDay),
           const SizedBox(height: 24),
         ],
-
-        // Top páginas
         if (stats.topPages.isNotEmpty)
           _TopSection(
             title: 'Páginas más visitadas',
             icon: Icons.description_outlined,
             items: stats.topPages,
           ),
-
-        // Top referrers
         if (stats.topReferrers.isNotEmpty)
           _TopSection(
             title: 'Fuentes de tráfico',
             icon: Icons.link,
             items: stats.topReferrers,
           ),
-
-        // Top países
         if (stats.topCountries.isNotEmpty)
           _TopSection(
             title: 'Países',
             icon: Icons.public,
             items: stats.topCountries,
           ),
-
         const SizedBox(height: 40),
       ],
+    );
+  }
+}
+
+class _SiteSelector extends StatelessWidget {
+  const _SiteSelector({required this.selected, required this.onChanged});
+
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+
+  static const _sites = <(String?, String)>[
+    (null, 'Todos'),
+    ('sealquilamarido.com', 'Se Alquila Marido'),
+    ('www.baqueanonatales.com', 'Baqueano'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _sites.map((site) {
+        final (hostname, label) = site;
+        final isSelected = selected == hostname;
+        return ChoiceChip(
+          label: Text(label),
+          selected: isSelected,
+          onSelected: (_) => onChanged(hostname),
+        );
+      }).toList(),
     );
   }
 }
@@ -220,10 +236,7 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 Icon(icon, color: color, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
             const SizedBox(height: 8),
