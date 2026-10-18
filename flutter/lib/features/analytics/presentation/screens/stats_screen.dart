@@ -27,7 +27,7 @@ class StatsScreen extends ConsumerStatefulWidget {
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _days = 7;
-  String? _hostname = null;
+  String? _hostname;
 
   @override
   Widget build(BuildContext context) {

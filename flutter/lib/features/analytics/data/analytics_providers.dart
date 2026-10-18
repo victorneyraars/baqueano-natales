@@ -14,14 +14,6 @@ final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
 });
 
 // =========================================================
-// Filtro de hostname (compartido entre stats admin)
-// =========================================================
-/// `null` = todos los sitios.
-/// `"sealquilamarido.com"` = Se Alquila Marido.
-/// `"www.baqueanonatales.com"` = Baqueano.
-final hostnameFilterProvider = StateProvider<String?>((ref) => null);
-
-// =========================================================
 // Stats del admin (con filtro de hostname)
 // =========================================================
 final adminStatsProvider = FutureProvider.family<StatsResponse, ({int days, String? hostname})>(
