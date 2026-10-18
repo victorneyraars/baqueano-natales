@@ -497,13 +497,13 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             ),
             const SizedBox(height: 16),
             // ----- Descarga e instalación in-app -----
-            ApkDownloadButton(
+            const ApkDownloadButton(
               flavor: 'adminDev',
               label: 'Descargar e Instalar APK Admin (dev)',
               icon: Icons.admin_panel_settings,
             ),
             const SizedBox(height: 8),
-            ApkDownloadButton(
+            const ApkDownloadButton(
               flavor: 'clientDev',
               label: 'Descargar e Instalar APK Client (dev)',
               icon: Icons.people,
