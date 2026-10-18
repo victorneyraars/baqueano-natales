@@ -78,6 +78,8 @@ from app.modules.social.worker import start_worker, stop_worker
 from app.modules.ops.routes import router as ops_admin_router
 from app.modules.ops import services_github as ops_services_github
 from app.modules.oficios.worker import (
+from app.modules.ops.revalidate import router as revalidate_router
+
     start_worker as start_recordatorios_worker,
     stop_worker as stop_recordatorios_worker,
 )
@@ -189,6 +191,7 @@ app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")
 
 # Ops Dashboard (admin — solo lectura, Fase 1)
 app.include_router(ops_admin_router, prefix="/api/v1")
+app.include_router(revalidate_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------

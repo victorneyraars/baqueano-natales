@@ -372,6 +372,7 @@ async def verificar_prestador(
     prestador.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(prestador)
+    await _notify_web_revalidation(prestador)
     return prestador
 
 
@@ -688,3 +689,17 @@ async def actualizar_foto_portada(
     await db.flush()
     await db.refresh(prestador)
     return prestador
+async def _notify_web_revalidation(prestador):
+    """Llama al webhook interno para revalidar la web (best-effort)."""
+    from app.core.config import settings
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{settings.INTERNAL_API_URL}/api/v1/ops/webhooks/revalidate",
+                json={"paths": ["/prestadores", f"/prestadores/{prestador.slug}"]},
+                headers={"x-api-key": settings.REVALIDATE_API_KEY},
+                timeout=5.0,
+            )
+    except Exception:
+        pass

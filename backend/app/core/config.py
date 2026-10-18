@@ -8,6 +8,9 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+    REVALIDATE_API_KEY: str = ""
+    VERCEL_BYPASS_TOKEN: str = ""
+    PUBLIC_WEB_URL: str = "https://www.baqueanonatales.com"
 class Settings(BaseSettings):
     """Configuración central de la aplicación."""
     # ============================================================
