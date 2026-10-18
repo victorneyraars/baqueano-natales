@@ -3796,3 +3796,46 @@ en producción**.
 - Copy alineado con la app real.
 - 0 menciones a Torres del Paine / Aeropuerto / Delivery.
 
+
+### 2026-10-18 (cont. 52) - Web alineada con MVP real: oficios + comercios
+
+**Web cerrada: todas las features operativas representadas.**
+
+**Nuevas páginas (`baqueano-natales-web`):**
+- `/prestadores` — listado con filtros por categoría (chips), grid marketplace (foto portada, avatar overlap, rating, especialidades, badges "A domicilio" / "24/7").
+- `/prestadores/[slug]` — detalle con hero (portada + avatar), stats (rating/años/verificado), descripción, especialidades legibles, servicios con precios, contacto WhatsApp/teléfono, reviews con respuesta del prestador, JSON-LD `LocalBusiness` para SEO local.
+
+**Mejores prácticas aplicadas:**
+- ISR con `export const prerender = false`.
+- Fetch defensivo: filtro estricto (`verificado && categoria && Array.isArray(especialidades)`).
+- Optional chaining: `p.categoria?.nombre`, `(p.especialidades ?? [])`.
+- 2 requests en paralelo (prestador + reviews).
+- JSON-LD `LocalBusiness` con dirección, teléfono, aggregateRating.
+- Mapeo de slugs técnicos a nombres legibles (`ESPECIALIDADES_MAP`).
+
+**Bug encontrado y fixeado:**
+- Prestador `casa` con `especialidades: null` → listado devolvía 500. Fix: filtro defensivo + optional chaining.
+
+**Home actualizada:**
+- Link "Oficios" en header (junto a "Comercios").
+- Botón "Ver Oficios" en hero.
+
+**Estado final de la web:**
+
+| Página | Tipo | Datos |
+|---|---|---|
+| `/` | Estático | Links a oficios + comercios + descargar |
+| `/descargar` | Estático | APK prod + dev |
+| `/locales` | ISR | Comercios |
+| `/locales/[tipo]/[slug]` | ISR | Detalle de comercio |
+| `/prestadores` | ISR | Oficios con filtros |
+| `/prestadores/[slug]` | ISR | Detalle + reviews + JSON-LD |
+
+**Verificado:**
+- 5 rutas raíz: 200.
+- Filtro por categoría funcional.
+- Especialidades legibles.
+- JSON-LD presente.
+- Reviews cargan desde endpoint separado.
+- Home tiene 2 links a `/prestadores`.
+

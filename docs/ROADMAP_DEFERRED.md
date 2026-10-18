@@ -249,3 +249,22 @@ Fin del documento.
 
 **Resultado:** `cf-cache-status: DYNAMIC` en cada petición a `/apks/*`. Los APKs se sirven siempre desde el origen (server). No hace falta purgar manualmente tras cada actualización.
 
+
+## Web: Pendientes post-sesión 2026-10-18
+
+### Features faltantes
+1. **Filtros avanzados en `/prestadores`**: búsqueda por texto, ordenamiento por rating/precio.
+2. **Paginación** cuando haya >20 prestadores.
+3. **Mapa de prestadores** (Leaflet) — requiere lat/lng.
+4. **Galería de fotos de trabajos** — la API ya devuelve `fotos_trabajos[]`.
+5. **Página `/prestadores/categorias`** con conteo por categoría.
+
+### Bugs conocidos
+- **`casa`** en prod es un prestador de prueba con `especialidades: null`. Filtrado del listado pero conviene limpiarlo de la DB.
+- **`prod-client.apk`** es placeholder (copia del dev). Se reemplaza en release `v0.4.0`.
+
+### Prioridad
+- **Alta**: limpiar prestadores de prueba en prod.
+- **Media**: búsqueda por texto en `/prestadores`.
+- **Baja**: mapa, galería.
+
