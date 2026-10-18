@@ -259,15 +259,17 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                   color: preview.canProceed ? Colors.green : Colors.red,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  preview.canProceed
-                      ? 'Listo para publicar'
-                      : 'Revisar validaciones',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: preview.canProceed
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                Expanded(
+                  child: Text(
+                    preview.canProceed
+                        ? 'Listo para publicar'
+                        : 'Revisar validaciones',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: preview.canProceed
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
                   ),
                 ),
               ],
@@ -329,6 +331,16 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Botón APK directo (siempre visible, sin Play Store)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.android),
+                label: const Text('Generar APK Admin (dev)'),
+                onPressed: () => _triggerBuild(context, 'adminDev'),
               ),
             ),
           ],
@@ -439,15 +451,6 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                     'Listo en ~5-10 min. '
                     'Descargable desde api-dev.baqueanonatales.com/apks/app-admindev.apk',
                     style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.download),
-                      label: const Text('Generar APK Admin'),
-                      onPressed: () => _triggerBuild(context, 'adminDev'),
-                    ),
                   ),
                 ],
               ),
