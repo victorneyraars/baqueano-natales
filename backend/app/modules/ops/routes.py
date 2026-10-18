@@ -298,3 +298,40 @@ async def build_dev_apk(
         ),
     }
 
+
+
+import os
+from pydantic import BaseModel
+from fastapi import HTTPException
+
+class ApkInfoResponse(BaseModel):
+    version: str
+    url: str
+    sha256: str
+    size_mb: float
+
+@router.get("/latest-apk/{flavor}", response_model=ApkInfoResponse)
+async def get_latest_apk(flavor: str):
+    if flavor not in ["adminDev", "clientDev"]:
+        raise HTTPException(status_code=400, detail="Flavor inválido")
+        
+    filename = "app-admindev.apk" if flavor == "adminDev" else "app-clientdev.apk"
+    apk_path = f"/home/deploy/baqueano-natales/deploy/apks/{filename}"
+    
+    if not os.path.exists(apk_path):
+        raise HTTPException(status_code=404, detail="APK no encontrado")
+        
+    sha = ""
+    sha_path = apk_path + ".sha256"
+    if os.path.exists(sha_path):
+        with open(sha_path, "r") as f:
+            sha = f.read().strip().split()[0]
+
+    version = "0.4.0" # temporal hasta que el CI genere un metadata.json
+
+    return ApkInfoResponse(
+        version=version,
+        url=f"https://api-dev.baqueanonatales.com/apks/{filename}",
+        sha256=sha,
+        size_mb=round(os.path.getsize(apk_path) / (1024 * 1024), 1)
+    )
