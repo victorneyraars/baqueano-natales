@@ -28,7 +28,7 @@ class AnalyticsRepository {
         '$_base/stats',
         queryParameters: {
           'days': days,
-          if (hostname != null) 'hostname': hostname,
+          if (hostname case final h?) 'hostname': h,
         },
       );
       return StatsResponse.fromJson(res.data as Map<String, dynamic>);
