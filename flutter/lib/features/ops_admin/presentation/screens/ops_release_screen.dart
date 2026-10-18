@@ -38,6 +38,44 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
   bool _triggering = false;
   ReleaseTrigger? _triggerResult;
   String? _triggerError;
+  String? _suggestedVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    _autocompletarVersion();
+  }
+
+  /// Hace un preview "probe" para leer currentVersion y sugerir la siguiente.
+  /// Usa 99.99.99 para garantizar que el backend siempre responda.
+  Future<void> _autocompletarVersion() async {
+    if (_versionController.text.isNotEmpty) return;
+    try {
+      final result = await ref.read(
+        opsReleasePreviewProvider(
+          const ReleasePreviewParams(versionName: '99.99.99'),
+        ).future,
+      );
+      final current = result.currentVersion; // ej. "0.3.4+7"
+      if (current.isEmpty) return;
+      final base = current.split('+').first; // "0.3.4"
+      final parts = base.split('.');
+      if (parts.length != 3) return;
+      final major = int.tryParse(parts[0]);
+      final minor = int.tryParse(parts[1]);
+      if (major == null || minor == null) return;
+      final suggested = '$major.${minor + 1}.0';
+      if (!mounted) return;
+      setState(() {
+        _suggestedVersion = suggested;
+        if (_versionController.text.isEmpty) {
+          _versionController.text = suggested;
+        }
+      });
+    } catch (_) {
+      // silencioso: si falla, el usuario escribe a mano
+    }
+  }
 
   @override
   void dispose() {
@@ -135,6 +173,33 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ----- Sugerencia automatica de version -----
+          if (_suggestedVersion != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome,
+                      size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Sugerencia: $_suggestedVersion',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _versionController.text = _suggestedVersion!;
+                      });
+                    },
+                    child: const Text('Usar'),
+                  ),
+                ],
+              ),
+            ),
 
           // ----- Input version -----
           Form(
