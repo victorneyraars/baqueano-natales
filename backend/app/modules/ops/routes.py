@@ -231,3 +231,70 @@ async def cleanup_run(
     await db.commit()
 
     return resultado
+
+# ============================================================
+# Build Dev APK (dispara dev-build.yml desde la app)
+# ============================================================
+@router.post("/build-dev-apk")
+async def build_dev_apk(
+    current_user: AdminUser,
+    flavor: str = Query(default="adminDev", pattern="^(clientDev|adminDev|both)$"),
+):
+    """Dispara el workflow dev-build.yml para generar un APK directo.
+
+    - flavor=adminDev → compila la App Admin
+    - flavor=clientDev → compila la App Cliente
+    - flavor=both → compila ambas
+
+    El APK queda disponible en:
+    https://api-dev.baqueanonatales.com/apks/app-{flavor}.apk
+    Listo en ~5-10 min.
+    """
+    import httpx
+    from app.core.config import settings
+
+    if not settings.GITHUB_OPS_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_OPS_TOKEN no configurado en .env",
+        )
+
+    url = (
+        f"{settings.GITHUB_API_BASE}/repos/{settings.GITHUB_OPS_REPO}"
+        f"/actions/workflows/dev-build.yml/dispatches"
+    )
+
+    async with httpx.AsyncClient() as client:
+        try:
+            r = await client.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {settings.GITHUB_OPS_TOKEN}",
+                    "Accept": "application/vnd.github+json",
+                },
+                json={"ref": "main", "inputs": {"flavor": flavor}},
+                timeout=15.0,
+            )
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Error GitHub: {e}")
+
+    if r.status_code not in (200, 204):
+        raise HTTPException(
+            status_code=502,
+            detail=f"GitHub API {r.status_code}: {r.text[:300]}",
+        )
+
+    return {
+        "status": "triggered",
+        "flavor": flavor,
+        "message": f"Build {flavor} disparado. Listo en ~5-10 min.",
+        "workflow_url": (
+            f"https://github.com/{settings.GITHUB_OPS_REPO}"
+            f"/actions/workflows/dev-build.yml"
+        ),
+        "apk_url": (
+            f"https://api-dev.baqueanonatales.com/apks/"
+            f"app-{flavor.replace('Dev', '').lower()}.apk"
+        ),
+    }
+
