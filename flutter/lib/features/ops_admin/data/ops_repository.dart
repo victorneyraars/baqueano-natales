@@ -198,4 +198,18 @@ class OpsRepository {
     }
   }
 
+
+  Future<Map<String, dynamic>> getLatestApk(String flavor) async {
+    try {
+      final res = await _dio.get('/api/v1/admin/ops/latest-apk/$flavor');
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

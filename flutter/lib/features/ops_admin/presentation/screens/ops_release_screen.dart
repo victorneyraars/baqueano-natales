@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/apk_download_button.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/ops_admin/data/ops_providers.dart';
@@ -476,14 +477,36 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Botón APK directo (siempre visible, sin Play Store)
+            // ----- Build triggers -----
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.android),
+                icon: const Icon(Icons.build),
                 label: const Text('Generar APK Admin (dev)'),
                 onPressed: () => _triggerBuild(context, 'adminDev'),
               ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.build),
+                label: const Text('Generar APK Client (dev)'),
+                onPressed: () => _triggerBuild(context, 'clientDev'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // ----- Descarga e instalación in-app -----
+            ApkDownloadButton(
+              flavor: 'adminDev',
+              label: 'Descargar e Instalar APK Admin (dev)',
+              icon: Icons.admin_panel_settings,
+            ),
+            const SizedBox(height: 8),
+            ApkDownloadButton(
+              flavor: 'clientDev',
+              label: 'Descargar e Instalar APK Client (dev)',
+              icon: Icons.people,
             ),
           ],
         ),
