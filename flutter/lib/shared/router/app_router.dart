@@ -281,7 +281,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           name: 'admin-stats',
           builder: (context, state) => const StatsScreen(),
         ),
-        ),
 
       // =========================================================
       // Comercios â€” pÃºblico
