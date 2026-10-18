@@ -500,8 +500,8 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             // ----- Descarga e instalación in-app -----
             Row(
               children: [
-                Expanded(
-                  child: const ApkDownloadButton(
+                const Expanded(
+                  child: ApkDownloadButton(
                     flavor: 'adminDev',
                     label: 'Descargar e Instalar Admin',
                     icon: Icons.admin_panel_settings,
@@ -512,7 +512,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                   icon: const Icon(Icons.share),
                   tooltip: 'Compartir link Admin',
                   onPressed: () {
-                    Share.share('Descarga el APK de Admin (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-admindev.apk');
+                    SharePlus.instance.share(ShareParams(text: 'Descarga el APK de Admin (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-admindev.apk'));
                   },
                 ),
               ],
@@ -520,8 +520,8 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(
-                  child: const ApkDownloadButton(
+                const Expanded(
+                  child: ApkDownloadButton(
                     flavor: 'clientDev',
                     label: 'Descargar e Instalar Client',
                     icon: Icons.people,
@@ -532,7 +532,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                   icon: const Icon(Icons.share),
                   tooltip: 'Compartir link Client',
                   onPressed: () {
-                    Share.share('Descarga el APK de Client (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-clientdev.apk');
+                    SharePlus.instance.share(ShareParams(text: 'Descarga el APK de Client (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-clientdev.apk'));
                   },
                 ),
               ],
