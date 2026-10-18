@@ -80,7 +80,18 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
-          target: "/home/deploy/baqueano-natales/deploy/apks/app-clientdev.apk"
+          target: "/home/deploy/baqueano-natales/deploy/apks/"
+
+      - name: Renombrar APK (clientDev)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/deploy/baqueano-natales/deploy/apks/
+            mv app-clientDev-release.apk app-clientdev.apk 2>/dev/null || true
+            mv app-clientDev-release.apk.sha256 app-clientdev.apk.sha256 2>/dev/null || true
 
   build-admin:
     if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'both'
@@ -148,4 +159,15 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
-          target: "/home/deploy/baqueano-natales/deploy/apks/app-admindev.apk"
+          target: "/home/deploy/baqueano-natales/deploy/apks/"
+
+      - name: Renombrar APK (adminDev)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/deploy/baqueano-natales/deploy/apks/
+            mv app-adminDev-release.apk app-admindev.apk 2>/dev/null || true
+            mv app-adminDev-release.apk.sha256 app-admindev.apk.sha256 2>/dev/null || true
