@@ -427,40 +427,6 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
               ],
             ),
           ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.android, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'APK directo (sin Play Store)',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Genera un APK de Admin y lo sube a la web. '
-                    'Listo en ~5-10 min. '
-                    'Descargable desde api-dev.baqueanonatales.com/apks/app-admindev.apk',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
         ],
       ),
     );
