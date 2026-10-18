@@ -411,6 +411,49 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
               ],
             ),
           ),
+
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.android, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'APK directo (sin Play Store)',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Genera un APK de Admin y lo sube a la web. '
+                    'Listo en ~5-10 min. '
+                    'Descargable desde api-dev.baqueanonatales.com/apks/app-admindev.apk',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.download),
+                      label: const Text('Generar APK Admin'),
+                      onPressed: () => _triggerBuild(context, 'adminDev'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         ],
       ),
     );
@@ -575,4 +618,30 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
       }
     }
   }
+
+  Future<void> _triggerBuild(BuildContext context, String flavor) async {
+    try {
+      final repo = ref.read(opsRepositoryProvider);
+      final result = await repo.triggerDevBuild(flavor: flavor);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Build disparado.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 }

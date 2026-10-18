@@ -169,4 +169,33 @@ class OpsRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  /// Dispara el workflow dev-build.yml para generar un APK directo.
+  ///
+  /// - flavor=adminDev → compila la App Admin
+  /// - flavor=clientDev → compila la App Cliente
+  /// - flavor=both → compila ambas
+  ///
+  /// El APK queda disponible en:
+  /// https://api-dev.baqueanonatales.com/apks/app-{flavor}.apk
+  /// Listo en ~5-10 min.
+  Future<Map<String, dynamic>> triggerDevBuild({
+    required String flavor,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/admin/ops/build-dev-apk',
+        queryParameters: {'flavor': flavor},
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
 }
