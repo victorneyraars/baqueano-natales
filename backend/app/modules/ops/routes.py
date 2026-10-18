@@ -1,4 +1,3 @@
-from app.modules.ops import services_cleanup
 """Endpoints admin del Ops Dashboard (solo lectura — Fase 1).
 
 Todos requieren rol `admin`. Los endpoints están diseñados para ser
@@ -21,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 
 from app.modules.ops import (
+    services_audit,
+    services_cleanup,
     services_github,
     services_health,
     services_links,
