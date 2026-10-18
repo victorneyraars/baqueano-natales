@@ -187,3 +187,22 @@ Fin del documento.
 - El paso `Debug — listar APKs generados` quedó en el workflow (útil para debug, se puede quitar).
 - `scripts/register_sha1_firebase.py` tiene argumento `--keystore-b64` que ya no se usa (siempre pasamos `--sha1` directo).
 
+
+## Frontend Web - Pendientes post sesión 2026-10-18
+
+### Migración a ISR real (prioridad alta)
+- **Qué**: refactorizar páginas de Astro para usar `fetch()` dinámico + `prerender = false`.
+- **Por qué**: hoy las páginas son estáticas puras, el webhook no las revalida.
+- **Páginas afectadas**: `/locales/index.astro`, `/locales/[tipo]/[slug].astro`.
+- **Cambios**:
+  1. Reemplazar `import { locales } from '../../data/menus'` con `fetch()` a la API.
+  2. Quitar `getStaticPaths()` de `[slug].astro`.
+  3. Agregar `export const prerender = false;` al inicio.
+  4. Actualizar paths del webhook backend (`/prestadores` → `/locales`).
+- **Testing**: crear comercio en DB → webhook → verificar `/locales` muestra el nuevo en <30s.
+
+### Bug: sync-locales.mjs retorna 404
+- El script `scripts/sync-locales.mjs` consulta la API para ID 4 (`puro-verde`) y recibe 404.
+- Build continúa por el `|| true`, pero la página queda con datos vacíos.
+- Fix pendiente: revisar si el local existe en la DB o si el ID está mal hardcodeado.
+

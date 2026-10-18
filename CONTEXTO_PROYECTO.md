@@ -3673,3 +3673,27 @@ en producción**.
 - `/usr/share/nginx/apks/` (alias público).
 - `apksigner` instalado en servidor (para verificar certificados).
 
+
+### 2026-10-18 (cont. 47) - Web Frontend: Adapter Vercel + ISR preparado
+
+**Webhook de revalidación backend → Vercel funcionando end-to-end.**
+
+**Backend (commit `bc5ae08`):**
+- `POST /api/v1/ops/webhooks/revalidate` con API key.
+- `_notificar_cambio_web()` en `prestadores/services.py` (dispara al verificar prestador).
+- Variables: `REVALIDATE_API_KEY`, `VERCEL_BYPASS_TOKEN`, `PUBLIC_WEB_URL`.
+- Gotcha: `docker compose restart` NO relee `.env` → usar `up -d --force-recreate`.
+
+**Nginx fix:**
+- Routing dev/prod estaba invertido por config stale en memoria.
+- Fix: `docker exec baqueano_nginx nginx -s reload`.
+- Backups movidos a `/tmp/nginx-backups/`.
+
+**Frontend (commit `890e833`):**
+- `@astrojs/vercel@9.0.5` instalado (compatible con Astro 5).
+- `astro.config.mjs` con `adapter: vercel({ isr: { bypassToken, expiration } })`.
+- `VERCEL_BYPASS_TOKEN` configurado en Vercel (Prod/Preview/Dev).
+- Deployment Protection NO afecta dominio público.
+
+**Infra Vercel CLI documentada** en `SERVER_CHEATSHEET.md`.
+
