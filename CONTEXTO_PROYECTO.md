@@ -3839,3 +3839,42 @@ en producción**.
 - Reviews cargan desde endpoint separado.
 - Home tiene 2 links a `/prestadores`.
 
+
+### 2026-10-18 (cont. 54) - Automatización completa + cleanup en producción
+
+**Sistema 100% automatizado. La web se actualiza y auto-repara sin intervención manual.**
+
+**Cleanup automático (`ops/services_cleanup.py` + `ops/worker.py`):**
+
+- **Detección**: prestadores verificados con `especialidades: null` o `categoria_id: null`.
+- **Sanitización**: prestadores detectados → `BORRADOR` (dejan de ser públicos).
+- **Comercios**: solo se loguean (requieren revisión manual por FK).
+- **Worker APScheduler**: corre cada 24h (config: `CLEANUP_WORKER_ENABLED=true`, `CLEANUP_WORKER_INTERVAL_SEC=86400`).
+- **Audit log**: `action=cleanup.run` en `ops_audit_log`.
+- **Endpoints admin**:
+  - `GET /admin/ops/cleanup/preview` (dry-run)
+  - `POST /admin/ops/cleanup` (ejecuta real)
+
+**Bugs encontrados y fixeados durante el deploy:**
+
+1. **Import faltante en `routes.py`**: `services_cleanup` y `services_audit` no estaban importados.
+2. **Indentación rota en `main.py`**: `start_cleanup_worker()` se insertó con 8 espacios.
+3. **`DbSession` no existía**: se agregó `DbSession = Annotated[AsyncSession, Depends(get_db)]`.
+4. **Gotcha 4.3**: scripts standalone con `AsyncSessionLocal` necesitan importar TODOS los modelos relacionados.
+
+**Verificado end-to-end en PROD:**
+
+- `casa` (prestador con `especialidades: null`) pasó de `verificado` a `borrador`.
+- Audit log: `success` en 43ms.
+- `/prestadores` ya no muestra `casa` (0 referencias).
+- Webhook revalidó Vercel automáticamente.
+
+**Estado completo de la automatización:**
+
+| Trigger | Acción |
+|---|---|
+| Admin verifica/edita/rechaza/suspende prestador | Webhook → Vercel regenera `/prestadores` + `/prestadores/{slug}` |
+| Admin verifica/edita/rechaza/suspende comercio | Webhook → Vercel regenera `/locales` + `/locales/{cat}/{slug}` |
+| Admin agrega/modifica horarios | Webhook → Vercel regenera detalle |
+| Datos incompletos en DB (cron 24h) | Cleanup → sanitiza prestadores + audit log |
+

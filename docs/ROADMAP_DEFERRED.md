@@ -268,3 +268,29 @@ Fin del documento.
 - **Media**: búsqueda por texto en `/prestadores`.
 - **Baja**: mapa, galería.
 
+
+## Web + Ops: Estado post-sesión 2026-10-18
+
+### ✅ Cerrado
+- Webhook de revalidación ISR (prestadores + comercios)
+- Cleanup automático de datos incompletos (cron 24h)
+- Endpoints admin: `/cleanup/preview` + `/cleanup`
+- Audit log en `ops_audit_log`
+- Filtro client-side en `/prestadores` (compatible con ISR cacheado)
+- `casa` sanitizado en prod
+
+### 🔜 Pendiente próximas sesiones
+
+**Backend:**
+- Notificar cleanup de comercios (requiere revisión manual por FK).
+- Worker cleanup de imágenes huérfanas (fotos sin orden activa).
+
+**Web:**
+- Filtros avanzados en `/prestadores` (búsqueda por texto, ordenamiento).
+- Mapa de prestadores/comercios (Leaflet).
+- Galería de fotos de trabajos en detalle del prestador (API ya devuelve `fotos_trabajos[]`).
+
+**Ops Dashboard:**
+- Mostrar historial de cleanups en el Ops Dashboard.
+- Alertas si el cleanup sanitiza >5 registros (posible ataque o bug masivo).
+
