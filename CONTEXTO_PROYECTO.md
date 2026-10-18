@@ -3737,3 +3737,32 @@ en producción**.
 - Backend prod es imagen autocontenida → rebuild obligatorio tras cambios en código.
 - El schema `HorarioResponse` espera `dia_semana` en rango 0-6 (domingo=0), no 1-7 (ISO).
 
+
+### 2026-10-18 (cont. 49) - Limpieza de código legacy en la web
+
+**Eliminado todo el código de la web anterior (menús hardcoded).**
+
+**Archivos borrados (247 líneas):**
+- `src/data/menus.ts` (data hardcoded, sin referencias).
+- `scripts/sync-locales.mjs` (legacy, fallaba con 404).
+- `src/styles/global.css` (huérfano, no importado).
+- `public/assets/*` (8 assets obsoletos: icono PNG, mono, logo, logo oscuro, duplicados).
+- `package.json`: script `sync` eliminado.
+
+**Estado final del proyecto web:**
+- `src/config/api.ts` — cliente API + tipos.
+- `src/layouts/Layout.astro` — layout base.
+- `src/pages/index.astro` — home (prerenderizada).
+- `src/pages/locales/index.astro` — listado (ISR runtime).
+- `src/pages/locales/[tipo]/[slug].astro` — detalle (ISR runtime).
+- `public/assets/baqueano_icono.svg` — único asset.
+
+**Verificado post-limpieza:**
+- Home, `/locales`, detalle: HTTP 200.
+- Assets borrados: 404 (esperado).
+- Asset conservado: 200.
+- ISR sigue funcionando: `age` 51s → 7s tras webhook.
+- Build exitoso (10s), deploy exitoso (14s).
+
+**Backup:** `/tmp/web-backup-20261018-023355/` (rollback disponible si se necesita).
+
