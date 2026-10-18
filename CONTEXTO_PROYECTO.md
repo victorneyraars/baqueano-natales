@@ -3697,3 +3697,43 @@ en producción**.
 
 **Infra Vercel CLI documentada** en `SERVER_CHEATSHEET.md`.
 
+
+### 2026-10-18 (cont. 48) - Web ISR END-TO-END FUNCIONAL
+
+**Frontend Astro + ISR bajo demanda + webhook backend = ciclo automático completo.**
+
+**Frontend (commit `43b5fd1`):**
+- `/locales` y `/locales/[tipo]/[slug]` reconstruidos con `fetch()` dinámico a la API.
+- `export const prerender = false` → ISR activo en runtime.
+- `src/config/api.ts` centralizado con tipos TypeScript completos.
+- Solo `/` (home) queda prerenderizada estáticamente.
+- `sync-locales.mjs` eliminado del build (ya no se necesita).
+
+**Backend (commits `bc5ae08` + `e03e7fc`):**
+- `POST /api/v1/ops/webhooks/revalidate` operativo.
+- `_notificar_cambio_web(comercio)` en `comercios/services.py`:
+  - Notifica a Vercel con paths `/locales` y `/locales/{categoria}/{slug}`.
+  - Llamada desde `verificar_comercio`, `rechazar_comercio`, `suspender_comercio`, `destacar_comercio`.
+  - Best-effort (nunca rompe el flujo principal).
+- `_notify_web_revalidation(prestador)` corregido: ahora usa `PUBLIC_API_URL` (antes `INTERNAL_API_URL` que no existía) y apunta a `/` en lugar de `/prestadores`.
+
+**Variables de entorno:**
+- `REVALIDATE_API_KEY`, `VERCEL_BYPASS_TOKEN`, `PUBLIC_API_URL` en `.env.dev` y `.env.prod`.
+- Ambas variables críticas cargadas en `settings` de dev y prod (rebuild necesario en prod por imagen autocontenida).
+
+**Prueba end-to-end verificado (2026-10-18):**
+- Cache antes: `age: 421` (7 min).
+- Webhook dispara: `HEAD /locales` y `HEAD /locales/restaurante/la-picada-de-natales` → `HTTP 200 OK`.
+- Cache después: `age: 12` (regenerado hace 12s).
+
+**Configuración Vercel:**
+- `@astrojs/vercel@9.0.5` (compatible con Astro 5).
+- `adapter: vercel({ isr: { bypassToken, expiration: 86400 } })`.
+- `VERCEL_BYPASS_TOKEN` configurado en Prod/Preview/Dev.
+- Deployment Protection NO afecta dominio público.
+
+**Gotchas críticos descubiertos:**
+- `docker compose restart` NO recarga variables de `.env` → `up -d --force-recreate`.
+- Backend prod es imagen autocontenida → rebuild obligatorio tras cambios en código.
+- El schema `HorarioResponse` espera `dia_semana` en rango 0-6 (domingo=0), no 1-7 (ISO).
+

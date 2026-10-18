@@ -17,6 +17,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
+
+from app.core.config import settings
 
 from app.modules.auth.models import RolUsuario, Usuario
 from app.modules.comercios.models import (
@@ -408,6 +411,8 @@ async def verificar_comercio(
     comercio.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(comercio)
+
+    await _notificar_cambio_web(comercio)
     return comercio
 
 
@@ -428,6 +433,8 @@ async def rechazar_comercio(
     comercio.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(comercio)
+
+    await _notificar_cambio_web(comercio)
     return comercio
 
 
@@ -448,6 +455,8 @@ async def suspender_comercio(
     comercio.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(comercio)
+
+    await _notificar_cambio_web(comercio)
     return comercio
 
 
@@ -460,6 +469,8 @@ async def destacar_comercio(
     comercio.destacado = destacado
     await db.flush()
     await db.refresh(comercio)
+
+    await _notificar_cambio_web(comercio)
     return comercio
 
 
@@ -605,3 +616,28 @@ async def actualizar_portada(
     await db.flush()
     await db.refresh(comercio)
     return comercio
+
+# ============================================================
+# Webhook de revalidación (best-effort)
+# ============================================================
+async def _notificar_cambio_web(comercio: "Comercio") -> None:
+    """Notifica a Vercel para revalidar las páginas del comercio."""
+    try:
+        categoria_slug = "comercio"
+        if comercio.categoria:
+            categoria_slug = comercio.categoria.slug
+
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{settings.PUBLIC_API_URL}/api/v1/ops/webhooks/revalidate",
+                json={"paths": [
+                    "/locales",
+                    f"/locales/{categoria_slug}/{comercio.slug}",
+                ]},
+                headers={"x-api-key": settings.REVALIDATE_API_KEY},
+                timeout=5.0,
+            )
+    except Exception:
+        # Best-effort: nunca rompemos el flujo principal
+        pass
+

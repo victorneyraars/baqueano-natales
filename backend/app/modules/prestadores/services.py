@@ -690,14 +690,14 @@ async def actualizar_foto_portada(
     await db.refresh(prestador)
     return prestador
 async def _notify_web_revalidation(prestador):
-    """Llama al webhook interno para revalidar la web (best-effort)."""
+    """Notifica a Vercel para revalidar la home (best-effort)."""
     from app.core.config import settings
     import httpx
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
-                f"{settings.INTERNAL_API_URL}/api/v1/ops/webhooks/revalidate",
-                json={"paths": ["/prestadores", f"/prestadores/{prestador.slug}"]},
+                f"{settings.PUBLIC_API_URL}/api/v1/ops/webhooks/revalidate",
+                json={"paths": ["/"]},
                 headers={"x-api-key": settings.REVALIDATE_API_KEY},
                 timeout=5.0,
             )

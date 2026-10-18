@@ -206,3 +206,26 @@ Fin del documento.
 - Build continúa por el `|| true`, pero la página queda con datos vacíos.
 - Fix pendiente: revisar si el local existe en la DB o si el ID está mal hardcodeado.
 
+
+## Web Frontend - Estado post 2026-10-18
+
+### ✅ Cerrado
+- Adapter Vercel + ISR
+- Webhook backend de revalidación
+- `/locales` + `/locales/[tipo]/[slug]` con fetch dinámico
+- Ciclo automático: cambio DB → webhook → Vercel regenera
+
+### Pendiente próximo
+1. **Página `/` (home)**: hoy es estática, no tiene `prerender=false`. Si querés que se actualice con datos de la API (ej: contador de comercios), hay que migrarla también.
+2. **Ampliar webhook a más acciones**: hoy solo se dispara desde comercios. Se puede agregar en:
+   - Prestadores verificados (cuando haya página pública).
+   - Cambios en `categorias_comercio` (reflejar en filtros).
+   - Reviews (si se muestran en el sitio público).
+3. **Bug `sync-locales.mjs`**: el script legacy consultaba `/catalogo/local/{id}` que devuelve 404. Ya no se ejecuta en build pero el archivo `scripts/sync-locales.mjs` sigue en el repo. Se puede eliminar.
+4. **Filtros y búsqueda en `/locales`**: hoy no hay filtro por categoría ni búsqueda. Próxima iteración.
+5. **Mapa de locales en `/locales`**: integrar Google Maps o Leaflet con `latitud`/`longitud` (los campos existen en el modelo pero están null en el seed).
+
+### Bug conocidos
+- `sync-locales.mjs` consulta `/catalogo/local/4` (404) — no se ejecuta en build pero se puede borrar.
+- El comercio `la-picada-de-natales` tiene todos los horarios como `cerrado: true` en prod. Se puede ajustar el seed.
+
