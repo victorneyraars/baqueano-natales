@@ -305,6 +305,9 @@ async def editar_prestador(
         prestador,
         attribute_names=["categoria", "servicios", "fotos_trabajos"],
     )
+    # Solo revalidar si el prestador está verificado (público)
+    if prestador.estado == EstadoPrestador.VERIFICADO:
+        await _notify_web_revalidation(prestador)
     return prestador
 
 
@@ -393,6 +396,7 @@ async def rechazar_prestador(
     prestador.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(prestador)
+    await _notify_web_revalidation(prestador)
     return prestador
 
 
@@ -413,6 +417,7 @@ async def suspender_prestador(
     prestador.verificado_por_id = admin.id
     await db.flush()
     await db.refresh(prestador)
+    await _notify_web_revalidation(prestador)
     return prestador
 
 
@@ -425,6 +430,9 @@ async def destacar_prestador(
     prestador.destacado = destacado
     await db.flush()
     await db.refresh(prestador)
+    # Solo revalidar si el prestador está verificado (público)
+    if prestador.estado == EstadoPrestador.VERIFICADO:
+        await _notify_web_revalidation(prestador)
     return prestador
 
 
@@ -690,14 +698,18 @@ async def actualizar_foto_portada(
     await db.refresh(prestador)
     return prestador
 async def _notify_web_revalidation(prestador):
-    """Notifica a Vercel para revalidar la home (best-effort)."""
+    """Notifica a Vercel para revalidar /prestadores y el detalle (best-effort)."""
     from app.core.config import settings
     import httpx
     try:
+        paths = ["/prestadores"]
+        if prestador.slug:
+            paths.append(f"/prestadores/{prestador.slug}")
+
         async with httpx.AsyncClient() as client:
             await client.post(
                 f"{settings.PUBLIC_API_URL}/api/v1/ops/webhooks/revalidate",
-                json={"paths": ["/"]},
+                json={"paths": paths},
                 headers={"x-api-key": settings.REVALIDATE_API_KEY},
                 timeout=5.0,
             )
