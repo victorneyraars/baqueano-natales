@@ -31,6 +31,7 @@ import 'package:baqueano_natales/features/promocion/presentation/screens/admin_p
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_composer_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_historial_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/admin_notificaciones_stats_screen.dart';
+import 'package:baqueano_natales/features/analytics/presentation/screens/stats_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/mis_notificaciones_screen.dart';
 import 'package:baqueano_natales/features/notificaciones/presentation/screens/preferencias_notificacion_screen.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
@@ -273,6 +274,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/admin/ops/release',
           name: 'admin-ops-release',
           builder: (context, state) => const OpsReleaseScreen(),
+
+        // Admin - Analytics (Cloudflare Web Analytics)
+        GoRoute(
+          path: '/admin/stats',
+          name: 'admin-stats',
+          builder: (context, state) => const StatsScreen(),
+        ),
         ),
 
       // =========================================================

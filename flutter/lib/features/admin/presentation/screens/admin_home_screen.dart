@@ -252,6 +252,13 @@ class AdminHomeScreen extends ConsumerWidget {
             ),
 
             _AdminCard(
+              icon: Icons.analytics_outlined,
+              title: 'Estadísticas Web',
+              subtitle: 'Visitas, páginas y fuentes de tráfico',
+              onTap: () => context.push('/admin/stats'),
+            ),
+            const SizedBox(height: 12),
+            _AdminCard(
               icon: Icons.monitor_heart,
               title: 'Ops Dashboard',
               subtitle: 'CI/CD, runs de GitHub, releases en Play',

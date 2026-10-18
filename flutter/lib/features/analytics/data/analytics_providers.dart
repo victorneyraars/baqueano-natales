@@ -1,0 +1,30 @@
+/// Providers de Riverpod para el módulo Analytics.
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:baqueano_natales/features/analytics/data/analytics_repository.dart';
+import 'package:baqueano_natales/features/analytics/domain/stats_response.dart';
+
+// =========================================================
+// Repositorio
+// =========================================================
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  return AnalyticsRepository();
+});
+
+// =========================================================
+// Stats del admin (todos los sitios)
+// =========================================================
+final adminStatsProvider = FutureProvider.family<StatsResponse, int>((ref, days) async {
+  final repo = ref.watch(analyticsRepositoryProvider);
+  return repo.fetchStats(days: days);
+});
+
+// =========================================================
+// Stats del prestador (auto-filtro)
+// =========================================================
+final myStatsProvider = FutureProvider.family<StatsResponse, int>((ref, days) async {
+  final repo = ref.watch(analyticsRepositoryProvider);
+  return repo.fetchMyStats(days: days);
+});
