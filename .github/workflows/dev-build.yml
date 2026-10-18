@@ -1,4 +1,4 @@
-name: Dev Build + Firebase App Distribution
+name: Dev Build + Distribución Directa (bundletool)
 
 on:
   workflow_dispatch:
@@ -46,42 +46,41 @@ jobs:
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
 
-      - name: Build clientDev APK
+      - name: Build AAB (clientDev)
         working-directory: flutter
         run: |
-          flutter build apk --release --flavor clientDev \
+          flutter build appbundle --release --flavor clientDev \
             -t lib/main_client.dart \
             --dart-define-from-file=dart_defines/client_dev.json
 
-      - name: Debug — listar APKs generados
-        working-directory: flutter
-        run: find build -name "*.apk" -exec ls -lh {} \;
+      - name: Generar APK Universal (bundletool)
+        id: bundletool
+        uses: roberteggl/bundletool-action@v1.0.0
+        with:
+          aab-file: flutter/build/app/outputs/bundle/clientDevRelease/app-clientDev-release.aab
+          bundletool-version: '1.18.3'
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          mode: universal
+          extract-universal-apk: true
 
-      - name: Upload to Firebase (clientDev)
+      - name: Generar Checksum SHA-256 (clientDev)
         working-directory: flutter
-        env:
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_CLIENT_DEV }}
-          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          APK=$(find build -name "*clientdev*release*.apk" -o -name "*clientDev*release*.apk" | head -1)
-          echo "APK encontrado: $APK"
-          if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
-          npx -y firebase-tools appdistribution:distribute "$APK" \
-            --app "$FIREBASE_APP_ID" \
-            --groups dev-testers \
-            --project baqueano-natales-prod
+          APK_PATH="${{ steps.bundletool.outputs.apk-path }}"
+          sha256sum "$APK_PATH" | awk '{print $1}' > "${APK_PATH}.sha256"
+          echo "SHA-256: $(cat ${APK_PATH}.sha256)"
 
-      - name: Copiar APK a servidor (clientDev)
+      - name: Copiar APK y Checksum a servidor (clientDev)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "flutter/build/app/outputs/flutter-apk/*.apk"
-          target: "/home/deploy/baqueano-natales/deploy/apks/"
-          strip_components: 5
+          source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
+          target: "/home/deploy/baqueano-natales/deploy/apks/app-clientdev.apk"
 
   build-admin:
     if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'both'
@@ -115,39 +114,38 @@ jobs:
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
 
-      - name: Build adminDev APK
+      - name: Build AAB (adminDev)
         working-directory: flutter
         run: |
-          flutter build apk --release --flavor adminDev \
+          flutter build appbundle --release --flavor adminDev \
             -t lib/main_admin.dart \
             --dart-define-from-file=dart_defines/admin_dev.json
 
-      - name: Debug — listar APKs generados
-        working-directory: flutter
-        run: find build -name "*.apk" -exec ls -lh {} \;
+      - name: Generar APK Universal (bundletool)
+        id: bundletool
+        uses: roberteggl/bundletool-action@v1.0.0
+        with:
+          aab-file: flutter/build/app/outputs/bundle/adminDevRelease/app-adminDev-release.aab
+          bundletool-version: '1.18.3'
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          mode: universal
+          extract-universal-apk: true
 
-      - name: Upload to Firebase (adminDev)
+      - name: Generar Checksum SHA-256 (adminDev)
         working-directory: flutter
-        env:
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_ADMIN_DEV }}
-          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          APK=$(find build -name "*admindev*release*.apk" -o -name "*adminDev*release*.apk" | head -1)
-          echo "APK encontrado: $APK"
-          if [ -z "$APK" ]; then echo "ERROR: no se encontró APK"; exit 1; fi
-          npx -y firebase-tools appdistribution:distribute "$APK" \
-            --app "$FIREBASE_APP_ID" \
-            --groups dev-testers \
-            --project baqueano-natales-prod
+          APK_PATH="${{ steps.bundletool.outputs.apk-path }}"
+          sha256sum "$APK_PATH" | awk '{print $1}' > "${APK_PATH}.sha256"
+          echo "SHA-256: $(cat ${APK_PATH}.sha256)"
 
-      - name: Copiar APK a servidor (adminDev)
+      - name: Copiar APK y Checksum a servidor (adminDev)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "flutter/build/app/outputs/flutter-apk/*.apk"
-          target: "/home/deploy/baqueano-natales/deploy/apks/"
-          strip_components: 5
+          source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
+          target: "/home/deploy/baqueano-natales/deploy/apks/app-admindev.apk"
