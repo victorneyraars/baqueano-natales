@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
 
     # --- WhatsApp ---
+    # Cloudflare (Global Key + Analytics)
+    CLOUDFLARE_API_EMAIL: str = ""
+    CLOUDFLARE_API_KEY: str = ""
+    CLOUDFLARE_ANALYTICS_TOKEN: str = ""
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+
     WHATSAPP_API_URL: str = "https://graph.facebook.com/v20.0"
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""

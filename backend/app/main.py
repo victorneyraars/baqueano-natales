@@ -76,6 +76,7 @@ from app.modules.social.routes import (
 from app.modules.social.worker import start_worker, stop_worker
 # Ops Dashboard (admin — CI/CD, tracks, health)
 from app.modules.ops.routes import router as ops_admin_router
+from app.modules.analytics.routes import router as analytics_router
 from app.modules.ops import services_github as ops_services_github
 from app.modules.ops.revalidate import router as revalidate_router
 from app.modules.ops.worker import (
@@ -197,6 +198,9 @@ app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")
 
 # Ops Dashboard (admin — solo lectura, Fase 1)
 app.include_router(ops_admin_router, prefix="/api/v1")
+
+# Analytics (Cloudflare Web Analytics)
+app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(revalidate_router, prefix="/api/v1")
 
 
