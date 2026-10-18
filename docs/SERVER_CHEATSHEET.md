@@ -1003,3 +1003,37 @@ Despues commitear (el archivo va al repo, no es secreto — son API keys publica
 - El token de Firebase en `~/.config/configstore/firebase-tools.json` da acceso total al proyecto Firebase. Tratarlo como secreto.
 - Si se revoca el login (`firebase logout`), todos los comandos de administracion fallan. Re-loguear con `firebase login:ci` (link interactivo).
 - **Nunca** loguearse con una cuenta personal que no sea del proyecto.
+
+## Conectividad saliente del servidor (verificado 2026-10-17)
+
+El servidor (`104.129.59.151`) tiene salida a internet sin restricciones (no hay firewall bloqueando conexiones salientes). Esto es **crítico** para:
+- Webhooks de revalidación (Vercel ISR).
+- GitHub Actions (API).
+- Firebase Admin SDK (Google APIs).
+- Meta/Facebook Graph API.
+
+### Comandos de verificación
+
+    # DNS
+    nslookup www.baqueanonatales.com
+
+    # HTTPS a Vercel (web pública)
+    curl -sS -o /dev/null -w "HTTP status: %{http_code}\n" https://www.baqueanonatales.com
+
+    # HTTPS a Vercel (endpoint de revalidación ISR)
+    curl -sS -o /dev/null -w "HTTP status: %{http_code}\n" \
+      -H "x-prerender-revalidate: test" \
+      https://www.baqueanonatales.com/
+
+    # HTTPS a Google (verificación de salida general)
+    curl -sS -o /dev/null -w "HTTP status: %{http_code}\n" https://www.google.com
+
+### Resultados esperados (última verificación: 2026-10-17)
+
+| Chequeo | Resultado |
+|---|---|
+| DNS Vercel | `cname.vercel-dns.com` → `66.33.60.66`, `76.76.21.142` |
+| HTTPS web pública | `200` (0.18s) |
+| HTTPS ISR Vercel | `200` |
+| HTTPS Google | `200` |
+
