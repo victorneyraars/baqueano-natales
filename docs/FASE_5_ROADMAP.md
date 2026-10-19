@@ -5,7 +5,7 @@
 ## 🎯 Mejoras priorizadas
 
 ### 🥇 1. Validación SHA-256 en el cliente (SEGURIDAD — 2h)
-**Estado:** 🔴 Pendiente
+**Estado:** ✅ Completado (2026-10-19, build #42)
 **Objetivo:** El cliente calcula el SHA-256 del APK descargado y lo compara con el del `version.json` antes de instalar.
 **Impacto:** Estándar de oro de Play Store/F-Droid. Previene APKs corruptos o manipulados.
 **Archivos a tocar:** `app_update_service.dart` (agregar `crypto`, calcular hash, comparar, abortar si difiere).
@@ -17,7 +17,8 @@
 **Archivos a tocar:** Backend (`routes.py`), Flutter (`ops_admin/presentation/screens/`), nuevo `apks_history_screen.dart`.
 
 ### 🥉 3. URL corta para compartir (UX — 1h)
-**Estado:** 🟢 En Sesión 1
+**Estado:** ✅ Completado (2026-10-19)
+**URLs:** sealquilamarido.com/app + baqueanonatales.com/app
 **Objetivo:** `sealquilamarido.com/app` → APK. `baqueanonatales.com/app` → APK.
 **Impacto:** Link memorable, profesional, intercambiable sin cambiar el link.
 **Archivos a tocar:** `se-alquila-marido-web/src/pages/app.astro` + equivalente en baqueanonatales web.
