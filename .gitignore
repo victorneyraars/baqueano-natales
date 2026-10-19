@@ -104,3 +104,6 @@ deploy/apks/*.apk.sha256
 deploy/apks/archive/
 deploy/apks/version.json
 *.bak_*
+
+# Contexto de IA (local, no versionado)
+HANDOFF_IA.md
