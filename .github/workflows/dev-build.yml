@@ -95,7 +95,10 @@ jobs:
             VERSION=$(grep '^version:' /home/deploy/baqueano-natales/flutter/pubspec.yaml | awk '{print $2}' | cut -d'+' -f1 | tr -d '\r')
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             mv app-clientDev-release.apk app-clientdev.apk 2>/dev/null || true
-            mv app-clientDev-release.apk.sha256 app-clientdev.apk.sha256 2>/dev/null || true
+            
+            # Forzar la regeneración del sha256 para que coincida con el APK final
+            sha256sum app-clientdev.apk | awk '{print $1}' > app-clientdev.apk.sha256
+            
             cp app-clientdev.apk archive/app-clientdev-v${VERSION}.apk || true
             cp app-clientdev.apk.sha256 archive/app-clientdev-v${VERSION}.apk.sha256 || true
             
@@ -189,6 +192,9 @@ jobs:
             mkdir -p archive
             VERSION=$(grep '^version:' /home/deploy/baqueano-natales/flutter/pubspec.yaml | awk '{print $2}' | cut -d'+' -f1 | tr -d '\r')
             mv app-adminDev-release.apk app-admindev.apk 2>/dev/null || true
-            mv app-adminDev-release.apk.sha256 app-admindev.apk.sha256 2>/dev/null || true
+            
+            # Forzar la regeneración del sha256
+            sha256sum app-admindev.apk | awk '{print $1}' > app-admindev.apk.sha256
+            
             cp app-admindev.apk archive/app-admindev-v${VERSION}.apk || true
             cp app-admindev.apk.sha256 archive/app-admindev-v${VERSION}.apk.sha256 || true
