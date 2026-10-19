@@ -102,24 +102,27 @@ class AppUpdateService {
   }
 
   static Future<void> _downloadAndInstall(BuildContext context) async {
+    // Capturar messenger y navigator ANTES de los awaits (para evitar use_build_context_synchronously)
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     // Auto-permiso: si no está habilitado, abrir ajustes
     if (await Permission.requestInstallPackages.isDenied) {
       await Permission.requestInstallPackages.request();
       if (await Permission.requestInstallPackages.isPermanentlyDenied) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Habilita "Instalar apps desconocidas" en Ajustes para actualizar.'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Habilita "Instalar apps desconocidas" en Ajustes para actualizar.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
         return;
       }
     }
 
+    // Mostrar diálogo de progreso con el context capturado del navigator
     showDialog(
-      context: context,
+      context: navigator.context,
       barrierDismissible: false,
       builder: (ctx) => const AlertDialog(
         content: Row(
@@ -139,15 +142,13 @@ class AppUpdateService {
         'https://api-dev.baqueanonatales.com/apks/app-clientdev.apk',
         savePath,
       );
-      if (context.mounted) Navigator.pop(context);
+      navigator.pop(); // Cerrar el diálogo de progreso
       await OpenFilex.open(savePath);
     } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar: $e')),
-        );
-      }
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error al descargar: $e')),
+      );
     }
   }
 }
