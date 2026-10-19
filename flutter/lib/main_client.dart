@@ -14,6 +14,7 @@ import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
+import 'package:baqueano_natales/core/services/app_update_service.dart';
 
 Future<void> main() async {
   AppConfig.init(type: AppType.client);
@@ -45,6 +46,10 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
+      // Verificar si hay actualizaciones disponibles (Fase 4)
+      if (mounted) {
+        await AppUpdateService.checkForUpdates(context);
+      }
     });
   }
 
