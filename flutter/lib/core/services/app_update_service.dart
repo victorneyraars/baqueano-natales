@@ -9,7 +9,7 @@ class AppUpdateService {
   static const String versionUrl =
       'https://api-dev.baqueanonatales.com/apks/version.json';
 
-  static Future<void> checkForUpdates(GoRouter router) async {
+  static Future<void> checkForUpdates(GoRouter router, GlobalKey<ScaffoldMessengerState> messengerKey) async {
     try {
       final response = await Dio().get('$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}');
       if (response.statusCode != 200) return;
@@ -23,6 +23,14 @@ class AppUpdateService {
 
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
+
+      // DEBUG Obligatorio: mostrar versiones en SnackBar
+      messengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('DEBUG -> Instalada: $currentVersion | Servidor: $latestVersion'),
+          duration: const Duration(seconds: 15),
+        ),
+      );
 
       if (_isNewerVersion(latestVersion, currentVersion)) {
         final ctx = router.routerDelegate.navigatorKey.currentContext;

@@ -29,6 +29,8 @@ Future<void> main() async {
   );
 }
 
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 class BaqueanoClientApp extends ConsumerStatefulWidget {
   const BaqueanoClientApp({super.key});
 
@@ -47,7 +49,7 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
       // Check de actualización pasando el router
-      await AppUpdateService.checkForUpdates(ref.read(routerProvider));
+      await AppUpdateService.checkForUpdates(ref.read(routerProvider), scaffoldMessengerKey);
     });
   }
 
@@ -71,6 +73,7 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     }
 
     return MaterialApp.router(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
