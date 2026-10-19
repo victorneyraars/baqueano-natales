@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AppUpdateService {
   static const String versionUrl =
       'https://api-dev.baqueanonatales.com/apks/version.json';
 
-  static Future<void> checkForUpdates(GoRouter router, GlobalKey<ScaffoldMessengerState> messengerKey) async {
+  static Future<void> checkForUpdates(GoRouter router, GlobalKey<ScaffoldMessengerState> messengerKey, {bool forceShow = false}) async {
     try {
       final response = await Dio().get('$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}');
       if (response.statusCode != 200) return;
@@ -29,6 +30,10 @@ class AppUpdateService {
         if (ctx != null && ctx.mounted) {
           _showUpdateDialog(ctx, latestVersion, changelog);
         }
+      } else if (forceShow) {
+        messengerKey.currentState?.showSnackBar(
+          const SnackBar(content: Text('Ya estás en la última versión disponible.')),
+        );
       }
     } catch (e) {
       debugPrint('Error checking for updates: $e');
@@ -97,6 +102,22 @@ class AppUpdateService {
   }
 
   static Future<void> _downloadAndInstall(BuildContext context) async {
+    // Auto-permiso: si no está habilitado, abrir ajustes
+    if (await Permission.requestInstallPackages.isDenied) {
+      await Permission.requestInstallPackages.request();
+      if (await Permission.requestInstallPackages.isPermanentlyDenied) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Habilita "Instalar apps desconocidas" en Ajustes para actualizar.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,

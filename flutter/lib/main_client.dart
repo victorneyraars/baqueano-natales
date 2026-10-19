@@ -39,12 +39,34 @@ class BaqueanoClientApp extends ConsumerStatefulWidget {
       _BaqueanoClientAppState();
 }
 
-class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
+class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> with WidgetsBindingObserver {
   bool _navScheduled = false;
+  DateTime? _lastCheck;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      if (_lastCheck == null || now.difference(_lastCheck!) > const Duration(minutes: 5)) {
+        _lastCheck = now;
+        _checkUpdatesSilently();
+      }
+    }
+  }
+
+  Future<void> _checkUpdatesSilently() async {
+    if (!mounted) return;
+    await AppUpdateService.checkForUpdates(
+      ref.read(routerProvider),
+      scaffoldMessengerKey,
+      forceShow: false,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
@@ -56,6 +78,12 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
         await AppUpdateService.checkForUpdates(ref.read(routerProvider), scaffoldMessengerKey);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
