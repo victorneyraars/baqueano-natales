@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/notificaciones/data/notificaciones_providers.dart';
+import 'package:baqueano_natales/core/services/app_update_service.dart';
+import 'package:baqueano_natales/main_client.dart' show scaffoldMessengerKey;
+
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -51,6 +54,15 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Inicio'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.system_update),
+            tooltip: 'Buscar actualización',
+            onPressed: () => AppUpdateService.checkForUpdates(
+              GoRouter.of(context),
+              scaffoldMessengerKey,
+              forceShow: true,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
