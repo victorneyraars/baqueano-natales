@@ -67,13 +67,15 @@ jobs:
       - name: Generar APK Universal (bundletool manual)
         id: bundletool
         run: |
+          echo '${{ secrets.ANDROID_STORE_PASSWORD }}' > /tmp/store-pass.txt
+          echo '${{ secrets.ANDROID_KEY_PASSWORD }}' > /tmp/key-pass.txt
           java -jar bundletool.jar build-apks \
             --bundle=flutter/build/app/outputs/bundle/clientDevRelease/app-clientDev-release.aab \
             --output=app-clientDev-release.apks \
             --ks=release.keystore \
-            --ks-pass=pass:${{ secrets.ANDROID_STORE_PASSWORD }} \
+            --ks-pass=file:/tmp/store-pass.txt \
             --ks-key-alias=${{ secrets.ANDROID_KEY_ALIAS }} \
-            --key-pass=pass:${{ secrets.ANDROID_KEY_PASSWORD }} \
+            --key-pass=file:/tmp/key-pass.txt \
             --mode=universal
           unzip -p app-clientDev-release.apks universal.apk > flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk" >> $GITHUB_OUTPUT
@@ -175,13 +177,15 @@ jobs:
       - name: Generar APK Universal (bundletool manual)
         id: bundletool
         run: |
+          echo '${{ secrets.ANDROID_STORE_PASSWORD }}' > /tmp/store-pass.txt
+          echo '${{ secrets.ANDROID_KEY_PASSWORD }}' > /tmp/key-pass.txt
           java -jar bundletool.jar build-apks \
             --bundle=flutter/build/app/outputs/bundle/adminDevRelease/app-adminDev-release.aab \
             --output=app-adminDev-release.apks \
             --ks=release.keystore \
-            --ks-pass=pass:${{ secrets.ANDROID_STORE_PASSWORD }} \
+            --ks-pass=file:/tmp/store-pass.txt \
             --ks-key-alias=${{ secrets.ANDROID_KEY_ALIAS }} \
-            --key-pass=pass:${{ secrets.ANDROID_KEY_PASSWORD }} \
+            --key-pass=file:/tmp/key-pass.txt \
             --mode=universal
           unzip -p app-adminDev-release.apks universal.apk > flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk" >> $GITHUB_OUTPUT
