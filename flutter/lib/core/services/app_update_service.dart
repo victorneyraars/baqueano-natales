@@ -10,7 +10,7 @@ class AppUpdateService {
 
   static Future<void> checkForUpdates(BuildContext context) async {
     try {
-      final response = await Dio().get(versionUrl);
+      final response = await Dio().get('$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}');
       if (response.statusCode != 200) return;
 
       final data = response.data as Map<String, dynamic>;
@@ -30,6 +30,11 @@ class AppUpdateService {
       }
     } catch (e) {
       debugPrint('Error checking for updates: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error update: $e')),
+        );
+      }
     }
   }
 
