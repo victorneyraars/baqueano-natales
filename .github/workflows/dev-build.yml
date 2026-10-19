@@ -95,7 +95,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
           target: "/home/deploy/baqueano-natales/deploy/apks/"
-          strip_components: 4
+          strip_components: 5
 
       - name: Renombrar APK (clientDev)
         uses: appleboy/ssh-action@v1.0.0
@@ -206,7 +206,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "${{ steps.bundletool.outputs.apk-path }},${{ steps.bundletool.outputs.apk-path }}.sha256"
           target: "/home/deploy/baqueano-natales/deploy/apks/"
-          strip_components: 4
+          strip_components: 5
 
       - name: Renombrar APK (adminDev)
         uses: appleboy/ssh-action@v1.0.0
