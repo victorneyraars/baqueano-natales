@@ -99,3 +99,8 @@ deploy/legal/
 deploy/apks/*.apk
 deploy/apks/*.sha256
 deploy/apks/*.apk.sha256
+
+# Archivos generados por CI/CD en el servidor
+deploy/apks/archive/
+deploy/apks/version.json
+*.bak_*
