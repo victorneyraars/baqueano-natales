@@ -90,8 +90,23 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /home/deploy/baqueano-natales/deploy/apks/
+            mkdir -p archive
+            VERSION=$(grep '^version:' /home/deploy/baqueano-natales/flutter/pubspec.yaml | awk '{print $2}' | cut -d'+' -f1 | tr -d '\r')
+            COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             mv app-clientDev-release.apk app-clientdev.apk 2>/dev/null || true
             mv app-clientDev-release.apk.sha256 app-clientdev.apk.sha256 2>/dev/null || true
+            cp app-clientdev.apk archive/app-clientdev-v${VERSION}.apk || true
+            cp app-clientdev.apk.sha256 archive/app-clientdev-v${VERSION}.apk.sha256 || true
+            
+            SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
+            cat > version.json <<EOF
+            {
+              "latest_version": "$VERSION",
+              "url": "https://api-dev.baqueanonatales.com/apks/app-clientdev.apk",
+              "sha256": "$SHA",
+              "changelog": "$COMMIT_MSG"
+            }
+            EOF
 
   build-admin:
     if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'both'
@@ -169,5 +184,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /home/deploy/baqueano-natales/deploy/apks/
+            mkdir -p archive
+            VERSION=$(grep '^version:' /home/deploy/baqueano-natales/flutter/pubspec.yaml | awk '{print $2}' | cut -d'+' -f1 | tr -d '\r')
             mv app-adminDev-release.apk app-admindev.apk 2>/dev/null || true
             mv app-adminDev-release.apk.sha256 app-admindev.apk.sha256 2>/dev/null || true
+            cp app-admindev.apk archive/app-admindev-v${VERSION}.apk || true
+            cp app-admindev.apk.sha256 archive/app-admindev-v${VERSION}.apk.sha256 || true
