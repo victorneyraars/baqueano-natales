@@ -37,8 +37,6 @@ class BaqueanoClientApp extends ConsumerStatefulWidget {
       _BaqueanoClientAppState();
 }
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
   bool _navScheduled = false;
 
@@ -50,7 +48,10 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
       await fcm.inicializar();
       // Verificar si hay actualizaciones disponibles (Fase 4)
       if (mounted) {
-        await AppUpdateService.checkForUpdates(navigatorKey.currentContext!);
+        final ctx = ref.read(routerProvider).navigatorKey.currentContext;
+      if (ctx != null) {
+        await AppUpdateService.checkForUpdates(ctx);
+      }
       }
     });
   }
@@ -75,7 +76,6 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     }
 
     return MaterialApp.router(
-      navigatorKey: navigatorKey,
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
