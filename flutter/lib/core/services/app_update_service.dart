@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -140,10 +143,37 @@ class AppUpdateService {
     try {
       final dir = await getTemporaryDirectory();
       final savePath = '${dir.path}/update.apk';
+      
+      // Descargar el APK
       await Dio().download(
         'https://api-dev.baqueanonatales.com/apks/app-clientdev.apk',
         savePath,
       );
+      
+      // Calcular SHA-256 local del archivo descargado
+      final file = File(savePath);
+      final bytes = await file.readAsBytes();
+      final hash = sha256.convert(bytes).toString();
+      
+      // Obtener el hash esperado del version.json
+      final versionData = (await Dio().get(
+        'https://api-dev.baqueanonatales.com/apks/version.json?t=${DateTime.now().millisecondsSinceEpoch}',
+      )).data;
+      final expectedHash = versionData['sha256'] as String? ?? '';
+      
+      // Comparar
+      if (expectedHash.isNotEmpty && hash != expectedHash) {
+        navigator.pop();
+        await file.delete(); // Borrar el APK corrupto
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('❌ Error de integridad: el APK descargado está corrupto o fue manipulado.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+      
       navigator.pop(); // Cerrar el diálogo de progreso
       await OpenFilex.open(savePath);
     } catch (e) {
