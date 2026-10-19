@@ -121,7 +121,8 @@ class AppUpdateService {
       }
     }
 
-    // Mostrar diálogo de progreso con el context capturado ANTES de los awaits
+    // Mostrar diálogo de progreso (con guard de mounted)
+    if (!navContext.mounted) return;
     showDialog(
       context: navContext,
       barrierDismissible: false,
