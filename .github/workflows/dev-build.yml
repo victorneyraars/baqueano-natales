@@ -82,7 +82,6 @@ jobs:
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk" >> $GITHUB_OUTPUT
 
       - name: Generar Checksum SHA-256 (clientDev)
-        working-directory: flutter
         run: |
           APK_PATH="${{ steps.bundletool.outputs.apk-path }}"
           sha256sum "$APK_PATH" | awk '{print $1}' > "${APK_PATH}.sha256"
@@ -193,7 +192,6 @@ jobs:
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk" >> $GITHUB_OUTPUT
 
       - name: Generar Checksum SHA-256 (adminDev)
-        working-directory: flutter
         run: |
           APK_PATH="${{ steps.bundletool.outputs.apk-path }}"
           sha256sum "$APK_PATH" | awk '{print $1}' > "${APK_PATH}.sha256"
