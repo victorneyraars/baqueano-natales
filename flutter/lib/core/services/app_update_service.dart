@@ -102,9 +102,10 @@ class AppUpdateService {
   }
 
   static Future<void> _downloadAndInstall(BuildContext context) async {
-    // Capturar messenger y navigator ANTES de los awaits (para evitar use_build_context_synchronously)
+    // Capturar messenger, navigator y context ANTES de los awaits
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final navContext = Navigator.of(context).context;
 
     // Auto-permiso: si no está habilitado, abrir ajustes
     if (await Permission.requestInstallPackages.isDenied) {
@@ -120,9 +121,9 @@ class AppUpdateService {
       }
     }
 
-    // Mostrar diálogo de progreso con el context capturado del navigator
+    // Mostrar diálogo de progreso con el context capturado ANTES de los awaits
     showDialog(
-      context: navigator.context,
+      context: navContext,
       barrierDismissible: false,
       builder: (ctx) => const AlertDialog(
         content: Row(
