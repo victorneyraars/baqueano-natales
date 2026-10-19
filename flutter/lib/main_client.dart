@@ -46,6 +46,12 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
+      // Check de actualización usando el navigatorKey del GoRouter
+      final router = ref.read(routerProvider);
+      final ctx = router.routerDelegate.navigatorKey.currentContext;
+      if (ctx != null) {
+        await AppUpdateService.checkForUpdates(ctx);
+      }
     });
   }
 
@@ -75,32 +81,7 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       routerConfig: router,
-      builder: (context, child) {
-        return _UpdateChecker(child: child ?? const SizedBox.shrink());
-      },
     );
   }
 }
 
-class _UpdateChecker extends StatefulWidget {
-  final Widget child;
-  const _UpdateChecker({required this.child});
-
-  @override
-  State<_UpdateChecker> createState() => _UpdateCheckerState();
-}
-
-class _UpdateCheckerState extends State<_UpdateChecker> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        AppUpdateService.checkForUpdates(context);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
