@@ -65,6 +65,7 @@ jobs:
           key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
           mode: universal
           extract-universal-apk: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generar Checksum SHA-256 (clientDev)
         working-directory: flutter
@@ -159,6 +160,7 @@ jobs:
           key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
           mode: universal
           extract-universal-apk: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generar Checksum SHA-256 (adminDev)
         working-directory: flutter
