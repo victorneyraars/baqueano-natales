@@ -48,8 +48,13 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
-      // Check de actualización pasando el router
-      await AppUpdateService.checkForUpdates(ref.read(routerProvider), scaffoldMessengerKey);
+      
+      // Delay de 2 segundos para que la UI se estabilice antes de mostrar el diálogo
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted) {
+        await AppUpdateService.checkForUpdates(ref.read(routerProvider), scaffoldMessengerKey);
+      }
     });
   }
 

@@ -24,14 +24,6 @@ class AppUpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      // DEBUG Obligatorio: mostrar versiones en SnackBar
-      messengerKey.currentState?.showSnackBar(
-        SnackBar(
-          content: Text('DEBUG -> Instalada: $currentVersion | Servidor: $latestVersion'),
-          duration: const Duration(seconds: 15),
-        ),
-      );
-
       if (_isNewerVersion(latestVersion, currentVersion)) {
         final ctx = router.routerDelegate.navigatorKey.currentContext;
         if (ctx != null && ctx.mounted) {
