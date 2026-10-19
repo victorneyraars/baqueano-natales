@@ -77,6 +77,7 @@ jobs:
             --ks-key-alias=${{ secrets.ANDROID_KEY_ALIAS }} \
             --key-pass=file:/tmp/key-pass.txt \
             --mode=universal
+          mkdir -p flutter/build/app/outputs/flutter-apk
           unzip -p app-clientDev-release.apks universal.apk > flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-clientDev-release.apk" >> $GITHUB_OUTPUT
 
@@ -187,6 +188,7 @@ jobs:
             --ks-key-alias=${{ secrets.ANDROID_KEY_ALIAS }} \
             --key-pass=file:/tmp/key-pass.txt \
             --mode=universal
+          mkdir -p flutter/build/app/outputs/flutter-apk
           unzip -p app-adminDev-release.apks universal.apk > flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk
           echo "apk-path=flutter/build/app/outputs/flutter-apk/app-adminDev-release.apk" >> $GITHUB_OUTPUT
 
