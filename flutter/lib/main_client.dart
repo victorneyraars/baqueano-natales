@@ -46,12 +46,8 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
-      // Check de actualización usando el navigatorKey del GoRouter
-      final router = ref.read(routerProvider);
-      final ctx = router.routerDelegate.navigatorKey.currentContext;
-      if (ctx != null) {
-        await AppUpdateService.checkForUpdates(ctx);
-      }
+      // Check de actualización pasando el router
+      await AppUpdateService.checkForUpdates(ref.read(routerProvider));
     });
   }
 

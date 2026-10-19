@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,7 +9,7 @@ class AppUpdateService {
   static const String versionUrl =
       'https://api-dev.baqueanonatales.com/apks/version.json';
 
-  static Future<void> checkForUpdates(BuildContext context) async {
+  static Future<void> checkForUpdates(GoRouter router) async {
     try {
       final response = await Dio().get('$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}');
       if (response.statusCode != 200) return;
@@ -24,14 +25,16 @@ class AppUpdateService {
       final currentVersion = packageInfo.version;
 
       if (_isNewerVersion(latestVersion, currentVersion)) {
-        if (context.mounted) {
-          _showUpdateDialog(context, latestVersion, changelog);
+        final ctx = router.routerDelegate.navigatorKey.currentContext;
+        if (ctx != null && ctx.mounted) {
+          _showUpdateDialog(ctx, latestVersion, changelog);
         }
       }
     } catch (e) {
       debugPrint('Error checking for updates: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      final ctx = router.routerDelegate.navigatorKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(content: Text('Error update: $e')),
         );
       }
