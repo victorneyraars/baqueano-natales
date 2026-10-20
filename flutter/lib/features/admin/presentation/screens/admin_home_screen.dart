@@ -12,6 +12,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:baqueano_natales/core/services/app_update_service.dart';
+import 'package:baqueano_natales/main_admin.dart' show scaffoldMessengerKey;
 
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/comercios/data/comercio_providers.dart';
@@ -92,6 +94,15 @@ class AdminHomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Panel de administración'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.system_update),
+            tooltip: 'Buscar actualización',
+            onPressed: () => AppUpdateService.checkForUpdates(
+              GoRouter.of(context),
+              scaffoldMessengerKey,
+              forceShow: true,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
