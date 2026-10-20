@@ -1,3 +1,4 @@
+from enum import Enum
 """
 Schemas Pydantic del módulo prestadores.
 
@@ -432,3 +433,64 @@ class PrestadorVerificarRequest(BaseModel):
 
 class PrestadorDestacarRequest(BaseModel):
     destacado: bool
+
+# ============================================================
+# Modalidades de prestación (Fase 6)
+# ============================================================
+class TipoModalidad(str, Enum):
+    TALLER_FISICO = "taller_fisico"
+    DOMICILIO = "domicilio"
+    PUNTO_ESTRATEGICO = "punto_estrategico"
+    RECOGIDA_ENTREGA = "recogida_entrega"
+    SUSCRIPCION = "suscripcion"
+    FLOTAS = "flotas"
+    HIBRIDO = "hibrido"
+
+
+class ConfigModalidad(BaseModel):
+    activo: bool = False
+    notas: str | None = None
+
+
+class ConfigTallerFisico(ConfigModalidad):
+    pass
+
+
+class ConfigDomicilio(ConfigModalidad):
+    radio_km: int = Field(15, ge=0, le=100)
+    costo_desplazamiento_clp: int = Field(0, ge=0)
+
+
+class ConfigPuntoEstrategico(ConfigModalidad):
+    punto_descripcion: str | None = None
+
+
+class ConfigRecogidaEntrega(ConfigModalidad):
+    costo_traslado_clp: int = Field(0, ge=0)
+
+
+class ConfigSuscripcion(ConfigModalidad):
+    planes: list[dict] = Field(default_factory=list)
+
+
+class ConfigFlotas(ConfigModalidad):
+    pass
+
+
+class ModalidadesConfig(BaseModel):
+    taller_fisico: ConfigTallerFisico = Field(default_factory=ConfigTallerFisico)
+    domicilio: ConfigDomicilio = Field(default_factory=ConfigDomicilio)
+    punto_estrategico: ConfigPuntoEstrategico = Field(default_factory=ConfigPuntoEstrategico)
+    recogida_entrega: ConfigRecogidaEntrega = Field(default_factory=ConfigRecogidaEntrega)
+    suscripcion: ConfigSuscripcion = Field(default_factory=ConfigSuscripcion)
+    flotas: ConfigFlotas = Field(default_factory=ConfigFlotas)
+    hibrido: ConfigModalidad = Field(default_factory=ConfigModalidad)
+
+
+class ModalidadesResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    modalidades: ModalidadesConfig = Field(default_factory=ModalidadesConfig)
+
+
+class ModalidadesUpdateRequest(BaseModel):
+    modalidades: ModalidadesConfig
