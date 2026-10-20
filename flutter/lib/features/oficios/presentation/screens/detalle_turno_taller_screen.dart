@@ -309,6 +309,71 @@ class _Contenido extends StatelessWidget {
                 ),
               ),
             ),
+            if (turno.cliente != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cliente',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      _Fila(
+                        icon: Icons.person,
+                        label: 'Nombre',
+                        value: turno.cliente!.nombreCompleto,
+                      ),
+                      _Fila(
+                        icon: Icons.email,
+                        label: 'Email',
+                        value: turno.cliente!.email,
+                      ),
+                      if (turno.cliente!.phone != null)
+                        _Fila(
+                          icon: Icons.phone,
+                          label: 'Telefono',
+                          value: turno.cliente!.phone!,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (turno.vehiculo != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Vehiculo',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      _Fila(
+                        icon: Icons.directions_car,
+                        label: 'Vehiculo',
+                        value: turno.vehiculo!.descripcion,
+                      ),
+                      if (turno.vehiculo!.color != null)
+                        _Fila(
+                          icon: Icons.palette,
+                          label: 'Color',
+                          value: turno.vehiculo!.color!,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             if (acciones.isNotEmpty) ...[
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 8, children: acciones),

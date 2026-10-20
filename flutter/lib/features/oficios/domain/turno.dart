@@ -41,6 +41,71 @@ enum EstadoTurno {
   }
 }
 
+
+/// Resumen del cliente que hizo la reserva (para mostrar en agenda/detalle).
+class ClienteResumen {
+  const ClienteResumen({
+    required this.id,
+    required this.nombre,
+    this.apellido,
+    required this.email,
+    this.phone,
+  });
+
+  final String id;
+  final String nombre;
+  final String? apellido;
+  final String email;
+  final String? phone;
+
+  String get nombreCompleto {
+    if (apellido == null || apellido!.isEmpty) return nombre;
+    return '$nombre $apellido';
+  }
+
+  factory ClienteResumen.fromJson(Map<String, dynamic> json) {
+    return ClienteResumen(
+      id: json['id'] as String,
+      nombre: json['nombre'] as String,
+      apellido: json['apellido'] as String?,
+      email: json['email'] as String,
+      phone: json['phone'] as String?,
+    );
+  }
+}
+
+/// Resumen del vehiculo asociado al turno.
+class VehiculoResumen {
+  const VehiculoResumen({
+    required this.id,
+    required this.patente,
+    required this.marca,
+    required this.modelo,
+    required this.anio,
+    this.color,
+  });
+
+  final String id;
+  final String patente;
+  final String marca;
+  final String modelo;
+  final int anio;
+  final String? color;
+
+  String get descripcion => '$marca $modelo ($anio) - $patente';
+
+  factory VehiculoResumen.fromJson(Map<String, dynamic> json) {
+    return VehiculoResumen(
+      id: json['id'] as String,
+      patente: json['patente'] as String,
+      marca: json['marca'] as String,
+      modelo: json['modelo'] as String,
+      anio: json['anio'] as int,
+      color: json['color'] as String?,
+    );
+  }
+}
+
 class Turno {
   const Turno({
     required this.id,
@@ -56,6 +121,8 @@ class Turno {
     this.notasCliente,
     this.notasPrestador,
     this.ordenId,
+    this.cliente,
+    this.vehiculo,
   });
 
   final String id;
@@ -72,6 +139,10 @@ class Turno {
   final String? notasCliente;
   final String? notasPrestador;
   final String? ordenId;
+
+  /// Relaciones expandidas (opcionales, vienen del backend).
+  final ClienteResumen? cliente;
+  final VehiculoResumen? vehiculo;
 
   DateTime get fechaFin => fechaInicio.add(Duration(minutes: duracionMin));
 
@@ -92,6 +163,12 @@ class Turno {
       notasCliente: json['notas_cliente'] as String?,
       notasPrestador: json['notas_prestador'] as String?,
       ordenId: json['orden_id'] as String?,
+      cliente: json['cliente'] != null
+          ? ClienteResumen.fromJson(json['cliente'] as Map<String, dynamic>)
+          : null,
+      vehiculo: json['vehiculo'] != null
+          ? VehiculoResumen.fromJson(json['vehiculo'] as Map<String, dynamic>)
+          : null,
     );
   }
 
