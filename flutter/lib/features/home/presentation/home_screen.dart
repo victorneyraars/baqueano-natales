@@ -163,6 +163,14 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/mis-prestadores'),
             ),
             _FeatureCard(
+              icon: Icons.calendar_month,
+              title: 'Mi taller',
+              subtitle: 'Agenda y reservas del taller',
+              onTap: () => context.push(
+                '/mis-prestadores/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa/turnos',
+              ),
+            ),
+            _FeatureCard(
               icon: Icons.directions_car_outlined,
               title: 'Mis vehiculos',
               subtitle: 'Gestiona tus autos y su historial',
