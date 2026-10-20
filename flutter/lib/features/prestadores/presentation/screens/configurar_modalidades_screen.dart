@@ -132,13 +132,20 @@ class _ConfigurarModalidadesScreenState
         ),
         data: (config) {
           if (_config == null) _initFromConfig(config);
-          return _buildContenido(context, config);
+          return _buildContenido(context);
         },
       ),
     );
   }
 
-  Widget _buildContenido(BuildContext context, ModalidadesConfig config) {
+  /// FIX: lee SIEMPRE de _config, nunca del config del provider.
+  /// Antes recibía `config` como parámetro y los SwitchListTile.value
+  /// leían del provider, haciendo que el toggle rebote al rebuild.
+  Widget _buildContenido(BuildContext context) {
+    final config = _config;
+    if (config == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -154,7 +161,7 @@ class _ConfigurarModalidadesScreenState
           activo: config.tallerFisico.activo,
           onChanged: (v) => setState(() {
             _config = _config!.copyWith(
-              tallerFisico: ConfigModalidad(activo: v),
+              tallerFisico: _config!.tallerFisico.copyWith(activo: v),
             );
           }),
         ),
@@ -200,12 +207,8 @@ class _ConfigurarModalidadesScreenState
           activo: config.puntoEstrategico.activo,
           onChanged: (v) => setState(() {
             _config = _config!.copyWith(
-              puntoEstrategico: ConfigPuntoEstrategico(
-                activo: v,
-                puntoDescripcion: _puntoDescCtrl.text.trim().isEmpty
-                    ? null
-                    : _puntoDescCtrl.text.trim(),
-              ),
+              puntoEstrategico:
+                  _config!.puntoEstrategico.copyWith(activo: v),
             );
           }),
           expandido: config.puntoEstrategico.activo,
@@ -246,7 +249,7 @@ class _ConfigurarModalidadesScreenState
           activo: config.suscripcion.activo,
           onChanged: (v) => setState(() {
             _config = _config!.copyWith(
-              suscripcion: ConfigSuscripcion(activo: v),
+              suscripcion: _config!.suscripcion.copyWith(activo: v),
             );
           }),
         ),
@@ -256,7 +259,9 @@ class _ConfigurarModalidadesScreenState
           icono: Icons.business,
           activo: config.flotas.activo,
           onChanged: (v) => setState(() {
-            _config = _config!.copyWith(flotas: ConfigModalidad(activo: v));
+            _config = _config!.copyWith(
+              flotas: _config!.flotas.copyWith(activo: v),
+            );
           }),
         ),
         _SwitchModalidad(
@@ -265,7 +270,9 @@ class _ConfigurarModalidadesScreenState
           icono: Icons.merge_type,
           activo: config.hibrido.activo,
           onChanged: (v) => setState(() {
-            _config = _config!.copyWith(hibrido: ConfigModalidad(activo: v));
+            _config = _config!.copyWith(
+              hibrido: _config!.hibrido.copyWith(activo: v),
+            );
           }),
         ),
         const SizedBox(height: 24),

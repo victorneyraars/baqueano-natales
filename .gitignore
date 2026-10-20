@@ -107,3 +107,5 @@ deploy/apks/version.json
 
 # Contexto de IA (local, no versionado)
 HANDOFF_IA.md
+deploy/apks/version-admin.json
+deploy/apks/version-client.json
