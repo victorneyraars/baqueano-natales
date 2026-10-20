@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, model_validator, ConfigDict, Field
 
 
 # =========================================================
@@ -399,6 +399,25 @@ class TurnoResponse(BaseModel):
     cliente: UsuarioResumen | None = None
     vehiculo: VehiculoResumen | None = None
 
+    @model_validator(mode='before')
+    @classmethod
+    def extract_vehiculo(cls, data):
+        """Extrae el vehiculo desde objeto_servicio si no viene directo."""
+        if hasattr(data, 'objeto_servicio') and data.objeto_servicio is not None:
+            obj = data.objeto_servicio
+            if hasattr(obj, 'vehiculo') and obj.vehiculo is not None:
+                # No podemos modificar el ORM, devolvemos un dict
+                result = {}
+                for field in cls.model_fields:
+                    if field == 'vehiculo':
+                        result['vehiculo'] = obj.vehiculo
+                    elif field == 'cliente':
+                        result['cliente'] = getattr(data, 'cliente', None)
+                    else:
+                        result[field] = getattr(data, field, None)
+                return result
+        return data
+
 
 class TurnoListItemResponse(BaseModel):
     """Item resumido para listados."""
@@ -420,6 +439,23 @@ class TurnoListItemResponse(BaseModel):
     # Relaciones expandidas
     cliente: UsuarioResumen | None = None
     vehiculo: VehiculoResumen | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def extract_vehiculo(cls, data):
+        if hasattr(data, 'objeto_servicio') and data.objeto_servicio is not None:
+            obj = data.objeto_servicio
+            if hasattr(obj, 'vehiculo') and obj.vehiculo is not None:
+                result = {}
+                for field in cls.model_fields:
+                    if field == 'vehiculo':
+                        result['vehiculo'] = obj.vehiculo
+                    elif field == 'cliente':
+                        result['cliente'] = getattr(data, 'cliente', None)
+                    else:
+                        result[field] = getattr(data, field, None)
+                return result
+        return data
 
 
 # =========================================================
