@@ -419,6 +419,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
         GoRoute(
+          path: '/mis-prestadores/:id/modalidades',
+          name: 'mi-prestador-modalidades',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return ConfigurarModalidadesScreen(prestadorId: id);
+          },
+        ),
+        GoRoute(
           path: '/mis-prestadores/:id/turnos/:tid',
           name: 'turno-taller-detalle',
           builder: (context, state) {

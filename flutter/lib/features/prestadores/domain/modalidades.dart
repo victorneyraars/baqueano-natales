@@ -54,6 +54,7 @@ class ConfigDomicilio extends ConfigModalidad {
         'costo_desplazamiento_clp': costoDesplazamientoClp,
       };
 
+  @override
   ConfigDomicilio copyWith({
     bool? activo,
     String? notas,
@@ -92,6 +93,19 @@ class ConfigPuntoEstrategico extends ConfigModalidad {
         ...super.toJson(),
         'punto_descripcion': puntoDescripcion,
       };
+
+  @override
+  ConfigPuntoEstrategico copyWith({
+    bool? activo,
+    String? notas,
+    String? puntoDescripcion,
+  }) {
+    return ConfigPuntoEstrategico(
+      activo: activo ?? this.activo,
+      notas: notas ?? this.notas,
+      puntoDescripcion: puntoDescripcion ?? this.puntoDescripcion,
+    );
+  }
 }
 
 class ConfigRecogidaEntrega extends ConfigModalidad {
@@ -116,6 +130,19 @@ class ConfigRecogidaEntrega extends ConfigModalidad {
         ...super.toJson(),
         'costo_traslado_clp': costoTrasladoClp,
       };
+
+  @override
+  ConfigRecogidaEntrega copyWith({
+    bool? activo,
+    String? notas,
+    int? costoTrasladoClp,
+  }) {
+    return ConfigRecogidaEntrega(
+      activo: activo ?? this.activo,
+      notas: notas ?? this.notas,
+      costoTrasladoClp: costoTrasladoClp ?? this.costoTrasladoClp,
+    );
+  }
 }
 
 class ConfigSuscripcion extends ConfigModalidad {
@@ -142,6 +169,19 @@ class ConfigSuscripcion extends ConfigModalidad {
         ...super.toJson(),
         'planes': planes,
       };
+
+  @override
+  ConfigSuscripcion copyWith({
+    bool? activo,
+    String? notas,
+    List<Map<String, dynamic>>? planes,
+  }) {
+    return ConfigSuscripcion(
+      activo: activo ?? this.activo,
+      notas: notas ?? this.notas,
+      planes: planes ?? this.planes,
+    );
+  }
 }
 
 class ModalidadesConfig {
