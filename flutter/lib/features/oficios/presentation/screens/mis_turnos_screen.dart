@@ -174,6 +174,40 @@ class _TurnoCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(turno.motivo!, maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
+              if (turno.cliente != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.person,
+                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        turno.cliente!.nombreCompleto,
+                        style: theme.textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (turno.vehiculo != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.directions_car,
+                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        turno.vehiculo!.descripcion,
+                        style: theme.textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 children: [

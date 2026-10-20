@@ -126,6 +126,74 @@ class _DetalleMiTurnoScreenState
                   ),
                 ),
               ),
+              if (turno.vehiculo != null) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Vehiculo',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        _Fila(
+                          icon: Icons.directions_car,
+                          label: 'Vehiculo',
+                          value: turno.vehiculo!.descripcion,
+                        ),
+                        if (turno.vehiculo!.color != null)
+                          _Fila(
+                            icon: Icons.palette,
+                            label: 'Color',
+                            value: turno.vehiculo!.color!,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (turno.ordenId != null) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Calificar servicio',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Tu opinion ayuda a otros usuarios a elegir mejor.',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () => context.push(
+                            '/mis-ordenes/${turno.ordenId}/review',
+                          ),
+                          icon: const Icon(Icons.star_outline),
+                          label: const Text('Calificar servicio'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 44),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (puedeCancelar) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
