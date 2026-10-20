@@ -7,10 +7,27 @@ import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:baqueano_natales/core/config/app_config.dart';
 
 class AppUpdateService {
-  static const String versionUrl =
-      'https://api-dev.baqueanonatales.com/apks/version.json';
+  // Detectar flavor en runtime para elegir el manifest correcto.
+  static String get _manifestFile {
+    return AppConfig.appType == AppType.admin
+        ? 'version-admin.json'
+        : 'version-client.json';
+  }
+
+  static String get _apkFile {
+    return AppConfig.appType == AppType.admin
+        ? 'app-admindev.apk'
+        : 'app-clientdev.apk';
+  }
+
+  static String get versionUrl =>
+      'https://api-dev.baqueanonatales.com/apks/$_manifestFile';
+
+  static String get apkDownloadUrl =>
+      'https://api-dev.baqueanonatales.com/apks/$_apkFile';
 
   static Future<void> checkForUpdates(GoRouter router, GlobalKey<ScaffoldMessengerState> messengerKey, {bool forceShow = false}) async {
     try {
@@ -145,7 +162,7 @@ class AppUpdateService {
       
       // Descargar el APK
       await Dio().download(
-        'https://api-dev.baqueanonatales.com/apks/app-clientdev.apk',
+        apkDownloadUrl,
         savePath,
       );
       
@@ -156,7 +173,7 @@ class AppUpdateService {
       
       // Obtener el hash esperado del version.json
       final versionData = (await Dio().get(
-        'https://api-dev.baqueanonatales.com/apks/version.json?t=${DateTime.now().millisecondsSinceEpoch}',
+        '$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}',
       )).data;
       final expectedHash = versionData['sha256'] as String? ?? '';
       
