@@ -16,6 +16,7 @@ import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
+import 'package:baqueano_natales/features/prestadores/domain/modalidades.dart';
 
 /// Filtros para el listado público de prestadores.
 class PrestadoresFiltros {
@@ -684,4 +685,53 @@ class PrestadorRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  // ============================================================
+  // Modalidades de prestación (Fase 6)
+  // ============================================================
+
+  /// Obtiene la configuración de modalidades del prestador.
+  Future<ModalidadesConfig> obtenerModalidades(String prestadorId) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/modalidades',
+      );
+      final data = res.data as Map<String, dynamic>;
+      return ModalidadesConfig.fromJson(
+        data['modalidades'] as Map<String, dynamic>,
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Actualiza la configuración de modalidades del prestador.
+  Future<ModalidadesConfig> actualizarModalidades({
+    required String prestadorId,
+    required ModalidadesConfig config,
+  }) async {
+    try {
+      final res = await _dio.patch(
+        '/api/v1/mis-prestadores/$prestadorId/modalidades',
+        data: {'modalidades': config.toJson()},
+      );
+      final data = res.data as Map<String, dynamic>;
+      return ModalidadesConfig.fromJson(
+        data['modalidades'] as Map<String, dynamic>,
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
 }

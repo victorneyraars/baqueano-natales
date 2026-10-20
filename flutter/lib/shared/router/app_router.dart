@@ -65,6 +65,7 @@ import 'package:baqueano_natales/features/prestadores/presentation/screens/revie
 import 'package:baqueano_natales/features/prestadores/presentation/screens/detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/editor_servicios_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/formulario_prestador_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/configurar_modalidades_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/mis_prestadores_screen.dart';
 

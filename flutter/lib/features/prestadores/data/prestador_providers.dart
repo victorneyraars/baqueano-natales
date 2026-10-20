@@ -17,6 +17,7 @@ import 'package:baqueano_natales/features/comercios/data/comercio_repository.dar
 import 'package:baqueano_natales/features/prestadores/data/prestador_repository.dart';
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
+import 'package:baqueano_natales/features/prestadores/domain/modalidades.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 
 // =========================================================
@@ -239,4 +240,15 @@ final reviewsPrestadorProvider =
     FutureProvider.family<ReviewListResponse, String>((ref, slug) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.listarReviewsPublicas(slug);
+});
+
+// =========================================================
+// Modalidades de prestación (Fase 6)
+// =========================================================
+
+/// Obtiene la configuración de modalidades de un prestador.
+final modalidadesConfigProvider =
+    FutureProvider.family<ModalidadesConfig, String>((ref, prestadorId) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return repo.obtenerModalidades(prestadorId);
 });

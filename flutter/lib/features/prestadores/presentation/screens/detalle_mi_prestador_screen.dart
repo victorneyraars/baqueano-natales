@@ -214,6 +214,16 @@ class _Contenido extends StatelessWidget {
         const SizedBox(height: 8),
 
         OutlinedButton.icon(
+          icon: const Icon(Icons.tune_outlined),
+          label: const Text('Modalidades de servicio'),
+          onPressed: () => context.push(
+            '/mis-prestadores/${prestador.id}/modalidades',
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        OutlinedButton.icon(
           icon: const Icon(Icons.receipt_long_outlined),
           label: const Text('Ordenes del taller'),
           onPressed: () => context.push(
