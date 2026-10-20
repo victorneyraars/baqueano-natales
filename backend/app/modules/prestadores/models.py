@@ -338,6 +338,17 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         nullable=True,
         comment="Lista de especialidades dentro de la categoría",
     )
+
+    # Modalidades de prestación del servicio (Fase 6)
+    modalidades: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment=(
+            "Config de 7 modalidades: "
+            "taller_fisico, domicilio, punto_estrategico, "
+            "recogida_entrega, suscripcion, flotas, hibrido"
+        ),
+    )
     datos_extra: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
