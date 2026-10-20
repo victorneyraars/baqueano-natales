@@ -38,6 +38,8 @@ from app.modules.prestadores.schemas import (
     PrestadorServicioCreate,
     PrestadorServicioResponse,
     PrestadorServicioUpdate,
+    ModalidadesResponse,
+    ModalidadesUpdateRequest,
     PrestadorServiciosBulkUpdate,
     PrestadorUpdate,
     PrestadorVerificarRequest,
@@ -562,3 +564,35 @@ async def admin_destacar_prestador(
         db, prestador, data.destacado
     )
     return PrestadorPrivadoResponse.model_validate(prestador)
+
+# ============================================================
+# Modalidades de prestación (Fase 6)
+# ============================================================
+@router_propietario.get(
+    "/{prestador_id}/modalidades",
+    response_model=ModalidadesResponse,
+    summary="Ver configuración de modalidades",
+)
+async def obtener_modalidades_endpoint(
+    prestador: PrestadorPropietario,
+    db: DbSession,
+) -> ModalidadesResponse:
+    """Devuelve la config de modalidades del prestador."""
+    config = await services.obtener_modalidades(db, prestador)
+    return ModalidadesResponse(modalidades=config)
+
+
+@router_propietario.patch(
+    "/{prestador_id}/modalidades",
+    response_model=ModalidadesResponse,
+    summary="Actualizar configuración de modalidades",
+)
+async def actualizar_modalidades_endpoint(
+    prestador: PrestadorPropietario,
+    data: ModalidadesUpdateRequest,
+    db: DbSession,
+) -> ModalidadesResponse:
+    """Actualiza la config de modalidades del prestador."""
+    prestador = await services.actualizar_modalidades(db, prestador, data.modalidades)
+    config = await services.obtener_modalidades(db, prestador)
+    return ModalidadesResponse(modalidades=config)

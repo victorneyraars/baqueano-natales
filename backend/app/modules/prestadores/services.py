@@ -715,3 +715,20 @@ async def _notify_web_revalidation(prestador):
             )
     except Exception:
         pass
+
+# ============================================================
+# Modalidades de prestación (Fase 6)
+# ============================================================
+async def obtener_modalidades(db: AsyncSession, prestador):
+    """Devuelve la configuración de modalidades (o defaults si no existe)."""
+    from app.modules.prestadores.schemas import ModalidadesConfig
+    if not prestador.modalidades:
+        return ModalidadesConfig()
+    return ModalidadesConfig(**prestador.modalidades)
+
+
+async def actualizar_modalidades(db: AsyncSession, prestador, data):
+    """Actualiza la configuración de modalidades del prestador."""
+    prestador.modalidades = data.model_dump()
+    await db.flush()
+    return prestador
