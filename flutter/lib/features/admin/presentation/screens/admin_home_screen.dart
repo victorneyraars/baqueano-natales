@@ -182,14 +182,6 @@ class AdminHomeScreen extends ConsumerWidget {
               ),
             ),
 
-            _AdminCard(
-              icon: Icons.calendar_month,
-              title: 'Agenda de Turnos',
-              subtitle: 'Ver y confirmar reservas entrantes',
-              onTap: () => context.push(
-                '/mis-prestadores/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa/turnos',
-              ),
-            ),
 
             _AdminCard(
               icon: Icons.handyman,

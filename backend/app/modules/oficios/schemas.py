@@ -354,6 +354,28 @@ class TurnoVincularOrdenRequest(BaseModel):
     orden_id: UUID
 
 
+
+class UsuarioResumen(BaseModel):
+    """Datos publicos del cliente para un turno."""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    nombre: str
+    apellido: str | None
+    email: str
+    phone: str | None
+
+
+class VehiculoResumen(BaseModel):
+    """Datos del vehiculo para un turno."""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    patente: str
+    marca: str
+    modelo: str
+    anio: int
+    color: str | None
+
+
 class TurnoResponse(BaseModel):
     """Vista completa de un turno."""
 
@@ -373,6 +395,10 @@ class TurnoResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    # Relaciones expandidas
+    cliente: UsuarioResumen | None = None
+    vehiculo: VehiculoResumen | None = None
+
 
 class TurnoListItemResponse(BaseModel):
     """Item resumido para listados."""
@@ -390,6 +416,10 @@ class TurnoListItemResponse(BaseModel):
     orden_id: UUID | None
     created_at: datetime
     updated_at: datetime
+
+    # Relaciones expandidas
+    cliente: UsuarioResumen | None = None
+    vehiculo: VehiculoResumen | None = None
 
 
 # =========================================================

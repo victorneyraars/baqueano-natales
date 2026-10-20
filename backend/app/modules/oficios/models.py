@@ -896,6 +896,15 @@ class Turno(TimestampMixin, Base):
 
     # Relaciones (opcionales, para hidratar)
     objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")
+    cliente: Mapped["Usuario"] = relationship(
+        foreign_keys="Turno.cliente_id",
+        lazy="selectin",
+    )
+    prestador: Mapped["Prestador"] = relationship(
+        foreign_keys="Turno.prestador_id",
+        lazy="selectin",
+    )
+
     orden: Mapped["OrdenTrabajo | None"] = relationship(lazy="selectin")
 
     def __repr__(self) -> str:
@@ -1038,3 +1047,9 @@ class Recordatorio(TimestampMixin, SoftDeleteMixin, Base):
             f"<Recordatorio(id={self.id}, tipo={self.tipo.value}, "
             f"enviado={self.enviado})>"
         )
+
+# Imports de runtime para resolver las relaciones con Mapped["Usuario"] y Mapped["Prestador"].
+# Se importan al final del archivo para evitar imports circulares.
+# Ver: https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#late-evaluation-of-relationship-arguments
+from app.modules.auth.models import Usuario  # noqa: E402, F401
+from app.modules.prestadores.models import Prestador  # noqa: E402, F401
