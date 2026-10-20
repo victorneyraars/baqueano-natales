@@ -346,6 +346,7 @@ class PrestadorDetalleResponse(PrestadorPublicoResponse):
     radio_cobertura_km: Decimal | None
     datos_extra: dict | None
     redes_sociales: dict | None
+    modalidades: dict | None = None
     servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list[FotoTrabajoResponse] = []
 
