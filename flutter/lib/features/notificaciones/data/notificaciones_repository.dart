@@ -112,10 +112,7 @@ class NotificacionesRepository {
   }
 
   /// Devuelve el dashboard de estadisticas.
-  Future<StatsNotificacion> stats({
-    DateTime? desde,
-    DateTime? hasta,
-  }) async {
+  Future<StatsNotificacion> stats({DateTime? desde, DateTime? hasta}) async {
     try {
       final res = await _dio.get(
         '/api/v1/admin/notificaciones/stats',
@@ -145,10 +142,7 @@ class NotificacionesRepository {
     try {
       final res = await _dio.get(
         '/api/v1/notificaciones',
-        queryParameters: {
-          'limit': limit,
-          'offset': offset,
-        },
+        queryParameters: {'limit': limit, 'offset': offset},
       );
       final list = res.data as List<dynamic>;
       return list
@@ -184,9 +178,7 @@ class NotificacionesRepository {
       final res = await _dio.get(
         '/api/v1/usuarios/me/preferencias-notificacion',
       );
-      return PreferenciaNotificacion.fromJson(
-        res.data as Map<String, dynamic>,
-      );
+      return PreferenciaNotificacion.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
@@ -222,9 +214,7 @@ class NotificacionesRepository {
           'timezone': ?timezone,
         },
       );
-      return PreferenciaNotificacion.fromJson(
-        res.data as Map<String, dynamic>,
-      );
+      return PreferenciaNotificacion.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

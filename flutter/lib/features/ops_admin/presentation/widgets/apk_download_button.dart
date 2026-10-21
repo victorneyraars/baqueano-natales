@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../../data/ops_providers.dart';
 
 class ApkDownloadButton extends ConsumerStatefulWidget {
@@ -26,7 +27,10 @@ class _ApkDownloadButtonState extends ConsumerState<ApkDownloadButton> {
   double _progress = 0.0;
 
   Future<void> _downloadAndInstall() async {
-    setState(() { _isDownloading = true; _progress = 0.0; });
+    setState(() {
+      _isDownloading = true;
+      _progress = 0.0;
+    });
     try {
       final repo = ref.read(opsRepositoryProvider);
       final apkInfo = await repo.getLatestApk(widget.flavor);
@@ -41,25 +45,32 @@ class _ApkDownloadButtonState extends ConsumerState<ApkDownloadButton> {
         savePath,
         onReceiveProgress: (received, total) {
           if (total != -1) {
-            setState(() { _progress = received / total; });
+            setState(() {
+              _progress = received / total;
+            });
           }
         },
       );
 
-      setState(() { _isDownloading = false; });
-      
+      setState(() {
+        _isDownloading = false;
+      });
+
       final result = await OpenFilex.open(savePath);
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al abrir instalador: ${result.message}')),
+          SnackBar(
+            content: Text('Error al abrir instalador: ${result.message}'),
+          ),
         );
       }
     } catch (e) {
-      setState(() { _isDownloading = false; });
+      setState(() {
+        _isDownloading = false;
+      });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
       }
     }
   }
@@ -69,10 +80,14 @@ class _ApkDownloadButtonState extends ConsumerState<ApkDownloadButton> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        icon: _isDownloading 
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+        icon: _isDownloading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : Icon(widget.icon),
-        label: _isDownloading 
+        label: _isDownloading
             ? Text('Descargando... ${(_progress * 100).toStringAsFixed(0)}%')
             : Text(widget.label),
         onPressed: _isDownloading ? null : _downloadAndInstall,

@@ -40,8 +40,7 @@ class ReportesTallerScreen extends ConsumerStatefulWidget {
       _ReportesTallerScreenState();
 }
 
-class _ReportesTallerScreenState
-    extends ConsumerState<ReportesTallerScreen> {
+class _ReportesTallerScreenState extends ConsumerState<ReportesTallerScreen> {
   _RangoPreset _preset = _RangoPreset.doceMeses;
   late DateTime _desde;
   late DateTime _hasta;
@@ -66,10 +65,10 @@ class _ReportesTallerScreenState
   }
 
   ReportePrestadorParams get _params => ReportePrestadorParams(
-        prestadorId: widget.prestadorId,
-        desde: _desde,
-        hasta: _hasta,
-      );
+    prestadorId: widget.prestadorId,
+    desde: _desde,
+    hasta: _hasta,
+  );
 
   Future<void> _descargarCsv() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -143,8 +142,7 @@ class _ReportesTallerScreenState
           ),
           Expanded(
             child: async.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorView(
                 error: e,
                 onRetry: () =>
@@ -251,9 +249,7 @@ class _SeccionTitulo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       texto,
-      style: Theme.of(context)
-          .textTheme
-          .titleMedium
+      style: Theme.of(context).textTheme.titleMedium
           ?.copyWith(fontWeight: FontWeight.bold),
     );
   }
@@ -337,15 +333,10 @@ class _TarjetaKpi extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Icon(icono, size: 20, color: scheme.primary),
-            Text(
-              titulo,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(titulo, style: Theme.of(context).textTheme.bodySmall),
             Text(
               valor,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
+              style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
@@ -468,10 +459,7 @@ class _FilaServicio extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
         radius: 14,
-        child: Text(
-          '${s.cantidad}',
-          style: const TextStyle(fontSize: 12),
-        ),
+        child: Text('${s.cantidad}', style: const TextStyle(fontSize: 12)),
       ),
       title: Text(s.descripcion, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Text(

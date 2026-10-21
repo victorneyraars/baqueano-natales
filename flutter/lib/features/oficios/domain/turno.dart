@@ -41,7 +41,6 @@ enum EstadoTurno {
   }
 }
 
-
 /// Resumen del cliente que hizo la reserva (para mostrar en agenda/detalle).
 class ClienteResumen {
   const ClienteResumen({

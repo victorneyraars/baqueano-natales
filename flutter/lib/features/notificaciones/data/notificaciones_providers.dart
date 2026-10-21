@@ -9,7 +9,9 @@ import 'package:baqueano_natales/features/notificaciones/domain/preferencia_noti
 import 'package:baqueano_natales/features/notificaciones/domain/stats.dart';
 
 /// Provider del repositorio (inyectable para tests).
-final notificacionesRepositoryProvider = Provider<NotificacionesRepository>((ref) {
+final notificacionesRepositoryProvider = Provider<NotificacionesRepository>((
+  ref,
+) {
   return NotificacionesRepository();
 });
 
@@ -43,43 +45,41 @@ class HistorialParams {
 
 /// Historial con filtros (family).
 final historialNotificacionesProvider =
-    FutureProvider.family<List<NotificacionAdmin>, HistorialParams>(
-  (ref, params) async {
-    final repo = ref.read(notificacionesRepositoryProvider);
-    return repo.listar(
-      tipo: params.tipo,
-      estado: params.estado,
-      limit: params.limit,
-      offset: params.offset,
-    );
-  },
-);
+    FutureProvider.family<List<NotificacionAdmin>, HistorialParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.read(notificacionesRepositoryProvider);
+      return repo.listar(
+        tipo: params.tipo,
+        estado: params.estado,
+        limit: params.limit,
+        offset: params.offset,
+      );
+    });
 
 /// Stats del dashboard.
-final statsNotificacionesProvider = FutureProvider<StatsNotificacion>(
-  (ref) async {
-    final repo = ref.read(notificacionesRepositoryProvider);
-    return repo.stats();
-  },
-);
-
+final statsNotificacionesProvider = FutureProvider<StatsNotificacion>((
+  ref,
+) async {
+  final repo = ref.read(notificacionesRepositoryProvider);
+  return repo.stats();
+});
 
 // ==================== Endpoints del usuario ====================
 
-
 /// Notificaciones del usuario autenticado.
-final misNotificacionesProvider = FutureProvider<List<NotificacionAdmin>>(
-  (ref) async {
-    final repo = ref.read(notificacionesRepositoryProvider);
-    return repo.misNotificaciones();
-  },
-);
-
+final misNotificacionesProvider = FutureProvider<List<NotificacionAdmin>>((
+  ref,
+) async {
+  final repo = ref.read(notificacionesRepositoryProvider);
+  return repo.misNotificaciones();
+});
 
 /// Preferencias de notificacion del usuario.
-final misPreferenciasProvider = FutureProvider<PreferenciaNotificacion>(
-  (ref) async {
-    final repo = ref.read(notificacionesRepositoryProvider);
-    return repo.misPreferencias();
-  },
-);
+final misPreferenciasProvider = FutureProvider<PreferenciaNotificacion>((
+  ref,
+) async {
+  final repo = ref.read(notificacionesRepositoryProvider);
+  return repo.misPreferencias();
+});

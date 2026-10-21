@@ -10,7 +10,6 @@ import 'package:baqueano_natales/features/notificaciones/data/notificaciones_pro
 import 'package:baqueano_natales/core/services/app_update_service.dart';
 import 'package:baqueano_natales/main_client.dart' show scaffoldMessengerKey;
 
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -45,9 +44,7 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -294,17 +291,16 @@ class _FeatureCard extends StatelessWidget {
               ? null
               : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
-        onTap: onTap ??
+        onTap:
+            onTap ??
             () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Próximamente')),
-              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('Próximamente')));
             },
       ),
     );
   }
 }
-
 
 /// Card "Mis notificaciones" en el Home con badge de no leidas.
 class _NotificacionesHomeCard extends ConsumerWidget {
@@ -342,9 +338,7 @@ class _NotificacionesHomeCard extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          hasBadge
-              ? '$noLeidas sin leer'
-              : 'Recordatorios y avisos recientes',
+          hasBadge ? '$noLeidas sin leer' : 'Recordatorios y avisos recientes',
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 14),
         onTap: () => context.push('/mis-notificaciones'),

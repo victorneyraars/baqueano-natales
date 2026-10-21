@@ -39,14 +39,12 @@ class EditorServiciosScreen extends ConsumerWidget {
         orElse: () => null,
       ),
       body: asyncPrestador.when(
-        data: (prestador) => _Contenido(
-          prestador: prestador,
-          ref: ref,
-        ),
+        data: (prestador) => _Contenido(prestador: prestador, ref: ref),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorState(
           error: e.toString(),
-          onRetry: () => ref.invalidate(miPrestadorDetalleProvider(prestadorId)),
+          onRetry: () =>
+              ref.invalidate(miPrestadorDetalleProvider(prestadorId)),
         ),
       ),
     );
@@ -91,8 +89,7 @@ class _Contenido extends StatelessWidget {
           final srv = prestador.servicios[index - 1];
           return _ServicioCard(
             servicio: srv,
-            onEditar: () =>
-                _abrirFormulario(context, ref, prestador, srv),
+            onEditar: () => _abrirFormulario(context, ref, prestador, srv),
             onEliminar: () => _confirmarEliminar(context, ref, prestador, srv),
           );
         },
@@ -198,11 +195,7 @@ class _ServicioCard extends StatelessWidget {
                   bold: true,
                 ),
                 if (servicio.duracionLegible != null)
-                  _metaChip(
-                    theme,
-                    Icons.schedule,
-                    servicio.duracionLegible!,
-                  ),
+                  _metaChip(theme, Icons.schedule, servicio.duracionLegible!),
                 if (servicio.garantiaLegible != null)
                   _metaChip(
                     theme,
@@ -347,9 +340,7 @@ Future<void> _abrirFormulario(
   if (guardado == true && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          esEdicion ? 'Servicio actualizado' : 'Servicio agregado',
-        ),
+        content: Text(esEdicion ? 'Servicio actualizado' : 'Servicio agregado'),
       ),
     );
   }
@@ -372,9 +363,7 @@ Future<void> _confirmarEliminar(
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.red.shade700,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
           onPressed: () => Navigator.of(ctx).pop(true),
           child: const Text('Eliminar'),
         ),
@@ -393,16 +382,12 @@ Future<void> _confirmarEliminar(
     );
     ref.invalidate(miPrestadorDetalleProvider(prestador.id));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Servicio eliminado')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Servicio eliminado')));
   } on ApiException catch (e) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(e.message),
-        backgroundColor: Colors.red.shade700,
-      ),
+      SnackBar(content: Text(e.message), backgroundColor: Colors.red.shade700),
     );
   }
 }
@@ -523,8 +508,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
         );
       }
 
-      widget.ref
-          .invalidate(miPrestadorDetalleProvider(widget.prestadorId));
+      widget.ref.invalidate(miPrestadorDetalleProvider(widget.prestadorId));
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {

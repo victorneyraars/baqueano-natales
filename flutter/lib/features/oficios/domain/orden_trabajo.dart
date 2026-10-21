@@ -161,13 +161,16 @@ class OrdenTrabajo {
           : null,
       kmIngreso: json['km_ingreso'] as int?,
       kmSalida: json['km_salida'] as int?,
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((i) => OrdenItem.fromJson(i as Map<String, dynamic>))
               .toList() ??
           const [],
-      historial: (json['historial'] as List<dynamic>?)
-              ?.map((h) =>
-                  OrdenHistorialEvento.fromJson(h as Map<String, dynamic>))
+      historial:
+          (json['historial'] as List<dynamic>?)
+              ?.map(
+                (h) => OrdenHistorialEvento.fromJson(h as Map<String, dynamic>),
+              )
               .toList() ??
           const [],
     );

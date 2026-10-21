@@ -64,10 +64,7 @@ class ComerciosFiltros {
   final int pageSize;
 
   Map<String, dynamic> toQuery() {
-    final q = <String, dynamic>{
-      'page': page,
-      'page_size': pageSize,
-    };
+    final q = <String, dynamic>{'page': page, 'page_size': pageSize};
     if (categoriaId != null) q['categoria_id'] = categoriaId;
     if (busqueda != null && busqueda!.isNotEmpty) q['q'] = busqueda;
     if (soloDestacados == true) q['destacados'] = true;
@@ -236,10 +233,7 @@ class ComercioRepository {
     Map<String, dynamic> cambios = const {},
   }) async {
     try {
-      final res = await _dio.patch(
-        '/api/v1/mis-comercios/$id',
-        data: cambios,
-      );
+      final res = await _dio.patch('/api/v1/mis-comercios/$id', data: cambios);
       return Comercio.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
@@ -421,10 +415,7 @@ class ComercioRepository {
       if (categoriaId != null) q['categoria_id'] = categoriaId;
       if (busqueda != null && busqueda.isNotEmpty) q['q'] = busqueda;
 
-      final res = await _dio.get(
-        '/api/v1/admin/comercios',
-        queryParameters: q,
-      );
+      final res = await _dio.get('/api/v1/admin/comercios', queryParameters: q);
       final data = res.data as Map<String, dynamic>;
       final items = (data['items'] as List<dynamic>)
           .map((c) => Comercio.fromJson(c as Map<String, dynamic>))

@@ -14,11 +14,7 @@ Future<void> main() async {
   AppConfig.init(type: AppType.admin);
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(
-    const ProviderScope(
-      child: BaqueanoAdminApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: BaqueanoAdminApp()));
 }
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =

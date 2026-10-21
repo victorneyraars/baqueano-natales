@@ -26,8 +26,7 @@ class AdminComerciosScreen extends ConsumerStatefulWidget {
       _AdminComerciosScreenState();
 }
 
-class _AdminComerciosScreenState
-    extends ConsumerState<AdminComerciosScreen> {
+class _AdminComerciosScreenState extends ConsumerState<AdminComerciosScreen> {
   EstadoComercio? _estadoFiltro = EstadoComercio.pendiente;
   final _searchController = TextEditingController();
   String? _busqueda;
@@ -57,9 +56,7 @@ class _AdminComerciosScreenState
     final asyncComercios = ref.watch(adminComerciosProvider(params));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Comercios'),
-      ),
+      appBar: AppBar(title: const Text('Comercios')),
       body: Column(
         children: [
           // --- Buscador ---
@@ -125,15 +122,13 @@ class _AdminComerciosScreenState
                       final c = paginated.items[index];
                       return _ComercioAdminCard(
                         comercio: c,
-                        onTap: () =>
-                            context.push('/admin/comercios/${c.id}'),
+                        onTap: () => context.push('/admin/comercios/${c.id}'),
                       );
                     },
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorState(
                 error: e.toString(),
                 onRetry: () => ref.invalidate(adminComerciosProvider),
@@ -162,10 +157,7 @@ class _AdminComerciosScreenState
 // Card del comercio
 // =========================================================
 class _ComercioAdminCard extends StatelessWidget {
-  const _ComercioAdminCard({
-    required this.comercio,
-    required this.onTap,
-  });
+  const _ComercioAdminCard({required this.comercio, required this.onTap});
 
   final Comercio comercio;
   final VoidCallback onTap;
@@ -337,10 +329,7 @@ class _EmptyState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No hay comercios',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('No hay comercios', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Probá cambiar el filtro o la búsqueda.',

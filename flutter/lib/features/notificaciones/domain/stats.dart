@@ -57,9 +57,9 @@ class EstadoCount {
   final int count;
 
   factory EstadoCount.fromJson(Map<String, dynamic> json) => EstadoCount(
-        estado: json['estado'] as String,
-        count: (json['count'] as num).toInt(),
-      );
+    estado: json['estado'] as String,
+    count: (json['count'] as num).toInt(),
+  );
 }
 
 class TipoCount {
@@ -68,9 +68,9 @@ class TipoCount {
   final int count;
 
   factory TipoCount.fromJson(Map<String, dynamic> json) => TipoCount(
-        tipo: json['tipo'] as String,
-        count: (json['count'] as num).toInt(),
-      );
+    tipo: json['tipo'] as String,
+    count: (json['count'] as num).toInt(),
+  );
 }
 
 class TopNotificacion {

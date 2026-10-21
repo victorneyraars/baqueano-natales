@@ -262,10 +262,7 @@ class OficiosRepository {
     try {
       final res = await _dio.post(
         '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/estado',
-        data: {
-          'nuevo_estado': nuevoEstado,
-          'motivo': ?motivo,
-        },
+        data: {'nuevo_estado': nuevoEstado, 'motivo': ?motivo},
       );
       return OrdenTrabajo.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
@@ -290,10 +287,7 @@ class OficiosRepository {
     try {
       final query = <String, dynamic>{'limit': limit};
       if (estado != null && estado.isNotEmpty) query['estado'] = estado;
-      final res = await _dio.get(
-        '/api/v1/mis-ordenes',
-        queryParameters: query,
-      );
+      final res = await _dio.get('/api/v1/mis-ordenes', queryParameters: query);
       final list = res.data as List<dynamic>;
       return list
           .map((o) => OrdenTrabajo.fromJson(o as Map<String, dynamic>))
@@ -560,10 +554,7 @@ class OficiosRepository {
     try {
       final res = await _dio.post(
         '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado',
-        data: {
-          'nuevo_estado': nuevoEstado,
-          'motivo': ?motivo,
-        },
+        data: {'nuevo_estado': nuevoEstado, 'motivo': ?motivo},
       );
       return Turno.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
@@ -741,9 +732,7 @@ class OficiosRepository {
   /// Elimina un recordatorio (soft delete).
   Future<void> eliminarRecordatorio(String objetoId, String recId) async {
     try {
-      await _dio.delete(
-        '/api/v1/mis-vehiculos/$objetoId/recordatorios/$recId',
-      );
+      await _dio.delete('/api/v1/mis-vehiculos/$objetoId/recordatorios/$recId');
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
@@ -830,9 +819,7 @@ class OficiosRepository {
     try {
       final res = await _dio.get(
         '/api/v1/mis-ordenes/$ordenId/fotos',
-        queryParameters: {
-          if (momento != null) 'momento': momento.value,
-        },
+        queryParameters: {if (momento != null) 'momento': momento.value},
       );
       final list = res.data as List<dynamic>;
       return list
@@ -857,9 +844,7 @@ class OficiosRepository {
     try {
       final res = await _dio.get(
         '/api/v1/mis-prestadores/$prestadorId/ordenes/$ordenId/fotos',
-        queryParameters: {
-          if (momento != null) 'momento': momento.value,
-        },
+        queryParameters: {if (momento != null) 'momento': momento.value},
       );
       final list = res.data as List<dynamic>;
       return list

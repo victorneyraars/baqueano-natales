@@ -8,11 +8,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 
 class CrearReviewScreen extends ConsumerStatefulWidget {
-  const CrearReviewScreen({
-    super.key,
-    required this.ordenId,
-    this.numeroOrden,
-  });
+  const CrearReviewScreen({super.key, required this.ordenId, this.numeroOrden});
 
   final String ordenId;
   final String? numeroOrden;
@@ -66,9 +62,7 @@ class _CrearReviewScreenState extends ConsumerState<CrearReviewScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Calificar servicio'),
-      ),
+      appBar: AppBar(title: const Text('Calificar servicio')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -78,10 +72,7 @@ class _CrearReviewScreenState extends ConsumerState<CrearReviewScreen> {
               style: theme.textTheme.titleMedium,
             ),
           const SizedBox(height: 8),
-          Text(
-            'Como fue tu experiencia?',
-            style: theme.textTheme.bodyLarge,
-          ),
+          Text('Como fue tu experiencia?', style: theme.textTheme.bodyLarge),
           const SizedBox(height: 20),
           _SelectorEstrellas(
             rating: _rating,
@@ -146,10 +137,7 @@ class _CrearReviewScreenState extends ConsumerState<CrearReviewScreen> {
 // Selector de estrellas
 // =========================================================
 class _SelectorEstrellas extends StatelessWidget {
-  const _SelectorEstrellas({
-    required this.rating,
-    required this.onChanged,
-  });
+  const _SelectorEstrellas({required this.rating, required this.onChanged});
 
   final int rating;
   final ValueChanged<int> onChanged;

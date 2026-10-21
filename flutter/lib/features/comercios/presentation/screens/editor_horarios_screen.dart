@@ -29,8 +29,7 @@ class EditorHorariosScreen extends ConsumerStatefulWidget {
       _EditorHorariosScreenState();
 }
 
-class _EditorHorariosScreenState
-    extends ConsumerState<EditorHorariosScreen> {
+class _EditorHorariosScreenState extends ConsumerState<EditorHorariosScreen> {
   /// Mapa día → lista de franjas. día: 0=lunes ... 6=domingo.
   final Map<int, List<_FranjaDraft>> _porDia = {};
 
@@ -72,7 +71,9 @@ class _EditorHorariosScreenState
       }
       // Poblar con los horarios existentes
       for (final h in comercio.horarios) {
-        porDia.putIfAbsent(h.diaSemana, () => []).add(
+        porDia
+            .putIfAbsent(h.diaSemana, () => [])
+            .add(
               _FranjaDraft(
                 cerrado: h.cerrado,
                 abre: _parseTime(h.abre),
@@ -179,11 +180,7 @@ class _EditorHorariosScreenState
   }
 
   /// Actualiza la hora de apertura o cierre de una franja.
-  Future<void> _editarHora(
-    int dia,
-    int index,
-    bool esApertura,
-  ) async {
+  Future<void> _editarHora(int dia, int index, bool esApertura) async {
     final franja = _porDia[dia]![index];
     final inicial = esApertura
         ? (franja.abre ?? const TimeOfDay(hour: 9, minute: 0))
@@ -235,9 +232,7 @@ class _EditorHorariosScreenState
         if (!f.cerrado && (f.abre == null || f.cierra == null)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Completá abre y cierra para ${_diasSemana[dia]}',
-              ),
+              content: Text('Completá abre y cierra para ${_diasSemana[dia]}'),
               backgroundColor: Colors.red.shade700,
             ),
           );
@@ -257,8 +252,9 @@ class _EditorHorariosScreenState
             'dia_semana': dia,
             'cerrado': f.cerrado,
             'abre': f.cerrado || f.abre == null ? null : _formatTime(f.abre!),
-            'cierra':
-                f.cerrado || f.cierra == null ? null : _formatTime(f.cierra!),
+            'cierra': f.cerrado || f.cierra == null
+                ? null
+                : _formatTime(f.cierra!),
           });
         }
       }
@@ -273,9 +269,8 @@ class _EditorHorariosScreenState
       ref.invalidate(misComerciosProvider);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Horarios guardados')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Horarios guardados')));
       context.pop();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -318,11 +313,7 @@ class _EditorHorariosScreenState
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(_errorCarga!, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
@@ -531,7 +522,7 @@ class _EditorHorariosScreenState
         hora == null
             ? label
             : '$label ${hora.hour.toString().padLeft(2, '0')}:'
-                '${hora.minute.toString().padLeft(2, '0')}',
+                  '${hora.minute.toString().padLeft(2, '0')}',
         style: const TextStyle(fontSize: 13),
       ),
       style: OutlinedButton.styleFrom(
@@ -568,11 +559,7 @@ class _EditorHorariosScreenState
 
 /// Franja horaria en edición (draft local, no persistido).
 class _FranjaDraft {
-  _FranjaDraft({
-    required this.cerrado,
-    this.abre,
-    this.cierra,
-  });
+  _FranjaDraft({required this.cerrado, this.abre, this.cierra});
 
   bool cerrado;
   TimeOfDay? abre;

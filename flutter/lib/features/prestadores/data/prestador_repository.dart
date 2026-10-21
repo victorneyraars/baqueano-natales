@@ -39,10 +39,7 @@ class PrestadoresFiltros {
   final int pageSize;
 
   Map<String, dynamic> toQuery() {
-    final q = <String, dynamic>{
-      'page': page,
-      'page_size': pageSize,
-    };
+    final q = <String, dynamic>{'page': page, 'page_size': pageSize};
     if (categoriaId != null) q['categoria_id'] = categoriaId;
     if (busqueda != null && busqueda!.isNotEmpty) q['q'] = busqueda;
     if (soloDestacados == true) q['destacados'] = true;
@@ -250,8 +247,9 @@ class PrestadorRepository {
   /// Envía un prestador a revisión (borrador/rechazado → pendiente).
   Future<Prestador> enviarARevision(String id) async {
     try {
-      final res =
-          await _dio.post('/api/v1/mis-prestadores/$id/enviar-revision');
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$id/enviar-revision',
+      );
       return Prestador.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
@@ -733,5 +731,4 @@ class PrestadorRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
-
 }

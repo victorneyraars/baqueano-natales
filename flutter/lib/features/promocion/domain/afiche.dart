@@ -32,8 +32,7 @@ class PlantillaInfo {
   }
 
   /// Todos los parametros (requeridos + opcionales).
-  List<String> get todosLosParams =>
-      [...paramsRequeridos, ...paramsOpcionales];
+  List<String> get todosLosParams => [...paramsRequeridos, ...paramsOpcionales];
 }
 
 /// Tamanos de afiche soportados.

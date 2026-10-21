@@ -9,9 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureStorageService {
   SecureStorageService._();
 
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(),
-  );
+  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions());
 
   // Claves conocidas
   static const _keyAccessToken = 'access_token';

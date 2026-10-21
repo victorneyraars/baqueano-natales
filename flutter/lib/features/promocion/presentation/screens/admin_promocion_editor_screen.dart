@@ -22,10 +22,7 @@ import 'package:baqueano_natales/features/promocion/data/promocion_providers.dar
 import 'package:baqueano_natales/features/promocion/domain/afiche.dart';
 
 class AdminPromocionEditorScreen extends ConsumerStatefulWidget {
-  const AdminPromocionEditorScreen({
-    super.key,
-    required this.plantillaId,
-  });
+  const AdminPromocionEditorScreen({super.key, required this.plantillaId});
 
   final String plantillaId;
 
@@ -65,9 +62,7 @@ class _AdminPromocionEditorScreenState
   TextEditingController _controller(String key) {
     return _controllers.putIfAbsent(
       key,
-      () => TextEditingController(
-        text: kParamPlaceholders[key] ?? '',
-      ),
+      () => TextEditingController(text: kParamPlaceholders[key] ?? ''),
     );
   }
 
@@ -177,15 +172,13 @@ class _AdminPromocionEditorScreenState
       );
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
       }
     } finally {
       if (mounted) setState(() => _descargando = false);
@@ -206,15 +199,13 @@ class _AdminPromocionEditorScreenState
       );
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
       }
     } finally {
       if (mounted) setState(() => _descargando = false);
@@ -261,15 +252,13 @@ class _AdminPromocionEditorScreenState
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
       }
     } finally {
       if (mounted) setState(() => _publicando = false);
@@ -366,11 +355,7 @@ class _Editor extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         // Preview
-        _PreviewCard(
-          afiche: afiche,
-          error: error,
-          generando: generando,
-        ),
+        _PreviewCard(afiche: afiche, error: error, generando: generando),
         const SizedBox(height: 16),
 
         // Chips de tamano
@@ -399,8 +384,7 @@ class _Editor extends StatelessWidget {
             child: TextField(
               controller: controllerFor(p),
               decoration: InputDecoration(
-                labelText:
-                    (kParamLabels[p] ?? p) + (esRequerido ? ' *' : ''),
+                labelText: (kParamLabels[p] ?? p) + (esRequerido ? ' *' : ''),
                 hintText: kParamPlaceholders[p],
                 border: const OutlineInputBorder(),
               ),
@@ -566,10 +550,7 @@ class _PreviewCard extends StatelessWidget {
             color: theme.colorScheme.outline,
           ),
           const SizedBox(height: 12),
-          Text(
-            'Generando preview...',
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text('Generando preview...', style: theme.textTheme.bodyMedium),
         ],
       );
     }
@@ -591,9 +572,8 @@ class _PreviewCard extends StatelessWidget {
         child: SvgPicture.string(
           afiche!.svg,
           fit: BoxFit.contain,
-          placeholderBuilder: (_) => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          placeholderBuilder: (_) =>
+              const Center(child: CircularProgressIndicator()),
         ),
       ),
     );
@@ -609,9 +589,9 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+      ),
     );
   }
 }
@@ -666,9 +646,9 @@ class _PublicarModalState extends State<_PublicarModal> {
 
   void _publicar() {
     if (_redesSeleccionadas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Eleg? al menos una red')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Eleg? al menos una red')));
       return;
     }
     Navigator.of(context).pop(
@@ -797,4 +777,3 @@ class _PublicarModalState extends State<_PublicarModal> {
     );
   }
 }
-

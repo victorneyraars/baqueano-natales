@@ -1,4 +1,4 @@
-﻿/// Providers de Riverpod para el modulo social (admin).
+/// Providers de Riverpod para el modulo social (admin).
 ///
 /// Expone:
 /// - Repositorio (inyectable para tests).
@@ -22,8 +22,7 @@ final socialRepositoryProvider = Provider<SocialRepository>((ref) {
 // =========================================================
 // Listado de cuentas conectadas
 // =========================================================
-final cuentasSocialesProvider =
-    FutureProvider<CuentasPaginadas>((ref) async {
+final cuentasSocialesProvider = FutureProvider<CuentasPaginadas>((ref) async {
   final repo = ref.watch(socialRepositoryProvider);
   return repo.listarCuentas();
 });
@@ -41,10 +40,9 @@ final configSocialProvider = FutureProvider<ConfigSocial>((ref) async {
 // =========================================================
 final cuentasSocialesPorRedProvider =
     FutureProvider.family<CuentasPaginadas, RedSocial?>((ref, red) async {
-  final repo = ref.watch(socialRepositoryProvider);
-  return repo.listarCuentas(red: red);
-});
-
+      final repo = ref.watch(socialRepositoryProvider);
+      return repo.listarCuentas(red: red);
+    });
 
 // =========================================================
 // Cola de publicaciones (filtro por estado)
@@ -69,12 +67,13 @@ class PublicacionesFiltro {
 
 /// Listado de publicaciones con filtros.
 final publicacionesSocialesProvider =
-    FutureProvider.family<PublicacionesPaginadas, PublicacionesFiltro>(
-  (ref, filtro) async {
-    final repo = ref.watch(socialRepositoryProvider);
-    return repo.listarPublicaciones(estado: filtro.estado, red: filtro.red);
-  },
-);
+    FutureProvider.family<PublicacionesPaginadas, PublicacionesFiltro>((
+      ref,
+      filtro,
+    ) async {
+      final repo = ref.watch(socialRepositoryProvider);
+      return repo.listarPublicaciones(estado: filtro.estado, red: filtro.red);
+    });
 
 // =========================================================
 // Publicaciones de un prestador (family)
@@ -82,60 +81,62 @@ final publicacionesSocialesProvider =
 
 final publicacionesDePrestadorProvider =
     FutureProvider.family<List<PublicacionSocial>, String>((ref, id) async {
-  final repo = ref.watch(socialRepositoryProvider);
-  return repo.listarPublicacionesDePrestador(id);
-});
+      final repo = ref.watch(socialRepositoryProvider);
+      return repo.listarPublicacionesDePrestador(id);
+    });
 
 // =========================================================
 // Acciones (no son providers de estado, son helpers)
 // =========================================================
 
 /// Devuelve una funcion que llama al worker y refresca la lista de cuentas.
-final procesarColaAhoraProvider = Provider<Future<Map<String, dynamic>>
-    Function()>((ref) {
-  return () async {
-    final repo = ref.read(socialRepositoryProvider);
-    final stats = await repo.procesarColaAhora();
-    // Refrescar listados tras publicar
-    ref.invalidate(cuentasSocialesProvider);
-    return stats;
-  };
-});
+final procesarColaAhoraProvider =
+    Provider<Future<Map<String, dynamic>> Function()>((ref) {
+      return () async {
+        final repo = ref.read(socialRepositoryProvider);
+        final stats = await repo.procesarColaAhora();
+        // Refrescar listados tras publicar
+        ref.invalidate(cuentasSocialesProvider);
+        return stats;
+      };
+    });
 
 /// Devuelve una funcion que reencola una publicacion y refresca la lista.
 final reencolarPublicacionProvider =
     Provider<Future<PublicacionSocial> Function(String)>((ref) {
-  return (String publicacionId) async {
-    final repo = ref.read(socialRepositoryProvider);
-    final result = await repo.reencolarPublicacion(publicacionId);
-    // Refrescar todos los listados de publicaciones
-    ref.invalidate(publicacionesSocialesProvider);
-    return result;
-  };
-});
+      return (String publicacionId) async {
+        final repo = ref.read(socialRepositoryProvider);
+        final result = await repo.reencolarPublicacion(publicacionId);
+        // Refrescar todos los listados de publicaciones
+        ref.invalidate(publicacionesSocialesProvider);
+        return result;
+      };
+    });
 
 /// Actualiza la config global y refresca el provider.
 final actualizarConfigProvider =
-    Provider<Future<ConfigSocial> Function({
-      bool? autoPublish,
-      String? destino,
-      bool? publicarEnFacebook,
-      bool? publicarEnInstagram,
-    })>((ref) {
-  return ({
-    bool? autoPublish,
-    String? destino,
-    bool? publicarEnFacebook,
-    bool? publicarEnInstagram,
-  }) async {
-    final repo = ref.read(socialRepositoryProvider);
-    final result = await repo.actualizarConfig(
-      autoPublish: autoPublish,
-      destino: destino,
-      publicarEnFacebook: publicarEnFacebook,
-      publicarEnInstagram: publicarEnInstagram,
-    );
-    ref.invalidate(configSocialProvider);
-    return result;
-  };
-});
+    Provider<
+      Future<ConfigSocial> Function({
+        bool? autoPublish,
+        String? destino,
+        bool? publicarEnFacebook,
+        bool? publicarEnInstagram,
+      })
+    >((ref) {
+      return ({
+        bool? autoPublish,
+        String? destino,
+        bool? publicarEnFacebook,
+        bool? publicarEnInstagram,
+      }) async {
+        final repo = ref.read(socialRepositoryProvider);
+        final result = await repo.actualizarConfig(
+          autoPublish: autoPublish,
+          destino: destino,
+          publicarEnFacebook: publicarEnFacebook,
+          publicarEnInstagram: publicarEnInstagram,
+        );
+        ref.invalidate(configSocialProvider);
+        return result;
+      };
+    });

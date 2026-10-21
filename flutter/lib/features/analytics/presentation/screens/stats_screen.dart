@@ -127,9 +127,8 @@ class _StatsBody extends StatelessWidget {
         if (stats.byDay.isNotEmpty) ...[
           Text(
             'Visitas por día',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           _BarChart(byDay: stats.byDay),
@@ -242,10 +241,8 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+              style: Theme.of(context).textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold, color: color),
             ),
           ],
         ),
@@ -261,7 +258,9 @@ class _BarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxVisits = byDay.map((d) => d.visits).fold<int>(1, (a, b) => a > b ? a : b);
+    final maxVisits = byDay
+        .map((d) => d.visits)
+        .fold<int>(1, (a, b) => a > b ? a : b);
 
     return Card(
       child: Padding(
@@ -336,9 +335,8 @@ class _TopSection extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -348,12 +346,15 @@ class _TopSection extends StatelessWidget {
               children: items.map((item) {
                 return ListTile(
                   dense: true,
-                  title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: Text(
                     item.count.toString(),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 );
               }).toList(),

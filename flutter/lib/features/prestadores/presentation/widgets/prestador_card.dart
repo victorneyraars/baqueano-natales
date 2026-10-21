@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 
 class PrestadorCard extends StatelessWidget {
-  const PrestadorCard({
-    super.key,
-    required this.prestador,
-    this.onTap,
-  });
+  const PrestadorCard({super.key, required this.prestador, this.onTap});
 
   final Prestador prestador;
   final VoidCallback? onTap;
@@ -129,17 +125,9 @@ class PrestadorCard extends StatelessWidget {
                       runSpacing: 4,
                       children: [
                         if (prestador.atiendeDomicilio)
-                          _badge(
-                            theme,
-                            Icons.home_outlined,
-                            'A domicilio',
-                          ),
+                          _badge(theme, Icons.home_outlined, 'A domicilio'),
                         if (prestador.atiendeLocal)
-                          _badge(
-                            theme,
-                            Icons.store_outlined,
-                            'En local',
-                          ),
+                          _badge(theme, Icons.store_outlined, 'En local'),
                         if (prestador.atiendeEmergencias)
                           _badge(
                             theme,
@@ -225,10 +213,7 @@ class PrestadorCard extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: fg),
           const SizedBox(width: 3),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(color: fg),
-          ),
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: fg)),
         ],
       ),
     );

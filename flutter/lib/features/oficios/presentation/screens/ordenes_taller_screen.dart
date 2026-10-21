@@ -58,8 +58,7 @@ class _OrdenesTallerScreenState extends ConsumerState<OrdenesTallerScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorView(
                 error: e,
-                onRetry: () =>
-                    ref.invalidate(ordenesPrestadorProvider(params)),
+                onRetry: () => ref.invalidate(ordenesPrestadorProvider(params)),
               ),
               data: (ordenes) {
                 if (ordenes.isEmpty) return const _EmptyView();
@@ -241,8 +240,8 @@ class _EmptyView extends StatelessWidget {
               'Crea la primera orden con el boton de abajo.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

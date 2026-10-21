@@ -239,50 +239,46 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/social/publicaciones',
         name: 'admin-social-publicaciones',
-        builder: (context, state) =>
-            const AdminSocialPublicacionesScreen(),
+        builder: (context, state) => const AdminSocialPublicacionesScreen(),
       ),
 
       // Admin - Notificaciones
       GoRoute(
         path: '/admin/notificaciones',
         name: 'admin-notificaciones-composer',
-        builder: (context, state) =>
-            const AdminNotificacionesComposerScreen(),
+        builder: (context, state) => const AdminNotificacionesComposerScreen(),
       ),
       GoRoute(
         path: '/admin/notificaciones/historial',
         name: 'admin-notificaciones-historial',
-        builder: (context, state) =>
-            const AdminNotificacionesHistorialScreen(),
+        builder: (context, state) => const AdminNotificacionesHistorialScreen(),
       ),
       GoRoute(
         path: '/admin/notificaciones/stats',
         name: 'admin-notificaciones-stats',
-        builder: (context, state) =>
-            const AdminNotificacionesStatsScreen(),
-        ),
+        builder: (context, state) => const AdminNotificacionesStatsScreen(),
+      ),
 
-        // Admin - Ops Dashboard (GitHub Actions + Play Console)
-        GoRoute(
-          path: '/admin/ops',
-          name: 'admin-ops',
-          builder: (context, state) => const OpsEstadoScreen(),
-        ),
+      // Admin - Ops Dashboard (GitHub Actions + Play Console)
+      GoRoute(
+        path: '/admin/ops',
+        name: 'admin-ops',
+        builder: (context, state) => const OpsEstadoScreen(),
+      ),
 
-        // Admin - Ops Release (crear tag + disparar workflow)
-        GoRoute(
-          path: '/admin/ops/release',
-          name: 'admin-ops-release',
-          builder: (context, state) => const OpsReleaseScreen(),
-        ),
+      // Admin - Ops Release (crear tag + disparar workflow)
+      GoRoute(
+        path: '/admin/ops/release',
+        name: 'admin-ops-release',
+        builder: (context, state) => const OpsReleaseScreen(),
+      ),
 
-        // Admin - Analytics (Cloudflare Web Analytics)
-        GoRoute(
-          path: '/admin/stats',
-          name: 'admin-stats',
-          builder: (context, state) => const StatsScreen(),
-        ),
+      // Admin - Analytics (Cloudflare Web Analytics)
+      GoRoute(
+        path: '/admin/stats',
+        name: 'admin-stats',
+        builder: (context, state) => const StatsScreen(),
+      ),
 
       // =========================================================
       // Comercios â€” pÃºblico
@@ -359,115 +355,109 @@ final routerProvider = Provider<GoRouter>((ref) {
       // =========================================================
       // Prestadores â€” dueÃ±o (mis prestadores)
       // =========================================================
-        GoRoute(
-          path: '/mis-vehiculos',
-          name: 'mis-vehiculos',
-          builder: (context, state) => const MisVehiculosScreen(),
-        ),
-        GoRoute(
-          path: '/mis-vehiculos/nuevo',
-          name: 'mis-vehiculos-nuevo',
-          builder: (context, state) => const FormularioVehiculoScreen(),
-        ),
-        GoRoute(
-          path: '/mis-vehiculos/:id/recordatorios',
-          name: 'mis-recordatorios',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return MisRecordatoriosScreen(objetoId: id);
-          },
-        ),        GoRoute(
-          path: '/mis-vehiculos/:id/editar',
-          name: 'mi-vehiculo-editar',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return FormularioVehiculoScreen(objetoId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-turnos',
-          name: 'mis-turnos',
-          builder: (context, state) => const MisTurnosScreen(),
-        ),
-        GoRoute(
-          path: '/mis-turnos/:id',
-          name: 'mi-turno-detalle',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return DetalleMiTurnoScreen(turnoId: id);
-          },
-        ),
+      GoRoute(
+        path: '/mis-vehiculos',
+        name: 'mis-vehiculos',
+        builder: (context, state) => const MisVehiculosScreen(),
+      ),
+      GoRoute(
+        path: '/mis-vehiculos/nuevo',
+        name: 'mis-vehiculos-nuevo',
+        builder: (context, state) => const FormularioVehiculoScreen(),
+      ),
+      GoRoute(
+        path: '/mis-vehiculos/:id/recordatorios',
+        name: 'mis-recordatorios',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return MisRecordatoriosScreen(objetoId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-vehiculos/:id/editar',
+        name: 'mi-vehiculo-editar',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FormularioVehiculoScreen(objetoId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-turnos',
+        name: 'mis-turnos',
+        builder: (context, state) => const MisTurnosScreen(),
+      ),
+      GoRoute(
+        path: '/mis-turnos/:id',
+        name: 'mi-turno-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleMiTurnoScreen(turnoId: id);
+        },
+      ),
 
-        // Notificaciones del usuario
-        GoRoute(
-          path: '/mis-notificaciones',
-          name: 'mis-notificaciones',
-          builder: (context, state) => const MisNotificacionesScreen(),
-        ),
-        GoRoute(
-          path: '/mis-notificaciones/preferencias',
-          name: 'mis-notificaciones-preferencias',
-          builder: (context, state) =>
-              const PreferenciasNotificacionScreen(),
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/turnos',
-          name: 'agenda-taller',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return AgendaTallerScreen(prestadorId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/modalidades',
-          name: 'mi-prestador-modalidades',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return ConfigurarModalidadesScreen(prestadorId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/turnos/:tid',
-          name: 'turno-taller-detalle',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            final tid = state.pathParameters['tid']!;
-            return DetalleTurnoTallerScreen(
-              prestadorId: id,
-              turnoId: tid,
-            );
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/reservar',
-          name: 'reservar-turno',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            final nombre = state.uri.queryParameters['nombre'];
-            return ReservarTurnoScreen(
-              prestadorId: id,
-              prestadorNombre: nombre,
-            );
-          },
-        ),
+      // Notificaciones del usuario
+      GoRoute(
+        path: '/mis-notificaciones',
+        name: 'mis-notificaciones',
+        builder: (context, state) => const MisNotificacionesScreen(),
+      ),
+      GoRoute(
+        path: '/mis-notificaciones/preferencias',
+        name: 'mis-notificaciones-preferencias',
+        builder: (context, state) => const PreferenciasNotificacionScreen(),
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/turnos',
+        name: 'agenda-taller',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AgendaTallerScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/modalidades',
+        name: 'mi-prestador-modalidades',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ConfigurarModalidadesScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/turnos/:tid',
+        name: 'turno-taller-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final tid = state.pathParameters['tid']!;
+          return DetalleTurnoTallerScreen(prestadorId: id, turnoId: tid);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/reservar',
+        name: 'reservar-turno',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final nombre = state.uri.queryParameters['nombre'];
+          return ReservarTurnoScreen(prestadorId: id, prestadorNombre: nombre);
+        },
+      ),
       GoRoute(
         path: '/mis-prestadores',
         name: 'mis-prestadores',
         builder: (context, state) => const MisPrestadoresScreen(),
       ),
-        GoRoute(
-          path: '/mis-ordenes',
-          name: 'mis-ordenes',
-          builder: (context, state) => const MisOrdenesScreen(),
-        ),
-        GoRoute(
-          path: '/mis-ordenes/:id',
-          name: 'mi-orden-detalle',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return DetalleMiOrdenScreen(ordenId: id);
-          },
-        ),
+      GoRoute(
+        path: '/mis-ordenes',
+        name: 'mis-ordenes',
+        builder: (context, state) => const MisOrdenesScreen(),
+      ),
+      GoRoute(
+        path: '/mis-ordenes/:id',
+        name: 'mi-orden-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleMiOrdenScreen(ordenId: id);
+        },
+      ),
 
       GoRoute(
         path: '/mis-ordenes/:id/review',
@@ -477,48 +467,48 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CrearReviewScreen(ordenId: id);
         },
       ),
-        GoRoute(
-          path: '/mis-ordenes/:id/fotos',
-          name: 'mi-orden-fotos',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return GaleriaFotosScreen(ordenId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/ordenes',
-          name: 'ordenes-taller',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return OrdenesTallerScreen(prestadorId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/ordenes/nueva',
-          name: 'orden-taller-nueva',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return FormularioOrdenScreen(prestadorId: id);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/ordenes/:oid',
-          name: 'orden-taller-detalle',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            final oid = state.pathParameters['oid']!;
-            return DetalleOrdenTallerScreen(prestadorId: id, ordenId: oid);
-          },
-        ),
-        GoRoute(
-          path: '/mis-prestadores/:id/ordenes/:oid/fotos',
-          name: 'orden-taller-fotos',
-          builder: (context, state) {
-            final pid = state.pathParameters['id']!;
-            final oid = state.pathParameters['oid']!;
-            return GaleriaFotosScreen(ordenId: oid, prestadorId: pid);
-          },
-        ),
+      GoRoute(
+        path: '/mis-ordenes/:id/fotos',
+        name: 'mi-orden-fotos',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return GaleriaFotosScreen(ordenId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/ordenes',
+        name: 'ordenes-taller',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return OrdenesTallerScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/ordenes/nueva',
+        name: 'orden-taller-nueva',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FormularioOrdenScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/ordenes/:oid',
+        name: 'orden-taller-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final oid = state.pathParameters['oid']!;
+          return DetalleOrdenTallerScreen(prestadorId: id, ordenId: oid);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/ordenes/:oid/fotos',
+        name: 'orden-taller-fotos',
+        builder: (context, state) {
+          final pid = state.pathParameters['id']!;
+          final oid = state.pathParameters['oid']!;
+          return GaleriaFotosScreen(ordenId: oid, prestadorId: pid);
+        },
+      ),
       GoRoute(
         path: '/mis-prestadores/nuevo',
         name: 'mis-prestadores-nuevo',

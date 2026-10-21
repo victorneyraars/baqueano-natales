@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:baqueano_natales/features/comercios/domain/comercio.dart';
 
 class ComercioCard extends StatelessWidget {
-  const ComercioCard({
-    super.key,
-    required this.comercio,
-    this.onTap,
-  });
+  const ComercioCard({super.key, required this.comercio, this.onTap});
 
   final Comercio comercio;
   final VoidCallback? onTap;
@@ -214,11 +210,7 @@ class ComercioCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 12,
-            color: theme.colorScheme.onSecondaryContainer,
-          ),
+          Icon(icon, size: 12, color: theme.colorScheme.onSecondaryContainer),
           const SizedBox(width: 3),
           Text(
             label,

@@ -71,7 +71,5 @@ class ServerException extends ApiException {
 
 /// Error desconocido.
 class UnknownException extends ApiException {
-  const UnknownException([
-    super.message = 'Ocurrió un error inesperado.',
-  ]);
+  const UnknownException([super.message = 'Ocurrió un error inesperado.']);
 }

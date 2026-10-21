@@ -99,8 +99,10 @@ class Vehiculo {
       if (vin != null) 'vin': vin,
       if (color != null) 'color': color,
       if (fechaUltimaRevision != null)
-        'fecha_ultima_revision':
-            fechaUltimaRevision!.toIso8601String().split('T').first,
+        'fecha_ultima_revision': fechaUltimaRevision!
+            .toIso8601String()
+            .split('T')
+            .first,
     };
   }
 }

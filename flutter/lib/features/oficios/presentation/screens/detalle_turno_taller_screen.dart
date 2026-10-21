@@ -86,11 +86,7 @@ class _DetalleTurnoTallerScreenState
     setState(() => _procesando = true);
     try {
       final repo = ref.read(oficiosRepositoryProvider);
-      await repo.cambiarEstadoTurno(
-        widget.prestadorId,
-        turno.id,
-        nuevo.value,
-      );
+      await repo.cambiarEstadoTurno(widget.prestadorId, turno.id, nuevo.value);
       _invalidar();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,9 +94,8 @@ class _DetalleTurnoTallerScreenState
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -140,35 +135,35 @@ class _DetalleTurnoTallerScreenState
       await repo.rechazarTurno(
         widget.prestadorId,
         turno.id,
-        motivo: motivoCtrl.text.trim().isEmpty
-            ? null
-            : motivoCtrl.text.trim(),
+        motivo: motivoCtrl.text.trim().isEmpty ? null : motivoCtrl.text.trim(),
       );
       _invalidar();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Turno rechazado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Turno rechazado')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
   }
 
   void _invalidar() {
-    ref.invalidate(turnoPrestadorDetalleProvider(
-      TurnoPrestadorDetalleParams(
-        prestadorId: widget.prestadorId,
-        turnoId: widget.turnoId,
+    ref.invalidate(
+      turnoPrestadorDetalleProvider(
+        TurnoPrestadorDetalleParams(
+          prestadorId: widget.prestadorId,
+          turnoId: widget.turnoId,
+        ),
       ),
-    ));
-    ref.invalidate(turnosPrestadorProvider(
-      TurnosPrestadorParams(prestadorId: widget.prestadorId),
-    ));
+    );
+    ref.invalidate(
+      turnosPrestadorProvider(
+        TurnosPrestadorParams(prestadorId: widget.prestadorId),
+      ),
+    );
   }
 }
 
@@ -259,13 +254,16 @@ class _Contenido extends StatelessWidget {
                         Expanded(
                           child: Text(
                             _formatFechaHora(turno.fechaInicio),
-                            style: theme.textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
@@ -319,8 +317,9 @@ class _Contenido extends StatelessWidget {
                     children: [
                       Text(
                         'Cliente',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _Fila(
@@ -354,8 +353,9 @@ class _Contenido extends StatelessWidget {
                     children: [
                       Text(
                         'Vehiculo',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _Fila(

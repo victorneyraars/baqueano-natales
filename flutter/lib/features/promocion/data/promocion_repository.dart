@@ -47,11 +47,7 @@ class PromocionRepository {
     try {
       final resp = await _dio.post(
         '$_base/generar',
-        data: {
-          'plantilla': plantilla,
-          'tamano': tamano.id,
-          'params': params,
-        },
+        data: {'plantilla': plantilla, 'tamano': tamano.id, 'params': params},
       );
       return AficheGenerado.fromJson(resp.data as Map<String, dynamic>);
     } on ApiException {
@@ -75,11 +71,7 @@ class PromocionRepository {
     try {
       final resp = await _dio.post(
         '$_base/generar-png',
-        data: {
-          'plantilla': plantilla,
-          'tamano': tamano.id,
-          'params': params,
-        },
+        data: {'plantilla': plantilla, 'tamano': tamano.id, 'params': params},
         options: Options(responseType: ResponseType.bytes),
       );
       return Uint8List.fromList(resp.data as List<int>);
@@ -112,9 +104,7 @@ class PromocionRepository {
           if (caption != null && caption.isNotEmpty) 'caption': caption,
         },
       );
-      return PublicarAficheResult.fromJson(
-        resp.data as Map<String, dynamic>,
-      );
+      return PublicarAficheResult.fromJson(resp.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

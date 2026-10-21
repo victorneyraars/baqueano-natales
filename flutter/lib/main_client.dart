@@ -22,24 +22,21 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  runApp(
-    const ProviderScope(
-      child: BaqueanoClientApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: BaqueanoClientApp()));
 }
 
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 class BaqueanoClientApp extends ConsumerStatefulWidget {
   const BaqueanoClientApp({super.key});
 
   @override
-  ConsumerState<BaqueanoClientApp> createState() =>
-      _BaqueanoClientAppState();
+  ConsumerState<BaqueanoClientApp> createState() => _BaqueanoClientAppState();
 }
 
-class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> with WidgetsBindingObserver {
+class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp>
+    with WidgetsBindingObserver {
   bool _navScheduled = false;
   DateTime? _lastCheck;
 
@@ -47,7 +44,8 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> with Widg
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final now = DateTime.now();
-      if (_lastCheck == null || now.difference(_lastCheck!) > const Duration(minutes: 5)) {
+      if (_lastCheck == null ||
+          now.difference(_lastCheck!) > const Duration(minutes: 5)) {
         _lastCheck = now;
         _checkUpdatesSilently();
       }
@@ -70,12 +68,15 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> with Widg
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final fcm = ref.read(fcmServiceProvider);
       await fcm.inicializar();
-      
+
       // Delay de 2 segundos para que la UI se estabilice antes de mostrar el diálogo
       await Future.delayed(const Duration(seconds: 2));
-      
+
       if (mounted) {
-        await AppUpdateService.checkForUpdates(ref.read(routerProvider), scaffoldMessengerKey);
+        await AppUpdateService.checkForUpdates(
+          ref.read(routerProvider),
+          scaffoldMessengerKey,
+        );
       }
     });
   }
@@ -116,4 +117,3 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp> with Widg
     );
   }
 }
-

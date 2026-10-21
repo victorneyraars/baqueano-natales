@@ -48,8 +48,11 @@ class _MisTurnosScreenState extends ConsumerState<MisTurnosScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
                       const SizedBox(height: 12),
                       Text('$e', textAlign: TextAlign.center),
                       const SizedBox(height: 16),
@@ -75,9 +78,7 @@ class _MisTurnosScreenState extends ConsumerState<MisTurnosScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (_, i) => _TurnoCard(
                       turno: turnos[i],
-                      onTap: () => context.push(
-                        '/mis-turnos/${turnos[i].id}',
-                      ),
+                      onTap: () => context.push('/mis-turnos/${turnos[i].id}'),
                     ),
                   ),
                 );
@@ -110,14 +111,16 @@ class _FiltrosEstado extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         children: opciones
-            .map((op) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(op.value),
-                    selected: seleccionado == op.key,
-                    onSelected: (_) => onCambio(op.key),
-                  ),
-                ))
+            .map(
+              (op) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(op.value),
+                  selected: seleccionado == op.key,
+                  onSelected: (_) => onCambio(op.key),
+                ),
+              ),
+            )
             .toList(),
       ),
     );
@@ -148,13 +151,16 @@ class _TurnoCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       _formatFechaHora(turno.fechaInicio),
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -172,14 +178,21 @@ class _TurnoCard extends StatelessWidget {
               ),
               if (turno.motivo != null) ...[
                 const SizedBox(height: 8),
-                Text(turno.motivo!, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  turno.motivo!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
               if (turno.cliente != null) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.person,
-                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      Icons.person,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -195,8 +208,11 @@ class _TurnoCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.directions_car,
-                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      Icons.directions_car,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -211,18 +227,25 @@ class _TurnoCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.timer,
-                      size: 16, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.timer,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 4),
-                  Text('${turno.duracionMin} min',
-                      style: theme.textTheme.bodySmall),
+                  Text(
+                    '${turno.duracionMin} min',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   if (turno.ordenId != null) ...[
                     const SizedBox(width: 16),
-                    Icon(Icons.receipt_long,
-                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      Icons.receipt_long,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
-                    Text('Orden vinculada',
-                        style: theme.textTheme.bodySmall),
+                    Text('Orden vinculada', style: theme.textTheme.bodySmall),
                   ],
                 ],
               ),
@@ -245,18 +268,23 @@ class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.event_available_outlined,
-                size: 72, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.event_available_outlined,
+              size: 72,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('No tenes turnos',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'No tenes turnos',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Cuando reserves con un taller, van a aparecer aca.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

@@ -40,17 +40,11 @@ class OpsRepository {
   }
 
   /// Lista los ultimos workflow runs. `branch` opcional.
-  Future<RunsResponse> runs({
-    int limit = 10,
-    String? branch,
-  }) async {
+  Future<RunsResponse> runs({int limit = 10, String? branch}) async {
     try {
       final res = await _dio.get(
         '$_base/runs',
-        queryParameters: {
-          'limit': limit,
-          'branch': ?branch,
-        },
+        queryParameters: {'limit': limit, 'branch': ?branch},
       );
       return RunsResponse.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
@@ -107,6 +101,7 @@ class OpsRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
   /// Quick links a dashboards externos (Play Console, GitHub, Cloudflare, etc.).
   Future<QuickLinksResponse> quickLinks() async {
     try {
@@ -131,10 +126,7 @@ class OpsRepository {
     try {
       final res = await _dio.post(
         '$_base/release/preview',
-        data: {
-          'version_name': versionName,
-          'branch': branch,
-        },
+        data: {'version_name': versionName, 'branch': branch},
       );
       return ReleasePreview.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
@@ -148,16 +140,11 @@ class OpsRepository {
   }
 
   /// Ejecuta el release: crea el tag en GitHub.
-  Future<ReleaseTrigger> releaseTrigger({
-    required String previewToken,
-  }) async {
+  Future<ReleaseTrigger> releaseTrigger({required String previewToken}) async {
     try {
       final res = await _dio.post(
         '$_base/release/trigger',
-        data: {
-          'preview_token': previewToken,
-          'confirm': 'CONFIRMAR',
-        },
+        data: {'preview_token': previewToken, 'confirm': 'CONFIRMAR'},
       );
       return ReleaseTrigger.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
@@ -179,9 +166,7 @@ class OpsRepository {
   /// El APK queda disponible en:
   /// https://api-dev.baqueanonatales.com/apks/app-{flavor}.apk
   /// Listo en ~5-10 min.
-  Future<Map<String, dynamic>> triggerDevBuild({
-    required String flavor,
-  }) async {
+  Future<Map<String, dynamic>> triggerDevBuild({required String flavor}) async {
     try {
       final res = await _dio.post(
         '/api/v1/admin/ops/build-dev-apk',
@@ -197,7 +182,6 @@ class OpsRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
-
 
   Future<Map<String, dynamic>> getLatestApk(String flavor) async {
     try {

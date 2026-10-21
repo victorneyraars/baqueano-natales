@@ -60,8 +60,7 @@ class _MisRecordatoriosScreenState
                 FilterChip(
                   label: const Text('Mostrar enviados'),
                   selected: _incluirEnviados,
-                  onSelected: (v) =>
-                      setState(() => _incluirEnviados = v),
+                  onSelected: (v) => setState(() => _incluirEnviados = v),
                 ),
               ],
             ),
@@ -107,21 +106,21 @@ class _MisRecordatoriosScreenState
     try {
       final repo = ref.read(oficiosRepositoryProvider);
       await repo.crearRecordatorio(result);
-      ref.invalidate(recordatoriosProvider(
-        RecordatoriosParams(
-          objetoId: widget.objetoId,
-          incluirEnviados: _incluirEnviados,
+      ref.invalidate(
+        recordatoriosProvider(
+          RecordatoriosParams(
+            objetoId: widget.objetoId,
+            incluirEnviados: _incluirEnviados,
+          ),
         ),
-      ));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recordatorio creado')),
       );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Recordatorio creado')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -151,17 +150,18 @@ class _MisRecordatoriosScreenState
     try {
       final repo = ref.read(oficiosRepositoryProvider);
       await repo.eliminarRecordatorio(widget.objetoId, r.id);
-      ref.invalidate(recordatoriosProvider(
-        RecordatoriosParams(
-          objetoId: widget.objetoId,
-          incluirEnviados: _incluirEnviados,
+      ref.invalidate(
+        recordatoriosProvider(
+          RecordatoriosParams(
+            objetoId: widget.objetoId,
+            incluirEnviados: _incluirEnviados,
+          ),
         ),
-      ));
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -186,9 +186,7 @@ class _RecordatorioCard extends StatelessWidget {
       TipoRecordatorio.fecha => Icons.calendar_today,
       TipoRecordatorio.evento => Icons.event_note,
     };
-    final color = r.enviado
-        ? Colors.grey
-        : theme.colorScheme.primary;
+    final color = r.enviado ? Colors.grey : theme.colorScheme.primary;
 
     return Card(
       child: Padding(
@@ -330,10 +328,7 @@ class _ModalRecordatorioFormState extends State<_ModalRecordatorioForm> {
                 border: OutlineInputBorder(),
               ),
               items: TipoRecordatorio.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label),
-                      ))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _tipo = v);
@@ -411,18 +406,23 @@ class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.notifications_none,
-                size: 72, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.notifications_none,
+              size: 72,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('Sin recordatorios',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Sin recordatorios',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Crea recordatorios por km o fecha para no olvidarte del mantenimiento.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -456,5 +456,4 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-String _formatFecha(DateTime d) =>
-    '${d.day}/${d.month}/${d.year}';
+String _formatFecha(DateTime d) => '${d.day}/${d.month}/${d.year}';

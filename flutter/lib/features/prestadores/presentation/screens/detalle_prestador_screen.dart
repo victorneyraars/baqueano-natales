@@ -56,9 +56,7 @@ class _Contenido extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           // --- Banner + avatar ---
-          SliverToBoxAdapter(
-            child: _BannerHeader(prestador: prestador),
-          ),
+          SliverToBoxAdapter(child: _BannerHeader(prestador: prestador)),
 
           // --- Contenido ---
           SliverToBoxAdapter(
@@ -92,9 +90,7 @@ class _Contenido extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       prestador.descripcion!,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        height: 1.4,
-                      ),
+                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
                     ),
                   ],
 
@@ -107,10 +103,12 @@ class _Contenido extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: prestador.especialidades!
-                          .map((e) => Chip(
-                                label: Text(_humanizar(e)),
-                                visualDensity: VisualDensity.compact,
-                              ))
+                          .map(
+                            (e) => Chip(
+                              label: Text(_humanizar(e)),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          )
                           .toList(),
                     ),
                   ],
@@ -352,10 +350,7 @@ class _Contenido extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: fg),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(color: fg),
-          ),
+          Text(label, style: theme.textTheme.labelMedium?.copyWith(color: fg)),
         ],
       ),
     );
@@ -373,12 +368,7 @@ class _Contenido extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(
-    ThemeData theme,
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _infoRow(ThemeData theme, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -575,22 +565,14 @@ class _BannerHeader extends StatelessWidget {
             if (prestador.destacado)
               Padding(
                 padding: const EdgeInsets.only(left: 4, top: 4),
-                child: Icon(
-                  Icons.star,
-                  size: 24,
-                  color: Colors.amber.shade700,
-                ),
+                child: Icon(Icons.star, size: 24, color: Colors.amber.shade700),
               ),
           ],
         ),
         const SizedBox(height: 4),
         Row(
           children: [
-            Icon(
-              Icons.handyman,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
+            Icon(Icons.handyman, size: 16, color: theme.colorScheme.primary),
             const SizedBox(width: 4),
             Text(
               prestador.categoria.nombre,
@@ -682,9 +664,7 @@ class _CatalogoServicios extends StatelessWidget {
                   ),
                 ),
               ),
-              ...servicios.map(
-                (srv) => _ServicioCard(servicio: srv),
-              ),
+              ...servicios.map((srv) => _ServicioCard(servicio: srv)),
             ],
           ),
         );
@@ -762,11 +742,7 @@ class _ServicioCard extends StatelessWidget {
                 runSpacing: 4,
                 children: [
                   if (servicio.duracionLegible != null)
-                    _miniChip(
-                      theme,
-                      Icons.schedule,
-                      servicio.duracionLegible!,
-                    ),
+                    _miniChip(theme, Icons.schedule, servicio.duracionLegible!),
                   if (servicio.garantiaLegible != null)
                     _miniChip(
                       theme,
@@ -795,10 +771,7 @@ class _ServicioCard extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: fg),
         const SizedBox(width: 3),
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(color: fg),
-        ),
+        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: fg)),
       ],
     );
   }
@@ -979,15 +952,12 @@ Future<void> _launch(
 }
 
 /// Abre WhatsApp con mensaje pre-armado. Fallback a https://wa.me.
-Future<void> _launchWhatsApp(
-  BuildContext context,
-  Prestador prestador,
-) async {
+Future<void> _launchWhatsApp(BuildContext context, Prestador prestador) async {
   final phone = (prestador.whatsapp ?? '').replaceAll(RegExp(r'[^\d]'), '');
   if (phone.isEmpty) return;
 
-  final mensaje = prestador.whatsappMensaje ??
-      'Hola, te contacto desde Baqueano Natales.';
+  final mensaje =
+      prestador.whatsappMensaje ?? 'Hola, te contacto desde Baqueano Natales.';
 
   final nativeUri = Uri.parse(
     'whatsapp://send?phone=$phone&text=${Uri.encodeComponent(mensaje)}',

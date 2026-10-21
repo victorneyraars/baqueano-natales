@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -29,9 +30,15 @@ class AppUpdateService {
   static String get apkDownloadUrl =>
       'https://api-dev.baqueanonatales.com/apks/$_apkFile';
 
-  static Future<void> checkForUpdates(GoRouter router, GlobalKey<ScaffoldMessengerState> messengerKey, {bool forceShow = false}) async {
+  static Future<void> checkForUpdates(
+    GoRouter router,
+    GlobalKey<ScaffoldMessengerState> messengerKey, {
+    bool forceShow = false,
+  }) async {
     try {
-      final response = await Dio().get('$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}');
+      final response = await Dio().get(
+        '$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}',
+      );
       if (response.statusCode != 200) return;
 
       final data = response.data as Map<String, dynamic>;
@@ -51,16 +58,17 @@ class AppUpdateService {
         }
       } else if (forceShow) {
         messengerKey.currentState?.showSnackBar(
-          const SnackBar(content: Text('Ya estás en la última versión disponible.')),
+          const SnackBar(
+            content: Text('Ya estás en la última versión disponible.'),
+          ),
         );
       }
     } catch (e) {
       debugPrint('Error checking for updates: $e');
       final ctx = router.routerDelegate.navigatorKey.currentContext;
       if (ctx != null && ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('Error update: $e')),
-        );
+        ScaffoldMessenger.of(ctx)
+            .showSnackBar(SnackBar(content: Text('Error update: $e')));
       }
     }
   }
@@ -132,7 +140,9 @@ class AppUpdateService {
       if (await Permission.requestInstallPackages.isPermanentlyDenied) {
         messenger.showSnackBar(
           const SnackBar(
-            content: Text('Habilita "Instalar apps desconocidas" en Ajustes para actualizar.'),
+            content: Text(
+              'Habilita "Instalar apps desconocidas" en Ajustes para actualizar.',
+            ),
             duration: Duration(seconds: 5),
           ),
         );
@@ -159,44 +169,41 @@ class AppUpdateService {
     try {
       final dir = await getTemporaryDirectory();
       final savePath = '${dir.path}/update.apk';
-      
+
       // Descargar el APK
-      await Dio().download(
-        apkDownloadUrl,
-        savePath,
-      );
-      
+      await Dio().download(apkDownloadUrl, savePath);
+
       // Calcular SHA-256 local del archivo descargado
       final file = File(savePath);
       final bytes = await file.readAsBytes();
       final hash = sha256.convert(bytes).toString();
-      
+
       // Obtener el hash esperado del version.json
       final versionData = (await Dio().get(
         '$versionUrl?t=${DateTime.now().millisecondsSinceEpoch}',
       )).data;
       final expectedHash = versionData['sha256'] as String? ?? '';
-      
+
       // Comparar
       if (expectedHash.isNotEmpty && hash != expectedHash) {
         navigator.pop();
         await file.delete(); // Borrar el APK corrupto
         messenger.showSnackBar(
           const SnackBar(
-            content: Text('❌ Error de integridad: el APK descargado está corrupto o fue manipulado.'),
+            content: Text(
+              '❌ Error de integridad: el APK descargado está corrupto o fue manipulado.',
+            ),
             duration: Duration(seconds: 5),
           ),
         );
         return;
       }
-      
+
       navigator.pop(); // Cerrar el diálogo de progreso
       await OpenFilex.open(savePath);
     } catch (e) {
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text('Error al descargar: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
     }
   }
 }

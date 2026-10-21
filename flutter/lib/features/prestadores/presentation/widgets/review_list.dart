@@ -32,8 +32,7 @@ class ReviewList extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.star_border,
-                      color: theme.colorScheme.outline),
+                  Icon(Icons.star_border, color: theme.colorScheme.outline),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -113,8 +112,7 @@ class _ReviewItemCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             _EstrellasMini(rating: item.rating),
-            if (item.comentario != null &&
-                item.comentario!.isNotEmpty) ...[
+            if (item.comentario != null && item.comentario!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(item.comentario!),
             ],
@@ -147,8 +145,7 @@ class _ReviewItemCard extends StatelessWidget {
     );
   }
 
-  String _fechaCorta(DateTime d) =>
-      '${d.day}/${d.month}/${d.year}';
+  String _fechaCorta(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }
 
 class _EstrellasMini extends StatelessWidget {

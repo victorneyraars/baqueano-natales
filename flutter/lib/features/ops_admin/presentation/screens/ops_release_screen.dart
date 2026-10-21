@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../widgets/apk_download_button.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -72,17 +73,21 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
       if (major == null || minor == null) return;
       final patch = int.tryParse(parts[2]) ?? 0;
       final msg = result.headCommitMessage.toLowerCase();
-      
+
       String type = 'patch (fix)';
       String suggested = '$major.$minor.${patch + 1}';
-      
+
       if (msg.contains('breaking change') || msg.contains('!:')) {
         type = 'major (breaking)';
         suggested = '${major + 1}.0.0';
-      } else if (msg.startsWith('feat') || msg.contains('feat:') || msg.contains('feat(')) {
+      } else if (msg.startsWith('feat') ||
+          msg.contains('feat:') ||
+          msg.contains('feat(')) {
         type = 'minor (feature)';
         suggested = '$major.${minor + 1}.0';
-      } else if (msg.startsWith('fix') || msg.contains('fix:') || msg.contains('fix(')) {
+      } else if (msg.startsWith('fix') ||
+          msg.contains('fix:') ||
+          msg.contains('fix(')) {
         type = 'patch (fix)';
         suggested = '$major.$minor.${patch + 1}';
       } else {
@@ -127,9 +132,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
       final params = ReleasePreviewParams(
         versionName: _versionController.text.trim(),
       );
-      final result = await ref.read(
-        opsReleasePreviewProvider(params).future,
-      );
+      final result = await ref.read(opsReleasePreviewProvider(params).future);
       if (mounted) {
         setState(() {
           _preview = result;
@@ -158,9 +161,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Publicar release'),
-      ),
+      appBar: AppBar(title: const Text('Publicar release')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -173,8 +174,10 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.new_releases,
-                          color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.new_releases,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Nueva version',
@@ -185,10 +188,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'El release va a:',
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  Text('El release va a:', style: theme.textTheme.bodySmall),
                   const SizedBox(height: 4),
                   Text(
                     '1. Actualizar pubspec.yaml con la nueva version\n'
@@ -209,7 +209,9 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.3,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: theme.colorScheme.primary.withValues(alpha: 0.3),
@@ -220,8 +222,11 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_awesome,
-                          size: 18, color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Asistente SemVer',
@@ -314,9 +319,9 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.preview),
-            label: Text(_loadingPreview
-                ? 'Generando preview...'
-                : 'Generar preview'),
+            label: Text(
+              _loadingPreview ? 'Generando preview...' : 'Generar preview',
+            ),
             onPressed: _loadingPreview || _triggering ? null : _generarPreview,
           ),
           const SizedBox(height: 16),
@@ -329,8 +334,10 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline,
-                        color: theme.colorScheme.onErrorContainer),
+                    Icon(
+                      Icons.error_outline,
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -365,8 +372,10 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(Icons.cancel,
-                        color: theme.colorScheme.onErrorContainer),
+                    Icon(
+                      Icons.cancel,
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -392,154 +401,173 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
       child: Card(
         margin: EdgeInsets.zero,
         child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  preview.canProceed ? Icons.check_circle : Icons.error_outline,
-                  color: preview.canProceed ? Colors.green : Colors.red,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
                     preview.canProceed
-                        ? 'Listo para publicar'
-                        : 'Revisar validaciones',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: preview.canProceed
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
+                        ? Icons.check_circle
+                        : Icons.error_outline,
+                    color: preview.canProceed ? Colors.green : Colors.red,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      preview.canProceed
+                          ? 'Listo para publicar'
+                          : 'Revisar validaciones',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: preview.canProceed
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildVersionRow(theme, 'Actual', preview.currentVersion, false),
-            const SizedBox(height: 4),
-            _buildVersionRow(theme, 'Nueva', preview.targetVersion, true),
-            const SizedBox(height: 12),
-            _buildDetailRow(theme, 'Tag', preview.targetTag),
-            _buildDetailRow(theme, 'VersionCode', '${preview.nextVersionCode}'),
-            _buildDetailRow(theme, 'Workflow', preview.workflowName),
-            _buildDetailRow(
-                theme, 'Duracion', '~${preview.estimatedDurationMin} min'),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text('Commit a taggear:', style: theme.textTheme.labelSmall),
-            const SizedBox(height: 4),
-            Text(
-              preview.headSha.length >= 7
-                  ? '${preview.headSha.substring(0, 7)}  -  ${preview.headCommitMessage}'
-                  : preview.headCommitMessage,
-              style: theme.textTheme.bodySmall,
-            ),
-            if (preview.headCommitAgeMinutes != null)
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildVersionRow(theme, 'Actual', preview.currentVersion, false),
+              const SizedBox(height: 4),
+              _buildVersionRow(theme, 'Nueva', preview.targetVersion, true),
+              const SizedBox(height: 12),
+              _buildDetailRow(theme, 'Tag', preview.targetTag),
+              _buildDetailRow(
+                theme,
+                'VersionCode',
+                '${preview.nextVersionCode}',
+              ),
+              _buildDetailRow(theme, 'Workflow', preview.workflowName),
+              _buildDetailRow(
+                theme,
+                'Duracion',
+                '~${preview.estimatedDurationMin} min',
+              ),
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text('Commit a taggear:', style: theme.textTheme.labelSmall),
+              const SizedBox(height: 4),
               Text(
-                'Hace ${preview.headCommitAgeMinutes} min',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                preview.headSha.length >= 7
+                    ? '${preview.headSha.substring(0, 7)}  -  ${preview.headCommitMessage}'
+                    : preview.headCommitMessage,
+                style: theme.textTheme.bodySmall,
               ),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text(
-              'Validaciones (${preview.validations.length})',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...preview.validations.map((v) => _buildValidationRow(theme, v)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: _triggering
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.rocket_launch),
-                label: Text(_triggering ? 'Publicando...' : 'Publicar release'),
-                onPressed: !preview.canProceed || _triggering
-                    ? null
-                    : () => _mostrarModalConfirmacion(preview),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // ----- Build triggers -----
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.build),
-                label: const Text('Generar APK Admin (dev)'),
-                onPressed: () => _triggerBuild(context, 'adminDev'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.build),
-                label: const Text('Generar APK Client (dev)'),
-                onPressed: () => _triggerBuild(context, 'clientDev'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // ----- Descarga e instalación in-app -----
-            Row(
-              children: [
-                const Expanded(
-                  child: ApkDownloadButton(
-                    flavor: 'adminDev',
-                    label: 'Descargar e Instalar Admin',
-                    icon: Icons.admin_panel_settings,
+              if (preview.headCommitAgeMinutes != null)
+                Text(
+                  'Hace ${preview.headCommitAgeMinutes} min',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  icon: const Icon(Icons.share),
-                  tooltip: 'Compartir link Admin',
-                  onPressed: () {
-                    SharePlus.instance.share(ShareParams(text: 'Descarga el APK de Admin (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-admindev.apk'));
-                  },
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                'Validaciones (${preview.validations.length})',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Expanded(
-                  child: ApkDownloadButton(
-                    flavor: 'clientDev',
-                    label: 'Descargar e Instalar Client',
-                    icon: Icons.people,
+              ),
+              const SizedBox(height: 8),
+              ...preview.validations.map((v) => _buildValidationRow(theme, v)),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: _triggering
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.rocket_launch),
+                  label: Text(
+                    _triggering ? 'Publicando...' : 'Publicar release',
+                  ),
+                  onPressed: !preview.canProceed || _triggering
+                      ? null
+                      : () => _mostrarModalConfirmacion(preview),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  icon: const Icon(Icons.share),
-                  tooltip: 'Compartir link Client',
-                  onPressed: () {
-                    SharePlus.instance.share(ShareParams(text: 'Descarga el APK de Client (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-clientdev.apk'));
-                  },
+              ),
+              const SizedBox(height: 16),
+              // ----- Build triggers -----
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.build),
+                  label: const Text('Generar APK Admin (dev)'),
+                  onPressed: () => _triggerBuild(context, 'adminDev'),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.build),
+                  label: const Text('Generar APK Client (dev)'),
+                  onPressed: () => _triggerBuild(context, 'clientDev'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // ----- Descarga e instalación in-app -----
+              Row(
+                children: [
+                  const Expanded(
+                    child: ApkDownloadButton(
+                      flavor: 'adminDev',
+                      label: 'Descargar e Instalar Admin',
+                      icon: Icons.admin_panel_settings,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Compartir link Admin',
+                    onPressed: () {
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: 'Descarga el APK de Admin (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-admindev.apk',
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Expanded(
+                    child: ApkDownloadButton(
+                      flavor: 'clientDev',
+                      label: 'Descargar e Instalar Client',
+                      icon: Icons.people,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Compartir link Client',
+                    onPressed: () {
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: 'Descarga el APK de Client (dev) aquí: https://api-dev.baqueanonatales.com/apks/app-clientdev.apk',
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -633,8 +661,11 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.check_circle,
-                    color: Colors.green.shade700, size: 32),
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade700,
+                  size: 32,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -659,7 +690,10 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                   : result.commitSha,
             ),
             _buildDetailRow(
-                theme, 'Duracion', '~${result.estimatedDurationMin} min'),
+              theme,
+              'Duracion',
+              '~${result.estimatedDurationMin} min',
+            ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -691,8 +725,10 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
           return AlertDialog(
             title: Row(
               children: [
-                Icon(Icons.warning_amber_rounded,
-                    color: Colors.orange.shade700),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange.shade700,
+                ),
                 const SizedBox(width: 8),
                 const Text('Confirmar release'),
               ],
@@ -729,9 +765,7 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                 child: const Text('Cancelar'),
               ),
               FilledButton(
-                onPressed: matches
-                    ? () => Navigator.of(ctx).pop(true)
-                    : null,
+                onPressed: matches ? () => Navigator.of(ctx).pop(true) : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: matches ? Colors.red.shade700 : null,
                 ),
@@ -799,13 +833,9 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
-
 }

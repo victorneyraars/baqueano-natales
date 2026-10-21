@@ -17,17 +17,20 @@ int? _asInt(Object? v) {
   if (v is String) return int.tryParse(v);
   return null;
 }
+
 String? _asString(Object? v) {
   if (v == null) return null;
   if (v is String) return v;
   return v.toString();
 }
+
 DateTime? _asDateTime(Object? v) {
   if (v == null) return null;
   if (v is DateTime) return v;
   if (v is String) return DateTime.tryParse(v);
   return null;
 }
+
 List<Map<String, dynamic>> _asListOfMap(Object? v) {
   if (v is! List) return const [];
   final out = <Map<String, dynamic>>[];
@@ -40,11 +43,13 @@ List<Map<String, dynamic>> _asListOfMap(Object? v) {
   }
   return List.unmodifiable(out);
 }
+
 Map<String, dynamic>? _asMap(Object? v) {
   if (v is Map<String, dynamic>) return v;
   if (v is Map) return v.cast<String, dynamic>();
   return null;
 }
+
 // ============================================================
 // Enums
 // ============================================================
@@ -57,6 +62,7 @@ enum WorkflowRunStatus {
   waiting,
   pending,
   unknown;
+
   static WorkflowRunStatus fromRaw(String? raw) {
     switch (raw) {
       case 'queued':
@@ -75,6 +81,7 @@ enum WorkflowRunStatus {
         return WorkflowRunStatus.unknown;
     }
   }
+
   String get label {
     switch (this) {
       case WorkflowRunStatus.queued:
@@ -94,6 +101,7 @@ enum WorkflowRunStatus {
     }
   }
 }
+
 /// Resultado final de un workflow run (o null si aun no termino).
 enum WorkflowRunConclusion {
   success,
@@ -104,6 +112,7 @@ enum WorkflowRunConclusion {
   timedOut,
   actionRequired,
   stale;
+
   static WorkflowRunConclusion? fromRaw(String? raw) {
     switch (raw) {
       case 'success':
@@ -126,6 +135,7 @@ enum WorkflowRunConclusion {
         return null;
     }
   }
+
   String get label {
     switch (this) {
       case WorkflowRunConclusion.success:
@@ -147,12 +157,14 @@ enum WorkflowRunConclusion {
     }
   }
 }
+
 /// Estado de un componente del sistema.
 enum ComponentStatus {
   ok,
   degraded,
   down,
   unknown;
+
   static ComponentStatus fromRaw(String? raw) {
     switch (raw) {
       case 'ok':
@@ -165,6 +177,7 @@ enum ComponentStatus {
         return ComponentStatus.unknown;
     }
   }
+
   String get label {
     switch (this) {
       case ComponentStatus.ok:
@@ -177,7 +190,8 @@ enum ComponentStatus {
         return 'Desconocido';
     }
   }
-}// ============================================================
+} // ============================================================
+
 // GitHub Actions
 // ============================================================
 /// Resumen de un workflow run de GitHub Actions.
@@ -227,6 +241,7 @@ class RunInfo {
       durationSeconds: _asInt(json['duration_seconds']),
     );
   }
+
   /// Duracion en formato humano (ej. "1m 15s"). Null si no hay datos.
   String? get duracionHumana {
     final s = durationSeconds;
@@ -240,6 +255,7 @@ class RunInfo {
     return restM == 0 ? '${h}h' : '${h}h ${restM}m';
   }
 }
+
 /// Un paso (step) dentro de un job.
 class StepInfo {
   final String name;
@@ -267,6 +283,7 @@ class StepInfo {
     );
   }
 }
+
 /// Un job dentro de un workflow run.
 class JobInfo {
   final int id;
@@ -299,6 +316,7 @@ class JobInfo {
     );
   }
 }
+
 /// Detalle completo de un run: incluye jobs + steps.
 class RunDetail extends RunInfo {
   final List<JobInfo> jobs;
@@ -339,14 +357,12 @@ class RunDetail extends RunInfo {
     );
   }
 }
+
 /// Lista paginada de runs.
 class RunsResponse {
   final int totalCount;
   final List<RunInfo> runs;
-  const RunsResponse({
-    this.totalCount = 0,
-    this.runs = const [],
-  });
+  const RunsResponse({this.totalCount = 0, this.runs = const []});
   factory RunsResponse.fromJson(Map<String, dynamic> json) {
     return RunsResponse(
       totalCount: _asInt(json['total_count']) ?? 0,
@@ -355,7 +371,8 @@ class RunsResponse {
           .toList(growable: false),
     );
   }
-}// ============================================================
+} // ============================================================
+
 // Play Console (tracks + versiones)
 // ============================================================
 /// Version actual en un track de Play Store.
@@ -384,6 +401,7 @@ class TrackVersion {
       releaseNotes: _asString(json['release_notes']),
     );
   }
+
   /// Etiqueta legible del track (ej. "internal" -> "Internal").
   String get trackLabel {
     switch (track) {
@@ -400,6 +418,7 @@ class TrackVersion {
     }
   }
 }
+
 /// Tracks de una app.
 class AppTracks {
   final String packageName;
@@ -423,14 +442,12 @@ class AppTracks {
     );
   }
 }
+
 /// Tracks de las 2 apps (client + admin).
 class TracksResponse {
   final AppTracks client;
   final AppTracks admin;
-  const TracksResponse({
-    required this.client,
-    required this.admin,
-  });
+  const TracksResponse({required this.client, required this.admin});
   factory TracksResponse.fromJson(Map<String, dynamic> json) {
     return TracksResponse(
       client: AppTracks.fromJson(_asMap(json['client']) ?? const {}),
@@ -438,6 +455,7 @@ class TracksResponse {
     );
   }
 }
+
 // ============================================================
 // Links de descarga
 // ============================================================
@@ -462,14 +480,12 @@ class AppLinks {
     );
   }
 }
+
 /// Links de descarga de las 2 apps.
 class LinksResponse {
   final AppLinks client;
   final AppLinks admin;
-  const LinksResponse({
-    required this.client,
-    required this.admin,
-  });
+  const LinksResponse({required this.client, required this.admin});
   factory LinksResponse.fromJson(Map<String, dynamic> json) {
     return LinksResponse(
       client: AppLinks.fromJson(_asMap(json['client']) ?? const {}),
@@ -477,6 +493,7 @@ class LinksResponse {
     );
   }
 }
+
 // ============================================================
 // Health consolidado
 // ============================================================
@@ -498,6 +515,7 @@ class ComponentHealth {
     );
   }
 }
+
 /// Estado consolidado del sistema para el panel admin.
 class SystemHealth {
   final String environment;
@@ -536,6 +554,7 @@ class SystemHealth {
       links: linksRaw == null ? null : LinksResponse.fromJson(linksRaw),
     );
   }
+
   /// `true` si todos los componentes estan OK.
   bool get allOk =>
       components.isNotEmpty &&

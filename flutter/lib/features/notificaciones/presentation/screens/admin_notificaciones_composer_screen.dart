@@ -46,7 +46,9 @@ class _AdminNotificacionesComposerScreenState
           ? Segmento(tipo: _segmentoTipo, valor: _rolSegmento)
           : Segmento(tipo: _segmentoTipo);
 
-      final result = await ref.read(notificacionesRepositoryProvider).enviar(
+      final result = await ref
+          .read(notificacionesRepositoryProvider)
+          .enviar(
             titulo: _tituloCtrl.text.trim(),
             body: _bodyCtrl.text.trim(),
             tipo: _tipo,
@@ -60,9 +62,8 @@ class _AdminNotificacionesComposerScreenState
       _showResultDialog(result);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -79,12 +80,18 @@ class _AdminNotificacionesComposerScreenState
           children: [
             Text('Total destinatarios: ${result.total}'),
             const SizedBox(height: 4),
-            Text('Enviados: ${result.enviados}',
-                style: const TextStyle(color: Colors.green)),
-            Text('Fallidos: ${result.fallidos}',
-                style: TextStyle(color: Colors.red.shade700)),
-            Text('Skipped: ${result.skipped}',
-                style: TextStyle(color: Colors.orange.shade700)),
+            Text(
+              'Enviados: ${result.enviados}',
+              style: const TextStyle(color: Colors.green),
+            ),
+            Text(
+              'Fallidos: ${result.fallidos}',
+              style: TextStyle(color: Colors.red.shade700),
+            ),
+            Text(
+              'Skipped: ${result.skipped}',
+              style: TextStyle(color: Colors.orange.shade700),
+            ),
             const SizedBox(height: 8),
             const Text(
               'Skipped incluye usuarios con preferencia deshabilitada o en quiet hours.',
@@ -153,7 +160,9 @@ class _AdminNotificacionesComposerScreenState
                 DropdownMenuItem(value: 'sistema', child: Text('Sistema')),
                 DropdownMenuItem(value: 'promocion', child: Text('Promocion')),
                 DropdownMenuItem(
-                    value: 'recordatorio', child: Text('Recordatorio')),
+                  value: 'recordatorio',
+                  child: Text('Recordatorio'),
+                ),
                 DropdownMenuItem(value: 'campana', child: Text('Campana')),
               ],
               onChanged: (v) => setState(() => _tipo = v ?? 'sistema'),
@@ -192,9 +201,13 @@ class _AdminNotificacionesComposerScreenState
                   items: const [
                     DropdownMenuItem(value: 'cliente', child: Text('Cliente')),
                     DropdownMenuItem(
-                        value: 'prestador', child: Text('Prestador')),
+                      value: 'prestador',
+                      child: Text('Prestador'),
+                    ),
                     DropdownMenuItem(
-                        value: 'comercio', child: Text('Comercio')),
+                      value: 'comercio',
+                      child: Text('Comercio'),
+                    ),
                     DropdownMenuItem(value: 'admin', child: Text('Admin')),
                   ],
                   onChanged: (v) =>

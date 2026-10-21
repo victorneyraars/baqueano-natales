@@ -19,8 +19,7 @@ class DetalleMiTurnoScreen extends ConsumerStatefulWidget {
       _DetalleMiTurnoScreenState();
 }
 
-class _DetalleMiTurnoScreenState
-    extends ConsumerState<DetalleMiTurnoScreen> {
+class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
   bool _procesando = false;
 
   @override
@@ -48,7 +47,8 @@ class _DetalleMiTurnoScreenState
         ),
         data: (turno) {
           final color = _hexToColor(turno.estado.colorHex);
-          final puedeCancelar = turno.estado == EstadoTurno.pendiente ||
+          final puedeCancelar =
+              turno.estado == EstadoTurno.pendiente ||
               turno.estado == EstadoTurno.confirmado;
 
           return ListView(
@@ -65,15 +65,15 @@ class _DetalleMiTurnoScreenState
                           Expanded(
                             child: Text(
                               _formatFechaHora(turno.fechaInicio),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
@@ -81,9 +81,7 @@ class _DetalleMiTurnoScreenState
                             ),
                             child: Text(
                               turno.estado.label,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
+                              style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(
                                     color: color,
                                     fontWeight: FontWeight.bold,
@@ -136,9 +134,7 @@ class _DetalleMiTurnoScreenState
                       children: [
                         Text(
                           'Vehiculo',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
@@ -168,9 +164,7 @@ class _DetalleMiTurnoScreenState
                       children: [
                         Text(
                           'Calificar servicio',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
@@ -253,22 +247,18 @@ class _DetalleMiTurnoScreenState
       final repo = ref.read(oficiosRepositoryProvider);
       await repo.cancelarTurno(
         turno.id,
-        motivo: motivoCtrl.text.trim().isEmpty
-            ? null
-            : motivoCtrl.text.trim(),
+        motivo: motivoCtrl.text.trim().isEmpty ? null : motivoCtrl.text.trim(),
       );
       ref.invalidate(miTurnoDetalleProvider(turno.id));
       ref.invalidate(misTurnosProvider(null));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Turno cancelado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Turno cancelado')));
       context.pop();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }

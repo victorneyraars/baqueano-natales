@@ -57,9 +57,7 @@ class _AdminPrestadoresScreenState
     final asyncPrestadores = ref.watch(adminPrestadoresProvider(params));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prestadores'),
-      ),
+      appBar: AppBar(title: const Text('Prestadores')),
       body: Column(
         children: [
           // --- Buscador ---
@@ -96,26 +94,11 @@ class _AdminPrestadoresScreenState
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _estadoChip(null, 'Todos'),
-                _estadoChip(
-                  EstadoPrestador.pendiente,
-                  'Pendientes',
-                ),
-                _estadoChip(
-                  EstadoPrestador.verificado,
-                  'Verificados',
-                ),
-                _estadoChip(
-                  EstadoPrestador.rechazado,
-                  'Rechazados',
-                ),
-                _estadoChip(
-                  EstadoPrestador.suspendido,
-                  'Suspendidos',
-                ),
-                _estadoChip(
-                  EstadoPrestador.borrador,
-                  'Borradores',
-                ),
+                _estadoChip(EstadoPrestador.pendiente, 'Pendientes'),
+                _estadoChip(EstadoPrestador.verificado, 'Verificados'),
+                _estadoChip(EstadoPrestador.rechazado, 'Rechazados'),
+                _estadoChip(EstadoPrestador.suspendido, 'Suspendidos'),
+                _estadoChip(EstadoPrestador.borrador, 'Borradores'),
               ],
             ),
           ),
@@ -140,15 +123,13 @@ class _AdminPrestadoresScreenState
                       final p = paginated.items[index];
                       return _PrestadorAdminCard(
                         prestador: p,
-                        onTap: () =>
-                            context.push('/admin/prestadores/${p.id}'),
+                        onTap: () => context.push('/admin/prestadores/${p.id}'),
                       );
                     },
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorState(
                 error: e.toString(),
                 onRetry: () => ref.invalidate(adminPrestadoresProvider),
@@ -177,10 +158,7 @@ class _AdminPrestadoresScreenState
 // Card del prestador
 // =========================================================
 class _PrestadorAdminCard extends StatelessWidget {
-  const _PrestadorAdminCard({
-    required this.prestador,
-    required this.onTap,
-  });
+  const _PrestadorAdminCard({required this.prestador, required this.onTap});
 
   final Prestador prestador;
   final VoidCallback onTap;
@@ -372,10 +350,7 @@ class _EmptyState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No hay prestadores',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('No hay prestadores', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Probá cambiar el filtro o la búsqueda.',

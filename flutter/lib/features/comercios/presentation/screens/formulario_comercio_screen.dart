@@ -141,9 +141,9 @@ class _FormularioComercioScreenState
         ref.invalidate(miComercioDetalleProvider(widget.comercioId!));
         ref.invalidate(misComerciosProvider);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Comercio actualizado')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Comercio actualizado')));
         context.pop();
       } else {
         final nuevo = await repo.crearComercio(
@@ -164,9 +164,8 @@ class _FormularioComercioScreenState
         );
         ref.invalidate(misComerciosProvider);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Comercio creado')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Comercio creado')));
         context.pop();
         // Reemplazamos la ruta por el detalle del nuevo
         context.push('/mis-comercios/${nuevo.id}');
@@ -489,8 +488,9 @@ class _FormularioComercioScreenState
                   border: OutlineInputBorder(),
                   suffixText: 'km',
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
                 ],
@@ -586,10 +586,9 @@ class _CategoriaDropdown extends ConsumerWidget {
         // Si el ID actual no existe en la lista, lo limpiamos para
         // evitar que DropdownButtonFormField tire error.
         final idsValidos = cats.map((c) => c.id).toSet();
-        final valor =
-            (categoriaId != null && idsValidos.contains(categoriaId))
-                ? categoriaId
-                : null;
+        final valor = (categoriaId != null && idsValidos.contains(categoriaId))
+            ? categoriaId
+            : null;
 
         return DropdownButtonFormField<String>(
           initialValue: valor,

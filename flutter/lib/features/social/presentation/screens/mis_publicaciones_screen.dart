@@ -30,9 +30,8 @@ class MisPublicacionesScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refrescar',
-            onPressed: () => ref.invalidate(
-              publicacionesDePrestadorProvider(prestadorId),
-            ),
+            onPressed: () =>
+                ref.invalidate(publicacionesDePrestadorProvider(prestadorId)),
           ),
         ],
       ),
@@ -40,9 +39,8 @@ class MisPublicacionesScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
           error: e,
-          onRetry: () => ref.invalidate(
-            publicacionesDePrestadorProvider(prestadorId),
-          ),
+          onRetry: () =>
+              ref.invalidate(publicacionesDePrestadorProvider(prestadorId)),
         ),
         data: (pubs) {
           if (pubs.isEmpty) {
@@ -50,9 +48,7 @@ class MisPublicacionesScreen extends ConsumerWidget {
           }
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(
-                publicacionesDePrestadorProvider(prestadorId),
-              );
+              ref.invalidate(publicacionesDePrestadorProvider(prestadorId));
               await ref.read(
                 publicacionesDePrestadorProvider(prestadorId).future,
               );
@@ -229,9 +225,7 @@ class _PublicacionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.red.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.2),
-                  ),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,10 +239,7 @@ class _PublicacionCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         pub.errorUltimo!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.red,
-                        ),
+                        style: const TextStyle(fontSize: 11, color: Colors.red),
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -286,10 +277,7 @@ class _Meta extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: color),
         const SizedBox(width: 3),
-        Text(
-          text,
-          style: TextStyle(fontSize: 11, color: color),
-        ),
+        Text(text, style: TextStyle(fontSize: 11, color: color)),
       ],
     );
   }

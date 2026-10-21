@@ -30,8 +30,9 @@ final prestadorRepositoryProvider = Provider<PrestadorRepository>((ref) {
 // =========================================================
 // Categorías (público)
 // =========================================================
-final categoriasOficioProvider =
-    FutureProvider<List<CategoriaOficio>>((ref) async {
+final categoriasOficioProvider = FutureProvider<List<CategoriaOficio>>((
+  ref,
+) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.listarCategorias();
 });
@@ -73,10 +74,7 @@ class PrestadoresFiltrosState {
   }
 
   bool get hayFiltrosActivos =>
-      categoriaId != null ||
-      soloDestacados ||
-      soloDomicilio ||
-      soloEmergencias;
+      categoriaId != null || soloDestacados || soloDomicilio || soloEmergencias;
 
   PrestadoresFiltros toFiltros({int page = 1, int pageSize = 20}) {
     return PrestadoresFiltros(
@@ -129,16 +127,15 @@ class PrestadoresFiltrosNotifier extends Notifier<PrestadoresFiltrosState> {
   }
 }
 
-final prestadoresFiltrosProvider = NotifierProvider<
-    PrestadoresFiltrosNotifier, PrestadoresFiltrosState>(
-  PrestadoresFiltrosNotifier.new,
-);
+final prestadoresFiltrosProvider =
+    NotifierProvider<PrestadoresFiltrosNotifier, PrestadoresFiltrosState>(
+      PrestadoresFiltrosNotifier.new,
+    );
 
 // =========================================================
 // Listado público (auto-refresh al cambiar filtros)
 // =========================================================
-final prestadoresProvider =
-    FutureProvider<Paginated<Prestador>>((ref) async {
+final prestadoresProvider = FutureProvider<Paginated<Prestador>>((ref) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   final filtros = ref.watch(prestadoresFiltrosProvider);
   return repo.listarPrestadores(filtros: filtros.toFiltros());
@@ -147,8 +144,10 @@ final prestadoresProvider =
 // =========================================================
 // Detalle por slug (family)
 // =========================================================
-final prestadorDetalleProvider =
-    FutureProvider.family<Prestador, String>((ref, slug) async {
+final prestadorDetalleProvider = FutureProvider.family<Prestador, String>((
+  ref,
+  slug,
+) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.obtenerPorSlug(slug);
 });
@@ -156,15 +155,16 @@ final prestadorDetalleProvider =
 // =========================================================
 // Dueño: mis prestadores
 // =========================================================
-final misPrestadoresProvider =
-    FutureProvider<List<Prestador>>((ref) async {
+final misPrestadoresProvider = FutureProvider<List<Prestador>>((ref) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.listarMisPrestadores();
 });
 
 /// Detalle de un prestador propio por ID.
-final miPrestadorDetalleProvider =
-    FutureProvider.family<Prestador, String>((ref, id) async {
+final miPrestadorDetalleProvider = FutureProvider.family<Prestador, String>((
+  ref,
+  id,
+) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.obtenerMiPrestador(id);
 });
@@ -172,8 +172,9 @@ final miPrestadorDetalleProvider =
 // =========================================================
 // Admin: categorías (incluye inactivas)
 // =========================================================
-final adminCategoriasOficioProvider =
-    FutureProvider<List<CategoriaOficio>>((ref) async {
+final adminCategoriasOficioProvider = FutureProvider<List<CategoriaOficio>>((
+  ref,
+) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.adminListarCategorias(incluirInactivas: true);
 });
@@ -209,16 +210,18 @@ class AdminPrestadoresParams {
 }
 
 final adminPrestadoresProvider =
-    FutureProvider.family<Paginated<Prestador>, AdminPrestadoresParams>(
-        (ref, params) async {
-  final repo = ref.watch(prestadorRepositoryProvider);
-  return repo.adminListarPrestadores(
-    estado: params.estado,
-    categoriaId: params.categoriaId,
-    busqueda: params.busqueda,
-    incluirInactivos: params.incluirInactivos,
-  );
-});
+    FutureProvider.family<Paginated<Prestador>, AdminPrestadoresParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(prestadorRepositoryProvider);
+      return repo.adminListarPrestadores(
+        estado: params.estado,
+        categoriaId: params.categoriaId,
+        busqueda: params.busqueda,
+        incluirInactivos: params.incluirInactivos,
+      );
+    });
 
 // =========================================================
 // Admin: detalle de prestador (por ID)
@@ -227,8 +230,10 @@ final adminPrestadoresProvider =
 /// Detalle de un prestador para admin (por ID).
 ///
 /// Se usa en el panel admin para verificar/rechazar/suspender/destacar.
-final adminPrestadorDetalleProvider =
-    FutureProvider.family<Prestador, String>((ref, id) async {
+final adminPrestadorDetalleProvider = FutureProvider.family<Prestador, String>((
+  ref,
+  id,
+) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.adminObtenerPrestador(id);
 });
@@ -238,9 +243,9 @@ final adminPrestadorDetalleProvider =
 // =========================================================
 final reviewsPrestadorProvider =
     FutureProvider.family<ReviewListResponse, String>((ref, slug) async {
-  final repo = ref.watch(prestadorRepositoryProvider);
-  return repo.listarReviewsPublicas(slug);
-});
+      final repo = ref.watch(prestadorRepositoryProvider);
+      return repo.listarReviewsPublicas(slug);
+    });
 
 // =========================================================
 // Modalidades de prestación (Fase 6)
@@ -249,6 +254,6 @@ final reviewsPrestadorProvider =
 /// Obtiene la configuración de modalidades de un prestador.
 final modalidadesConfigProvider =
     FutureProvider.family<ModalidadesConfig, String>((ref, prestadorId) async {
-  final repo = ref.watch(prestadorRepositoryProvider);
-  return repo.obtenerModalidades(prestadorId);
-});
+      final repo = ref.watch(prestadorRepositoryProvider);
+      return repo.obtenerModalidades(prestadorId);
+    });

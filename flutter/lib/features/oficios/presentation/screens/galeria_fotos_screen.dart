@@ -33,8 +33,7 @@ class GaleriaFotosScreen extends ConsumerStatefulWidget {
   final String? prestadorId;
 
   @override
-  ConsumerState<GaleriaFotosScreen> createState() =>
-      _GaleriaFotosScreenState();
+  ConsumerState<GaleriaFotosScreen> createState() => _GaleriaFotosScreenState();
 }
 
 class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
@@ -58,10 +57,7 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
     }
     return ref.watch(
       fotosDeMiOrdenProvider(
-        FotosDeMiOrdenParams(
-          ordenId: widget.ordenId,
-          momento: _filtroMomento,
-        ),
+        FotosDeMiOrdenParams(ordenId: widget.ordenId, momento: _filtroMomento),
       ),
     );
   }
@@ -148,9 +144,7 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
         );
       }
       await _refrescar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Foto subida')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('Foto subida')));
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
@@ -218,9 +212,7 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
         await repo.eliminarFotoDeMiOrden(widget.ordenId, foto.id);
       }
       await _refrescar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Foto eliminada')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('Foto eliminada')));
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
@@ -293,8 +285,7 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
             child: GridView.builder(
               // Padding bottom extra para que el FAB no tape la ultima fila.
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 6,
                 mainAxisSpacing: 6,
@@ -424,10 +415,7 @@ class _VisorFotosState extends State<_VisorFotos> {
       ),
       body: url == null
           ? const Center(
-              child: Text(
-                'Sin imagen',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: Text('Sin imagen', style: TextStyle(color: Colors.white)),
             )
           : PageView.builder(
               controller: _ctrl,

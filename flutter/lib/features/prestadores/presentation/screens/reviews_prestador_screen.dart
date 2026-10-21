@@ -27,27 +27,21 @@ class ReviewsPrestadorScreen extends ConsumerWidget {
             child: Text('Error: $e'),
           ),
         ),
-        data: (prestador) => _ContenidoReviews(
-          prestadorId: prestadorId,
-          slug: prestador.slug,
-        ),
+        data: (prestador) =>
+            _ContenidoReviews(prestadorId: prestadorId, slug: prestador.slug),
       ),
     );
   }
 }
 
 class _ContenidoReviews extends ConsumerStatefulWidget {
-  const _ContenidoReviews({
-    required this.prestadorId,
-    required this.slug,
-  });
+  const _ContenidoReviews({required this.prestadorId, required this.slug});
 
   final String prestadorId;
   final String slug;
 
   @override
-  ConsumerState<_ContenidoReviews> createState() =>
-      _ContenidoReviewsState();
+  ConsumerState<_ContenidoReviews> createState() => _ContenidoReviewsState();
 }
 
 class _ContenidoReviewsState extends ConsumerState<_ContenidoReviews> {
@@ -90,8 +84,8 @@ class _ContenidoReviewsState extends ConsumerState<_ContenidoReviews> {
                 _ReviewCardConResponder(
                   item: item,
                   prestadorId: widget.prestadorId,
-                  onRefrescar: () => ref
-                      .invalidate(reviewsPrestadorProvider(widget.slug)),
+                  onRefrescar: () =>
+                      ref.invalidate(reviewsPrestadorProvider(widget.slug)),
                 ),
             ],
           ),

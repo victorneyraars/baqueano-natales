@@ -116,8 +116,8 @@ class ComerciosFiltrosNotifier extends Notifier<ComerciosFiltrosState> {
 
 final comerciosFiltrosProvider =
     NotifierProvider<ComerciosFiltrosNotifier, ComerciosFiltrosState>(
-  ComerciosFiltrosNotifier.new,
-);
+      ComerciosFiltrosNotifier.new,
+    );
 
 // =========================================================
 // Listado público (auto-refresh al cambiar filtros)
@@ -131,8 +131,10 @@ final comerciosProvider = FutureProvider<Paginated<Comercio>>((ref) async {
 // =========================================================
 // Detalle por slug (family)
 // =========================================================
-final comercioDetalleProvider =
-    FutureProvider.family<Comercio, String>((ref, slug) async {
+final comercioDetalleProvider = FutureProvider.family<Comercio, String>((
+  ref,
+  slug,
+) async {
   final repo = ref.watch(comercioRepositoryProvider);
   return repo.obtenerPorSlug(slug);
 });
@@ -146,8 +148,10 @@ final misComerciosProvider = FutureProvider<List<Comercio>>((ref) async {
 });
 
 /// Detalle de un comercio propio por ID.
-final miComercioDetalleProvider =
-    FutureProvider.family<Comercio, String>((ref, id) async {
+final miComercioDetalleProvider = FutureProvider.family<Comercio, String>((
+  ref,
+  id,
+) async {
   final repo = ref.watch(comercioRepositoryProvider);
   return repo.obtenerMiComercio(id);
 });
@@ -191,16 +195,19 @@ class AdminComerciosParams {
       Object.hash(estado, categoriaId, busqueda, incluirInactivos);
 }
 
-final adminComerciosProvider = FutureProvider.family<Paginated<Comercio>,
-    AdminComerciosParams>((ref, params) async {
-  final repo = ref.watch(comercioRepositoryProvider);
-  return repo.adminListarComercios(
-    estado: params.estado,
-    categoriaId: params.categoriaId,
-    busqueda: params.busqueda,
-    incluirInactivos: params.incluirInactivos,
-  );
-});
+final adminComerciosProvider =
+    FutureProvider.family<Paginated<Comercio>, AdminComerciosParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(comercioRepositoryProvider);
+      return repo.adminListarComercios(
+        estado: params.estado,
+        categoriaId: params.categoriaId,
+        busqueda: params.busqueda,
+        incluirInactivos: params.incluirInactivos,
+      );
+    });
 
 // =========================================================
 // Admin: detalle de comercio (por ID)
@@ -209,8 +216,10 @@ final adminComerciosProvider = FutureProvider.family<Paginated<Comercio>,
 /// Detalle de un comercio para admin (por ID).
 ///
 /// Se usa en el panel admin para verificar/rechazar/suspender/destacar.
-final adminComercioDetalleProvider =
-    FutureProvider.family<Comercio, String>((ref, id) async {
+final adminComercioDetalleProvider = FutureProvider.family<Comercio, String>((
+  ref,
+  id,
+) async {
   final repo = ref.watch(comercioRepositoryProvider);
   return repo.adminObtenerComercio(id);
 });

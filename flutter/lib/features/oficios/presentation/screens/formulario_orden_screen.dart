@@ -26,8 +26,7 @@ class FormularioOrdenScreen extends ConsumerStatefulWidget {
       _FormularioOrdenScreenState();
 }
 
-class _FormularioOrdenScreenState
-    extends ConsumerState<FormularioOrdenScreen> {
+class _FormularioOrdenScreenState extends ConsumerState<FormularioOrdenScreen> {
   final _formKey = GlobalKey<FormState>();
   final _searchCtrl = TextEditingController();
   final _diagnosticoCtrl = TextEditingController();
@@ -79,15 +78,14 @@ class _FormularioOrdenScreenState
 
   Future<void> _guardar() async {
     if (_clienteSel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un cliente')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Selecciona un cliente')));
       return;
     }
     if (_vehiculoSel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un vehiculo')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecciona un vehiculo')));
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -114,25 +112,25 @@ class _FormularioOrdenScreenState
       );
 
       final creada = await repo.crearOrden(widget.prestadorId, nueva);
-      ref.invalidate(ordenesPrestadorProvider(
-        OrdenesPrestadorParams(prestadorId: widget.prestadorId),
-      ));
+      ref.invalidate(
+        ordenesPrestadorProvider(
+          OrdenesPrestadorParams(prestadorId: widget.prestadorId),
+        ),
+      );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Orden ${creada.numero} creada')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Orden ${creada.numero} creada')));
       context.pop();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inesperado: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -167,10 +165,7 @@ class _FormularioOrdenScreenState
                 onSeleccion: _seleccionarCliente,
               )
             else
-              _ClienteChip(
-                cliente: _clienteSel!,
-                onLimpiar: _limpiarCliente,
-              ),
+              _ClienteChip(cliente: _clienteSel!, onLimpiar: _limpiarCliente),
 
             const SizedBox(height: 20),
 
@@ -221,10 +216,7 @@ class _FormularioOrdenScreenState
                 border: OutlineInputBorder(),
               ),
               items: PrioridadOrden.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(p.label),
-                      ))
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p.label)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _prioridad = v);
@@ -336,15 +328,16 @@ class _BuscadorCliente extends ConsumerWidget {
                   margin: EdgeInsets.zero,
                   child: Column(
                     children: clientes
-                        .map((c) => ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.person),
-                              ),
-                              title: Text(c.nombreDisplay),
-                              subtitle:
-                                  c.email != null ? Text(c.email!) : null,
-                              onTap: () => onSeleccion(c),
-                            ))
+                        .map(
+                          (c) => ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.person),
+                            ),
+                            title: Text(c.nombreDisplay),
+                            subtitle: c.email != null ? Text(c.email!) : null,
+                            onTap: () => onSeleccion(c),
+                          ),
+                        )
                         .toList(),
                   ),
                 );
@@ -387,10 +380,7 @@ class _ClienteChip extends StatelessWidget {
                     ),
                   ),
                   if (cliente.email != null)
-                    Text(
-                      cliente.email!,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text(cliente.email!, style: theme.textTheme.bodySmall),
                 ],
               ),
             ),
@@ -435,10 +425,8 @@ class _SelectorVehiculo extends ConsumerWidget {
         padding: EdgeInsets.all(12),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text('Error: $e'),
-      ),
+      error: (e, _) =>
+          Padding(padding: const EdgeInsets.all(12), child: Text('Error: $e')),
       data: (vehiculos) {
         if (vehiculos.isEmpty) {
           return Container(
@@ -469,13 +457,12 @@ class _SelectorVehiculo extends ConsumerWidget {
             border: OutlineInputBorder(),
           ),
           items: vehiculos
-              .map((v) => DropdownMenuItem(
-                    value: v,
-                    child: Text(
-                      v.nombreDisplay,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
+              .map(
+                (v) => DropdownMenuItem(
+                  value: v,
+                  child: Text(v.nombreDisplay, overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: (v) {
             if (v != null) onSeleccion(v);

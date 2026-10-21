@@ -41,9 +41,8 @@ class FotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = foto.urlVariante(variante) ??
-        foto.urlMedium ??
-        foto.urlOriginal;
+    final url =
+        foto.urlVariante(variante) ?? foto.urlMedium ?? foto.urlOriginal;
     final radius = BorderRadius.circular(borderRadius);
 
     return ClipRRect(

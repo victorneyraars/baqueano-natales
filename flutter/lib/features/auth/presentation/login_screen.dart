@@ -38,7 +38,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Revisar el estado después del login
     final authState = ref.read(authNotifierProvider);
-    if (authState.errorMessage != null && authState.errorMessage != _lastError) {
+    if (authState.errorMessage != null &&
+        authState.errorMessage != _lastError) {
       _lastError = authState.errorMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

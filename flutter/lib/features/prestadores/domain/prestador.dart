@@ -227,8 +227,8 @@ class Prestador {
         nombre: _str(json, 'nombre'),
         descripcion: _strOrNull(json, 'descripcion'),
         aniosExperiencia: _toInt(json['anios_experiencia']),
-        categoria: _categoriaFromJson(json['categoria']) ??
-            _categoriaFallback(),
+        categoria:
+            _categoriaFromJson(json['categoria']) ?? _categoriaFallback(),
         categoriaId: _strOrNull(json, 'categoria_id'),
         telefono: _strOrNull(json, 'telefono'),
         whatsapp: _strOrNull(json, 'whatsapp'),
@@ -243,8 +243,7 @@ class Prestador {
         radioCoberturaKm: _toDouble(json['radio_cobertura_km']),
         atiendeDomicilio: (json['atiende_domicilio'] as bool?) ?? false,
         atiendeLocal: (json['atiende_local'] as bool?) ?? true,
-        atiendeEmergencias:
-            (json['atiende_emergencias'] as bool?) ?? false,
+        atiendeEmergencias: (json['atiende_emergencias'] as bool?) ?? false,
         horarioDescripcion: _strOrNull(json, 'horario_descripcion'),
         fotoUrl: _strOrNull(json, 'foto_url'),
         fotoPortadaUrl: _strOrNull(json, 'foto_portada_url'),
@@ -289,11 +288,7 @@ class Prestador {
     return v.toString();
   }
 
-  static String _strOr(
-    Map<String, dynamic> json,
-    String key,
-    String fallback,
-  ) {
+  static String _strOr(Map<String, dynamic> json, String key, String fallback) {
     final v = json[key];
     if (v is String && v.isNotEmpty) return v;
     return fallback;

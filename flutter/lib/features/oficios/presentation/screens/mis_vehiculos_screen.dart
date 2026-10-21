@@ -60,11 +60,7 @@ class MisVehiculosScreen extends ConsumerWidget {
                 onTap: () => context.push(
                   '/mis-vehiculos/${vehiculos[i].objetoId}/editar',
                 ),
-                onDelete: () => _confirmarEliminar(
-                  context,
-                  ref,
-                  vehiculos[i],
-                ),
+                onDelete: () => _confirmarEliminar(context, ref, vehiculos[i]),
                 onRecordatorios: () => context.push(
                   '/mis-vehiculos/${vehiculos[i].objetoId}/recordatorios',
                 ),
@@ -108,14 +104,12 @@ class MisVehiculosScreen extends ConsumerWidget {
       await repo.eliminarVehiculo(vehiculo.objetoId);
       ref.invalidate(misVehiculosProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vehiculo eliminado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehiculo eliminado')));
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 }
@@ -247,8 +241,8 @@ class _EmptyView extends StatelessWidget {
               'Agrega tu auto para poder agendar servicios y ver su historial.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -284,10 +278,7 @@ class _ErrorView extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),

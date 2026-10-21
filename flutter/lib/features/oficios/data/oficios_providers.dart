@@ -30,8 +30,9 @@ final oficiosRepositoryProvider = Provider<OficiosRepository>((ref) {
 // =========================================================
 // Categorias de mecanica (publico)
 // =========================================================
-final categoriasMecanicaProvider =
-    FutureProvider<List<MecanicaCategoria>>((ref) async {
+final categoriasMecanicaProvider = FutureProvider<List<MecanicaCategoria>>((
+  ref,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.listarCategoriasMecanica();
 });
@@ -45,8 +46,10 @@ final misVehiculosProvider = FutureProvider<List<Vehiculo>>((ref) async {
 });
 
 /// Detalle de un vehiculo por su objeto_servicio_id.
-final vehiculoDetalleProvider =
-    FutureProvider.family<Vehiculo, String>((ref, objetoId) async {
+final vehiculoDetalleProvider = FutureProvider.family<Vehiculo, String>((
+  ref,
+  objetoId,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.obtenerVehiculo(objetoId);
 });
@@ -55,10 +58,7 @@ final vehiculoDetalleProvider =
 // M2: Ordenes del prestador
 // =========================================================
 class OrdenesPrestadorParams {
-  const OrdenesPrestadorParams({
-    required this.prestadorId,
-    this.estado,
-  });
+  const OrdenesPrestadorParams({required this.prestadorId, this.estado});
 
   final String prestadorId;
   final String? estado;
@@ -74,14 +74,16 @@ class OrdenesPrestadorParams {
 }
 
 final ordenesPrestadorProvider =
-    FutureProvider.family<List<OrdenTrabajo>, OrdenesPrestadorParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarOrdenesPrestador(
-    params.prestadorId,
-    estado: params.estado,
-  );
-});
+    FutureProvider.family<List<OrdenTrabajo>, OrdenesPrestadorParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarOrdenesPrestador(
+        params.prestadorId,
+        estado: params.estado,
+      );
+    });
 
 class OrdenPrestadorDetalleParams {
   const OrdenPrestadorDetalleParams({
@@ -103,23 +105,29 @@ class OrdenPrestadorDetalleParams {
 }
 
 final ordenPrestadorDetalleProvider =
-    FutureProvider.family<OrdenTrabajo, OrdenPrestadorDetalleParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.detalleOrdenPrestador(params.prestadorId, params.ordenId);
-});
+    FutureProvider.family<OrdenTrabajo, OrdenPrestadorDetalleParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.detalleOrdenPrestador(params.prestadorId, params.ordenId);
+    });
 
 // =========================================================
 // M2: Ordenes del cliente
 // =========================================================
-final misOrdenesProvider =
-    FutureProvider.family<List<OrdenTrabajo>, String?>((ref, estado) async {
+final misOrdenesProvider = FutureProvider.family<List<OrdenTrabajo>, String?>((
+  ref,
+  estado,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.listarMisOrdenes(estado: estado);
 });
 
-final miOrdenDetalleProvider =
-    FutureProvider.family<OrdenTrabajo, String>((ref, ordenId) async {
+final miOrdenDetalleProvider = FutureProvider.family<OrdenTrabajo, String>((
+  ref,
+  ordenId,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.detalleMiOrden(ordenId);
 });
@@ -149,23 +157,27 @@ class BusquedaClientesParams {
 /// Busca clientes por query (nombre/email).
 /// Devuelve [] si query < 2 chars (evita llamar al backend).
 final busquedaClientesProvider =
-    FutureProvider.family<List<ClienteBusqueda>, BusquedaClientesParams>(
-        (ref, params) async {
-  if (params.query.trim().length < 2) return [];
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.buscarClientes(params.prestadorId, params.query);
-});
+    FutureProvider.family<List<ClienteBusqueda>, BusquedaClientesParams>((
+      ref,
+      params,
+    ) async {
+      if (params.query.trim().length < 2) return [];
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.buscarClientes(params.prestadorId, params.query);
+    });
 
 /// Vehiculos de un cliente (para elegir al crear orden).
 final vehiculosDeClienteProvider =
-    FutureProvider.family<List<Vehiculo>, VehiculosDeClienteParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarVehiculosDeCliente(
-    params.prestadorId,
-    params.clienteId,
-  );
-});
+    FutureProvider.family<List<Vehiculo>, VehiculosDeClienteParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarVehiculosDeCliente(
+        params.prestadorId,
+        params.clienteId,
+      );
+    });
 
 class VehiculosDeClienteParams {
   const VehiculosDeClienteParams({
@@ -189,14 +201,18 @@ class VehiculosDeClienteParams {
 // =========================================================
 // M3: Turnos del cliente
 // =========================================================
-final misTurnosProvider =
-    FutureProvider.family<List<Turno>, String?>((ref, estado) async {
+final misTurnosProvider = FutureProvider.family<List<Turno>, String?>((
+  ref,
+  estado,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.listarMisTurnos(estado: estado);
 });
 
-final miTurnoDetalleProvider =
-    FutureProvider.family<Turno, String>((ref, turnoId) async {
+final miTurnoDetalleProvider = FutureProvider.family<Turno, String>((
+  ref,
+  turnoId,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.detalleMiTurno(turnoId);
 });
@@ -205,10 +221,7 @@ final miTurnoDetalleProvider =
 // M3: Turnos del prestador
 // =========================================================
 class TurnosPrestadorParams {
-  const TurnosPrestadorParams({
-    required this.prestadorId,
-    this.estado,
-  });
+  const TurnosPrestadorParams({required this.prestadorId, this.estado});
 
   final String prestadorId;
   final String? estado;
@@ -224,14 +237,16 @@ class TurnosPrestadorParams {
 }
 
 final turnosPrestadorProvider =
-    FutureProvider.family<List<Turno>, TurnosPrestadorParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarTurnosPrestador(
-    params.prestadorId,
-    estado: params.estado,
-  );
-});
+    FutureProvider.family<List<Turno>, TurnosPrestadorParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarTurnosPrestador(
+        params.prestadorId,
+        estado: params.estado,
+      );
+    });
 
 class TurnoPrestadorDetalleParams {
   const TurnoPrestadorDetalleParams({
@@ -253,17 +268,21 @@ class TurnoPrestadorDetalleParams {
 }
 
 final turnoPrestadorDetalleProvider =
-    FutureProvider.family<Turno, TurnoPrestadorDetalleParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.detalleTurnoPrestador(params.prestadorId, params.turnoId);
-});
+    FutureProvider.family<Turno, TurnoPrestadorDetalleParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.detalleTurnoPrestador(params.prestadorId, params.turnoId);
+    });
 
 // =========================================================
 // M4: Garantias
 // =========================================================
-final garantiaDeMiOrdenProvider =
-    FutureProvider.family<Garantia?, String>((ref, ordenId) async {
+final garantiaDeMiOrdenProvider = FutureProvider.family<Garantia?, String>((
+  ref,
+  ordenId,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.obtenerGarantiaDeMiOrden(ordenId);
 });
@@ -288,14 +307,16 @@ class GarantiaPrestadorParams {
 }
 
 final garantiaPrestadorProvider =
-    FutureProvider.family<Garantia?, GarantiaPrestadorParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.obtenerGarantiaDeOrdenPrestador(
-    params.prestadorId,
-    params.ordenId,
-  );
-});
+    FutureProvider.family<Garantia?, GarantiaPrestadorParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.obtenerGarantiaDeOrdenPrestador(
+        params.prestadorId,
+        params.ordenId,
+      );
+    });
 
 // =========================================================
 // M4: Recordatorios
@@ -320,14 +341,16 @@ class RecordatoriosParams {
 }
 
 final recordatoriosProvider =
-    FutureProvider.family<List<Recordatorio>, RecordatoriosParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarRecordatorios(
-    params.objetoId,
-    incluirEnviados: params.incluirEnviados,
-  );
-});
+    FutureProvider.family<List<Recordatorio>, RecordatoriosParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarRecordatorios(
+        params.objetoId,
+        incluirEnviados: params.incluirEnviados,
+      );
+    });
 
 // =========================================================
 // M5.1: Fotos de orden
@@ -349,14 +372,13 @@ class FotosDeMiOrdenParams {
 }
 
 final fotosDeMiOrdenProvider =
-    FutureProvider.family<List<OrdenFoto>, FotosDeMiOrdenParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarFotosDeMiOrden(
-    params.ordenId,
-    momento: params.momento,
-  );
-});
+    FutureProvider.family<List<OrdenFoto>, FotosDeMiOrdenParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarFotosDeMiOrden(params.ordenId, momento: params.momento);
+    });
 
 class FotosDeOrdenPrestadorParams {
   const FotosDeOrdenPrestadorParams({
@@ -381,15 +403,17 @@ class FotosDeOrdenPrestadorParams {
 }
 
 final fotosDeOrdenPrestadorProvider =
-    FutureProvider.family<List<OrdenFoto>, FotosDeOrdenPrestadorParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.listarFotosDeOrdenPrestador(
-    params.prestadorId,
-    params.ordenId,
-    momento: params.momento,
-  );
-});
+    FutureProvider.family<List<OrdenFoto>, FotosDeOrdenPrestadorParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarFotosDeOrdenPrestador(
+        params.prestadorId,
+        params.ordenId,
+        momento: params.momento,
+      );
+    });
 
 // =========================================================
 // M5.3: Reportes del taller
@@ -417,21 +441,25 @@ class ReportePrestadorParams {
 }
 
 final reportePrestadorProvider =
-    FutureProvider.family<ReportePrestador, ReportePrestadorParams>(
-        (ref, params) async {
-  final repo = ref.watch(oficiosRepositoryProvider);
-  return repo.obtenerReporte(
-    params.prestadorId,
-    desde: params.desde,
-    hasta: params.hasta,
-  );
-});
+    FutureProvider.family<ReportePrestador, ReportePrestadorParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.obtenerReporte(
+        params.prestadorId,
+        desde: params.desde,
+        hasta: params.hasta,
+      );
+    });
 
 // =========================================================
 // M6: Review de una orden (o null si aun no califico)
 // =========================================================
-final miReviewProvider =
-    FutureProvider.family<Review?, String>((ref, ordenId) async {
+final miReviewProvider = FutureProvider.family<Review?, String>((
+  ref,
+  ordenId,
+) async {
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.obtenerMiReview(ordenId);
 });

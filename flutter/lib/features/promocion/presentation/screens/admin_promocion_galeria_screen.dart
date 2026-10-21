@@ -51,9 +51,8 @@ class AdminPromocionGaleriaScreen extends ConsumerWidget {
             itemCount: plantillas.length,
             itemBuilder: (ctx, i) => _PlantillaCard(
               plantilla: plantillas[i],
-              onTap: () => context.push(
-                '/admin/promocion/editor/${plantillas[i].id}',
-              ),
+              onTap: () =>
+                  context.push('/admin/promocion/editor/${plantillas[i].id}'),
             ),
           );
         },
@@ -139,10 +138,7 @@ class _PlantillaCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      v.bg,
-                      Color.lerp(v.bg, Colors.black, 0.15)!,
-                    ],
+                    colors: [v.bg, Color.lerp(v.bg, Colors.black, 0.15)!],
                   ),
                 ),
                 child: Stack(
@@ -172,9 +168,7 @@ class _PlantillaCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Center(
-                      child: Icon(v.icon, size: 56, color: v.fg),
-                    ),
+                    Center(child: Icon(v.icon, size: 56, color: v.fg)),
                   ],
                 ),
               ),
@@ -232,9 +226,7 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('No hay plantillas disponibles'),
-    );
+    return const Center(child: Text('No hay plantillas disponibles'));
   }
 }
 

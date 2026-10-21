@@ -49,10 +49,10 @@ class ConfigDomicilio extends ConfigModalidad {
 
   @override
   Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'radio_km': radioKm,
-        'costo_desplazamiento_clp': costoDesplazamientoClp,
-      };
+    ...super.toJson(),
+    'radio_km': radioKm,
+    'costo_desplazamiento_clp': costoDesplazamientoClp,
+  };
 
   @override
   ConfigDomicilio copyWith({
@@ -90,9 +90,9 @@ class ConfigPuntoEstrategico extends ConfigModalidad {
 
   @override
   Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'punto_descripcion': puntoDescripcion,
-      };
+    ...super.toJson(),
+    'punto_descripcion': puntoDescripcion,
+  };
 
   @override
   ConfigPuntoEstrategico copyWith({
@@ -127,9 +127,9 @@ class ConfigRecogidaEntrega extends ConfigModalidad {
 
   @override
   Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'costo_traslado_clp': costoTrasladoClp,
-      };
+    ...super.toJson(),
+    'costo_traslado_clp': costoTrasladoClp,
+  };
 
   @override
   ConfigRecogidaEntrega copyWith({
@@ -165,10 +165,7 @@ class ConfigSuscripcion extends ConfigModalidad {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'planes': planes,
-      };
+  Map<String, dynamic> toJson() => {...super.toJson(), 'planes': planes};
 
   @override
   ConfigSuscripcion copyWith({
@@ -230,14 +227,14 @@ class ModalidadesConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'taller_fisico': tallerFisico.toJson(),
-        'domicilio': domicilio.toJson(),
-        'punto_estrategico': puntoEstrategico.toJson(),
-        'recogida_entrega': recogidaEntrega.toJson(),
-        'suscripcion': suscripcion.toJson(),
-        'flotas': flotas.toJson(),
-        'hibrido': hibrido.toJson(),
-      };
+    'taller_fisico': tallerFisico.toJson(),
+    'domicilio': domicilio.toJson(),
+    'punto_estrategico': puntoEstrategico.toJson(),
+    'recogida_entrega': recogidaEntrega.toJson(),
+    'suscripcion': suscripcion.toJson(),
+    'flotas': flotas.toJson(),
+    'hibrido': hibrido.toJson(),
+  };
 
   ModalidadesConfig copyWith({
     ConfigModalidad? tallerFisico,

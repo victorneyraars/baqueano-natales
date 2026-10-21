@@ -32,10 +32,7 @@ class _AdminSocialPublicacionesScreenState
 
   @override
   Widget build(BuildContext context) {
-    final filtro = PublicacionesFiltro(
-      estado: _estadoFiltro,
-      red: _redFiltro,
-    );
+    final filtro = PublicacionesFiltro(estado: _estadoFiltro, red: _redFiltro);
     final async = ref.watch(publicacionesSocialesProvider(filtro));
 
     return Scaffold(
@@ -60,14 +57,11 @@ class _AdminSocialPublicacionesScreenState
           ),
           Expanded(
             child: async.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorView(
                 error: e,
-                onRetry: () => ref.invalidate(
-                  publicacionesSocialesProvider(filtro),
-                ),
+                onRetry: () =>
+                    ref.invalidate(publicacionesSocialesProvider(filtro)),
               ),
               data: (data) {
                 if (data.items.isEmpty) {
@@ -76,8 +70,9 @@ class _AdminSocialPublicacionesScreenState
                 return RefreshIndicator(
                   onRefresh: () async {
                     ref.invalidate(publicacionesSocialesProvider(filtro));
-                    await ref
-                        .read(publicacionesSocialesProvider(filtro).future);
+                    await ref.read(
+                      publicacionesSocialesProvider(filtro).future,
+                    );
                   },
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
@@ -183,9 +178,8 @@ class _FilterLabel extends StatelessWidget {
       padding: const EdgeInsets.only(right: 8),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -212,10 +206,7 @@ class _Chip extends StatelessWidget {
       child: FilterChip(
         label: Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: selected ? Colors.white : null,
-          ),
+          style: TextStyle(fontSize: 12, color: selected ? Colors.white : null),
         ),
         selected: selected,
         onSelected: (_) => onTap(),
@@ -325,15 +316,16 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Publicacion reencolada. El worker la procesara pronto.'),
+            content: Text(
+              'Publicacion reencolada. El worker la procesara pronto.',
+            ),
           ),
         );
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     } finally {
       if (mounted) setState(() => _reencolando = false);
@@ -415,10 +407,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
                     icon: Icons.refresh,
                     text: '${pub.intentos} intento(s)',
                   ),
-                _Meta(
-                  icon: Icons.schedule,
-                  text: _fmt(pub.createdAt),
-                ),
+                _Meta(icon: Icons.schedule, text: _fmt(pub.createdAt)),
               ],
             ),
 
@@ -431,9 +420,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
                 decoration: BoxDecoration(
                   color: Colors.red.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.2),
-                  ),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,10 +434,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
                     Expanded(
                       child: Text(
                         pub.errorUltimo!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.red,
-                        ),
+                        style: const TextStyle(fontSize: 11, color: Colors.red),
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -470,10 +454,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
             ],
             if (pub.externalPostId != null) ...[
               const SizedBox(height: 6),
-              _Meta(
-                icon: Icons.link,
-                text: 'ID: ${pub.externalPostId}',
-              ),
+              _Meta(icon: Icons.link, text: 'ID: ${pub.externalPostId}'),
             ],
 
             // Boton Reencolar (solo para estados que pueden reintentar)
@@ -524,10 +505,7 @@ class _Meta extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: color),
         const SizedBox(width: 3),
-        Text(
-          text,
-          style: TextStyle(fontSize: 11, color: color),
-        ),
+        Text(text, style: TextStyle(fontSize: 11, color: color)),
       ],
     );
   }

@@ -39,9 +39,7 @@ class _ListaComerciosScreenState extends ConsumerState<ListaComerciosScreen> {
     final categoriasAsync = ref.watch(categoriasProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Comercios'),
-      ),
+      appBar: AppBar(title: const Text('Comercios')),
       body: Column(
         children: [
           // --- Buscador ---
@@ -69,9 +67,7 @@ class _ListaComerciosScreenState extends ConsumerState<ListaComerciosScreen> {
                 isDense: true,
               ),
               onSubmitted: (value) {
-                ref
-                    .read(comerciosFiltrosProvider.notifier)
-                    .setBusqueda(value);
+                ref.read(comerciosFiltrosProvider.notifier).setBusqueda(value);
               },
             ),
           ),
@@ -82,9 +78,7 @@ class _ListaComerciosScreenState extends ConsumerState<ListaComerciosScreen> {
               categorias: cats,
               seleccionada: filtros.categoriaId,
               onSeleccionar: (id) {
-                ref
-                    .read(comerciosFiltrosProvider.notifier)
-                    .setCategoria(id);
+                ref.read(comerciosFiltrosProvider.notifier).setCategoria(id);
               },
             ),
             loading: () => const SizedBox(
@@ -162,8 +156,7 @@ class _ListaComerciosScreenState extends ConsumerState<ListaComerciosScreen> {
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ErrorState(
                 error: error.toString(),
                 onRetry: () => ref.invalidate(comerciosProvider),

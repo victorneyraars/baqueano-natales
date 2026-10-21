@@ -19,17 +19,11 @@ class AnalyticsRepository {
   static const String _base = '/api/v1/analytics';
 
   /// Stats de todos los sitios (admin) o filtrados por hostname.
-  Future<StatsResponse> fetchStats({
-    int days = 7,
-    String? hostname,
-  }) async {
+  Future<StatsResponse> fetchStats({int days = 7, String? hostname}) async {
     try {
       final res = await _dio.get(
         '$_base/stats',
-        queryParameters: {
-          'days': days,
-          'hostname': ?hostname,
-        },
+        queryParameters: {'days': days, 'hostname': ?hostname},
       );
       return StatsResponse.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {

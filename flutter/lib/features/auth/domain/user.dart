@@ -100,11 +100,7 @@ class User {
     };
   }
 
-  User copyWith({
-    String? nombre,
-    String? apellido,
-    String? avatarUrl,
-  }) {
+  User copyWith({String? nombre, String? apellido, String? avatarUrl}) {
     return User(
       id: id,
       role: role,

@@ -55,8 +55,7 @@ class _DetalleMiOrdenScreenState extends ConsumerState<DetalleMiOrdenScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
           error: e,
-          onRetry: () =>
-              ref.invalidate(miOrdenDetalleProvider(widget.ordenId)),
+          onRetry: () => ref.invalidate(miOrdenDetalleProvider(widget.ordenId)),
         ),
         data: (orden) {
           // Inicializar seleccion la primera vez que llega la orden
@@ -126,19 +125,16 @@ class _DetalleMiOrdenScreenState extends ConsumerState<DetalleMiOrdenScreen> {
       ref.invalidate(misOrdenesProvider(null));
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Respuesta enviada')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Respuesta enviada')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inesperado: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -242,12 +238,14 @@ class _Contenido extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...orden.items.map((it) => _ItemCard(
-                item: it,
-                seleccionado: seleccion[it.id] ?? false,
-                modoAprobacion: _puedeAprobar,
-                onToggle: (v) => onToggleItem(it.id, v),
-              )),
+          ...orden.items.map(
+            (it) => _ItemCard(
+              item: it,
+              seleccionado: seleccion[it.id] ?? false,
+              modoAprobacion: _puedeAprobar,
+              onToggle: (v) => onToggleItem(it.id, v),
+            ),
+          ),
           const SizedBox(height: 12),
           _TotalCard(orden: orden),
         ],
@@ -335,9 +333,7 @@ class _ItemCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Icon(
-                  item.aprobado == true
-                      ? Icons.check_circle
-                      : Icons.cancel,
+                  item.aprobado == true ? Icons.check_circle : Icons.cancel,
                   color: colorAprobado,
                   size: 24,
                 ),
@@ -449,10 +445,7 @@ class _TimelineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  evento.descripcion,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text(evento.descripcion, style: theme.textTheme.bodyMedium),
                 Text(
                   _formatFechaHora(evento.createdAt),
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -483,15 +476,9 @@ class _ErrorView extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            Text(error.toString(), textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),

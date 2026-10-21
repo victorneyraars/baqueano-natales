@@ -40,9 +40,7 @@ class _ListaPrestadoresScreenState
     final categoriasAsync = ref.watch(categoriasOficioProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Oficios y servicios'),
-      ),
+      appBar: AppBar(title: const Text('Oficios y servicios')),
       body: Column(
         children: [
           // --- Buscador ---
@@ -83,9 +81,7 @@ class _ListaPrestadoresScreenState
               categorias: cats,
               seleccionada: filtros.categoriaId,
               onSeleccionar: (id) {
-                ref
-                    .read(prestadoresFiltrosProvider.notifier)
-                    .setCategoria(id);
+                ref.read(prestadoresFiltrosProvider.notifier).setCategoria(id);
               },
             ),
             loading: () => const SizedBox(
@@ -139,9 +135,7 @@ class _ListaPrestadoresScreenState
                     TextButton(
                       onPressed: () {
                         _searchController.clear();
-                        ref
-                            .read(prestadoresFiltrosProvider.notifier)
-                            .limpiar();
+                        ref.read(prestadoresFiltrosProvider.notifier).limpiar();
                       },
                       child: const Text('Limpiar'),
                     ),
@@ -177,8 +171,7 @@ class _ListaPrestadoresScreenState
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ErrorState(
                 error: error.toString(),
                 onRetry: () => ref.invalidate(prestadoresProvider),

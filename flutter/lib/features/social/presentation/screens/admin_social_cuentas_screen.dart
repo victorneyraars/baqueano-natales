@@ -50,8 +50,7 @@ class AdminSocialCuentasScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               itemCount: data.items.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (ctx, i) =>
-                  _CuentaCard(cuenta: data.items[i]),
+              itemBuilder: (ctx, i) => _CuentaCard(cuenta: data.items[i]),
             ),
           );
         },
@@ -75,11 +74,7 @@ class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.cloud_off,
-              size: 64,
-              color: theme.colorScheme.outline,
-            ),
+            Icon(Icons.cloud_off, size: 64, color: theme.colorScheme.outline),
             const SizedBox(height: 16),
             Text(
               'No hay redes conectadas',
@@ -202,10 +197,7 @@ class _CuentaCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      _Badge(
-                        label: cuenta.red.label,
-                        color: _color,
-                      ),
+                      _Badge(label: cuenta.red.label, color: _color),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -229,9 +221,7 @@ class _CuentaCard extends StatelessWidget {
                     children: [
                       _Pill(
                         label: cuenta.activo ? 'Activa' : 'Inactiva',
-                        icon: cuenta.activo
-                            ? Icons.check_circle
-                            : Icons.cancel,
+                        icon: cuenta.activo ? Icons.check_circle : Icons.cancel,
                         color: cuenta.activo ? Colors.green : Colors.grey,
                       ),
                       const SizedBox(width: 6),
@@ -286,11 +276,7 @@ class _Badge extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
+  const _Pill({required this.label, required this.icon, required this.color});
 
   final String label;
   final IconData icon;

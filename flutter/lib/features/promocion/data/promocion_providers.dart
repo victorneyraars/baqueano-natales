@@ -18,8 +18,9 @@ final promocionRepositoryProvider = Provider<PromocionRepository>((ref) {
 // =========================================================
 // Plantillas (galeria)
 // =========================================================
-final plantillasPromocionProvider =
-    FutureProvider<List<PlantillaInfo>>((ref) async {
+final plantillasPromocionProvider = FutureProvider<List<PlantillaInfo>>((
+  ref,
+) async {
   final repo = ref.watch(promocionRepositoryProvider);
   return repo.listarPlantillas();
 });
@@ -78,9 +79,7 @@ class EditorAficheNotifier extends Notifier<EditorAficheState> {
   }
 
   void setParam(String key, dynamic value) {
-    state = state.copyWith(
-      params: {...state.params, key: value},
-    );
+    state = state.copyWith(params: {...state.params, key: value});
   }
 
   void limpiar() {
@@ -94,14 +93,15 @@ class EditorAficheNotifier extends Notifier<EditorAficheState> {
 
 final editorAficheProvider =
     NotifierProvider<EditorAficheNotifier, EditorAficheState>(
-  EditorAficheNotifier.new,
-);
+      EditorAficheNotifier.new,
+    );
 
 // =========================================================
 // Generacion del afiche (reactiva a editorAficheProvider)
 // =========================================================
-final aficheGeneradoProvider =
-    FutureProvider.autoDispose<AficheGenerado?>((ref) async {
+final aficheGeneradoProvider = FutureProvider.autoDispose<AficheGenerado?>((
+  ref,
+) async {
   final state = ref.watch(editorAficheProvider);
   if (!state.listo) return null;
 
@@ -118,8 +118,7 @@ final aficheGeneradoProvider =
 // =========================================================
 
 /// Descarga el PNG del afiche actual (bytes).
-final descargarAficheProvider =
-    Provider<Future<Uint8List> Function()>((ref) {
+final descargarAficheProvider = Provider<Future<Uint8List> Function()>((ref) {
   return () async {
     final editor = ref.read(editorAficheProvider);
     if (!editor.listo) {
@@ -135,30 +134,28 @@ final descargarAficheProvider =
 });
 
 /// Publica el afiche actual en las redes elegidas.
-final publicarAficheProvider = Provider<
-    Future<PublicarAficheResult> Function({
-      List<String>? redes,
-      String? caption,
-    })>((ref) {
-  return ({
-    List<String>? redes,
-    String? caption,
-  }) async {
-    final editor = ref.read(editorAficheProvider);
-    if (!editor.listo) {
-      throw StateError('Falta elegir plantilla o completar params');
-    }
-    final repo = ref.read(promocionRepositoryProvider);
-    final result = await repo.publicarAfiche(
-      plantilla: editor.plantillaId!,
-      tamano: editor.tamano,
-      params: editor.params,
-      redes: redes,
-      caption: caption,
-    );
-    // Refrescar la cola social
-    ref.invalidate(plantillasPromocionProvider);
-    return result;
-  };
-});
-
+final publicarAficheProvider =
+    Provider<
+      Future<PublicarAficheResult> Function({
+        List<String>? redes,
+        String? caption,
+      })
+    >((ref) {
+      return ({List<String>? redes, String? caption}) async {
+        final editor = ref.read(editorAficheProvider);
+        if (!editor.listo) {
+          throw StateError('Falta elegir plantilla o completar params');
+        }
+        final repo = ref.read(promocionRepositoryProvider);
+        final result = await repo.publicarAfiche(
+          plantilla: editor.plantillaId!,
+          tamano: editor.tamano,
+          params: editor.params,
+          redes: redes,
+          caption: caption,
+        );
+        // Refrescar la cola social
+        ref.invalidate(plantillasPromocionProvider);
+        return result;
+      };
+    });

@@ -1,4 +1,4 @@
-﻿/// Modelo de cuenta social conectada (Facebook, Instagram, etc.).
+/// Modelo de cuenta social conectada (Facebook, Instagram, etc.).
 ///
 /// Refleja el schema `CuentaSocialResponse` del backend.
 /// NO incluye tokens (esos viven cifrados y nunca llegan al cliente).
@@ -91,9 +91,8 @@ class CuentaSocial {
   final DateTime updatedAt;
 
   /// Nombre legible: `external_name` si esta, si no el `external_id`.
-  String get nombreVisible => externalName?.isNotEmpty == true
-      ? externalName!
-      : externalId;
+  String get nombreVisible =>
+      externalName?.isNotEmpty == true ? externalName! : externalId;
 
   /// Instagram username si esta en `metadata_extra`.
   String? get instagramUsername =>

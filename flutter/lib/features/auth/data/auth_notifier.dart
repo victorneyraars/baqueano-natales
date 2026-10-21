@@ -31,11 +31,7 @@ enum AuthStatus {
 
 /// Estado inmutable de la autenticación.
 class AuthState {
-  const AuthState({
-    required this.status,
-    this.user,
-    this.errorMessage,
-  });
+  const AuthState({required this.status, this.user, this.errorMessage});
 
   final AuthStatus status;
   final User? user;
@@ -46,16 +42,10 @@ class AuthState {
   const AuthState.loading() : this(status: AuthStatus.loading);
 
   const AuthState.unauthenticated({String? error})
-      : this(
-          status: AuthStatus.unauthenticated,
-          errorMessage: error,
-        );
+    : this(status: AuthStatus.unauthenticated, errorMessage: error);
 
   const AuthState.authenticated(User user)
-      : this(
-          status: AuthStatus.authenticated,
-          user: user,
-        );
+    : this(status: AuthStatus.authenticated, user: user);
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get isLoading => status == AuthStatus.loading;
@@ -115,9 +105,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } on ApiException catch (e) {
       state = AuthState.unauthenticated(error: e.message);
     } catch (e) {
-      state = AuthState.unauthenticated(
-        error: 'Error inesperado: $e',
-      );
+      state = AuthState.unauthenticated(error: 'Error inesperado: $e');
     }
   }
 
@@ -152,5 +140,6 @@ class AuthNotifier extends Notifier<AuthState> {
 }
 
 /// Provider del AuthNotifier (global).
-final authNotifierProvider =
-    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authNotifierProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

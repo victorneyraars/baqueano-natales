@@ -31,9 +31,7 @@ class AdminDetallePrestadorScreen extends ConsumerWidget {
     final asyncPrestador = ref.watch(adminPrestadorDetalleProvider(id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle prestador'),
-      ),
+      appBar: AppBar(title: const Text('Detalle prestador')),
       body: asyncPrestador.when(
         data: (prestador) => _Contenido(prestador: prestador, ref: ref),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -78,11 +76,7 @@ class _Contenido extends StatelessWidget {
         if (prestador.descripcion != null)
           _fila(theme, 'Descripción', prestador.descripcion!),
         if (prestador.aniosExperiencia != null)
-          _fila(
-            theme,
-            'Años de experiencia',
-            '${prestador.aniosExperiencia}',
-          ),
+          _fila(theme, 'Años de experiencia', '${prestador.aniosExperiencia}'),
 
         const SizedBox(height: 16),
 
@@ -102,11 +96,7 @@ class _Contenido extends StatelessWidget {
         _fila(theme, 'Región', prestador.region),
         _fila(theme, 'Dirección', prestador.direccion),
         if (prestador.radioCoberturaKm != null)
-          _fila(
-            theme,
-            'Radio cobertura',
-            '${prestador.radioCoberturaKm} km',
-          ),
+          _fila(theme, 'Radio cobertura', '${prestador.radioCoberturaKm} km'),
 
         const SizedBox(height: 16),
 
@@ -117,16 +107,8 @@ class _Contenido extends StatelessWidget {
           'Atiende a domicilio',
           prestador.atiendeDomicilio ? 'Sí' : 'No',
         ),
-        _fila(
-          theme,
-          'Atiende en local',
-          prestador.atiendeLocal ? 'Sí' : 'No',
-        ),
-        _fila(
-          theme,
-          'Emergencias',
-          prestador.atiendeEmergencias ? 'Sí' : 'No',
-        ),
+        _fila(theme, 'Atiende en local', prestador.atiendeLocal ? 'Sí' : 'No'),
+        _fila(theme, 'Emergencias', prestador.atiendeEmergencias ? 'Sí' : 'No'),
         _fila(theme, 'Horario', prestador.horarioDescripcion),
 
         const SizedBox(height: 16),
@@ -219,10 +201,7 @@ class _Contenido extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              valor ?? '—',
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(valor ?? '—', style: theme.textTheme.bodyMedium),
           ),
         ],
       ),
@@ -275,10 +254,7 @@ class _ServicioItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  servicio.nombre,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text(servicio.nombre, style: theme.textTheme.bodyMedium),
                 if (servicio.categoriaServicio != null)
                   Text(
                     servicio.categoriaServicio!,
@@ -339,10 +315,7 @@ class _EstadoCard extends StatelessWidget {
                   Icon(Icons.star, color: Colors.amber.shade700),
                 if (prestador.verificado) ...[
                   const SizedBox(width: 8),
-                  Icon(
-                    Icons.verified,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(Icons.verified, color: theme.colorScheme.primary),
                 ],
               ],
             ),
@@ -398,11 +371,7 @@ class _EstadoCard extends StatelessWidget {
           Icons.schedule_outlined,
         );
       case EstadoPrestador.rechazado:
-        return (
-          Colors.red.shade800,
-          Colors.red.shade50,
-          Icons.cancel_outlined,
-        );
+        return (Colors.red.shade800, Colors.red.shade50, Icons.cancel_outlined);
       case EstadoPrestador.suspendido:
         return (
           Colors.grey.shade800,
@@ -478,9 +447,7 @@ class _AccionesAdmin extends StatelessWidget {
         if (estado == EstadoPrestador.verificado) ...[
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            icon: Icon(
-              prestador.destacado ? Icons.star : Icons.star_border,
-            ),
+            icon: Icon(prestador.destacado ? Icons.star : Icons.star_border),
             label: Text(
               prestador.destacado
                   ? 'Quitar destacado'
@@ -531,9 +498,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminPrestadorDetalleProvider(prestador.id));
       ref.invalidate(adminPrestadoresProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prestador verificado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Prestador verificado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -565,9 +531,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminPrestadorDetalleProvider(prestador.id));
       ref.invalidate(adminPrestadoresProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prestador rechazado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Prestador rechazado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -599,9 +564,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminPrestadorDetalleProvider(prestador.id));
       ref.invalidate(adminPrestadoresProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prestador suspendido')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Prestador suspendido')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -706,10 +670,7 @@ class _MotivoDialogState extends State<_MotivoDialog> {
           onPressed: () => Navigator.of(context).pop(null),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _confirmar,
-          child: const Text('Confirmar'),
-        ),
+        FilledButton(onPressed: _confirmar, child: const Text('Confirmar')),
       ],
     );
   }

@@ -24,10 +24,7 @@ enum TipoSegmento {
 /// - `rol`: valor = "cliente" | "prestador" | "admin" | "comercio".
 /// - `usuarios`: valor = lista de UUIDs como strings.
 class Segmento {
-  const Segmento({
-    required this.tipo,
-    this.valor,
-  });
+  const Segmento({required this.tipo, this.valor});
 
   final TipoSegmento tipo;
   final dynamic valor; // String (rol) o List<String> (usuarios) o null

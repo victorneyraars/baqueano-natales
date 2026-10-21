@@ -17,8 +17,9 @@ class PendingNavigation extends Notifier<String?> {
 ///
 /// El FcmService la setea al tocar una notif. El widget raiz la observa
 /// y navega via GoRouter, luego la limpia (vuelve a null).
-final pendingNavigationProvider =
-    NotifierProvider<PendingNavigation, String?>(PendingNavigation.new);
+final pendingNavigationProvider = NotifierProvider<PendingNavigation, String?>(
+  PendingNavigation.new,
+);
 
 /// Provider del servicio FCM (singleton).
 final fcmServiceProvider = Provider<FcmService>((ref) {

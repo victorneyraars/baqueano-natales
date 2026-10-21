@@ -16,7 +16,10 @@ class ClienteBusqueda {
 
   /// Nombre completo para mostrar. Cae a email o ID si no hay nombre.
   String get nombreDisplay {
-    final n = [nombre, apellido].where((s) => s != null && s.isNotEmpty).join(' ');
+    final n = [
+      nombre,
+      apellido,
+    ].where((s) => s != null && s.isNotEmpty).join(' ');
     if (n.isNotEmpty) return n;
     if (email != null && email!.isNotEmpty) return email!;
     return id;

@@ -31,9 +31,7 @@ class AdminDetalleComercioScreen extends ConsumerWidget {
     final asyncComercio = ref.watch(adminComercioDetalleProvider(id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle comercio'),
-      ),
+      appBar: AppBar(title: const Text('Detalle comercio')),
       body: asyncComercio.when(
         data: (comercio) => _Contenido(comercio: comercio, ref: ref),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -109,25 +107,13 @@ class _Contenido extends StatelessWidget {
 
         // --- Delivery ---
         _Seccion(titulo: 'Delivery', theme: theme),
-        _fila(
-          theme,
-          'Acepta delivery',
-          comercio.aceptaDelivery ? 'Sí' : 'No',
-        ),
-        _fila(
-          theme,
-          'Acepta retiro',
-          comercio.aceptaRetiro ? 'Sí' : 'No',
-        ),
+        _fila(theme, 'Acepta delivery', comercio.aceptaDelivery ? 'Sí' : 'No'),
+        _fila(theme, 'Acepta retiro', comercio.aceptaRetiro ? 'Sí' : 'No'),
         if (comercio.aceptaDelivery) ...[
           _fila(theme, 'Costo de envío', '\$${comercio.costoEnvioClp}'),
           _fila(theme, 'Pedido mínimo', '\$${comercio.pedidoMinimoClp}'),
           if (comercio.radioEntregaKm != null)
-            _fila(
-              theme,
-              'Radio de entrega',
-              '${comercio.radioEntregaKm} km',
-            ),
+            _fila(theme, 'Radio de entrega', '${comercio.radioEntregaKm} km'),
           if (comercio.tiempoPreparacionMin != null)
             _fila(
               theme,
@@ -193,10 +179,7 @@ class _Contenido extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              valor ?? '—',
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(valor ?? '—', style: theme.textTheme.bodyMedium),
           ),
         ],
       ),
@@ -249,9 +232,9 @@ class _HorariosTabla extends StatelessWidget {
         final texto = todosCerrados
             ? 'Cerrado'
             : lista
-                .where((h) => !h.cerrado)
-                .map((h) => h.rangoLegible)
-                .join(' / ');
+                  .where((h) => !h.cerrado)
+                  .map((h) => h.rangoLegible)
+                  .join(' / ');
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
@@ -374,11 +357,7 @@ class _EstadoCard extends StatelessWidget {
           Icons.schedule_outlined,
         );
       case EstadoComercio.rechazado:
-        return (
-          Colors.red.shade800,
-          Colors.red.shade50,
-          Icons.cancel_outlined,
-        );
+        return (Colors.red.shade800, Colors.red.shade50, Icons.cancel_outlined);
       case EstadoComercio.suspendido:
         return (
           Colors.grey.shade800,
@@ -454,13 +433,9 @@ class _AccionesAdmin extends StatelessWidget {
         if (estado == EstadoComercio.verificado) ...[
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            icon: Icon(
-              comercio.destacado ? Icons.star : Icons.star_border,
-            ),
+            icon: Icon(comercio.destacado ? Icons.star : Icons.star_border),
             label: Text(
-              comercio.destacado
-                  ? 'Quitar destacado'
-                  : 'Marcar como destacado',
+              comercio.destacado ? 'Quitar destacado' : 'Marcar como destacado',
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.amber.shade800,
@@ -507,9 +482,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminComercioDetalleProvider(comercio.id));
       ref.invalidate(adminComerciosProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comercio verificado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Comercio verificado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -541,9 +515,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminComercioDetalleProvider(comercio.id));
       ref.invalidate(adminComerciosProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comercio rechazado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Comercio rechazado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -575,9 +548,8 @@ class _AccionesAdmin extends StatelessWidget {
       ref.invalidate(adminComercioDetalleProvider(comercio.id));
       ref.invalidate(adminComerciosProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comercio suspendido')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Comercio suspendido')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -596,10 +568,7 @@ class _AccionesAdmin extends StatelessWidget {
   ) async {
     try {
       final repo = ref.read(comercioRepositoryProvider);
-      await repo.adminDestacar(
-        id: comercio.id,
-        destacado: !comercio.destacado,
-      );
+      await repo.adminDestacar(id: comercio.id, destacado: !comercio.destacado);
       ref.invalidate(adminComercioDetalleProvider(comercio.id));
       ref.invalidate(adminComerciosProvider);
       if (!context.mounted) return;
@@ -682,10 +651,7 @@ class _MotivoDialogState extends State<_MotivoDialog> {
           onPressed: () => Navigator.of(context).pop(null),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _confirmar,
-          child: const Text('Confirmar'),
-        ),
+        FilledButton(onPressed: _confirmar, child: const Text('Confirmar')),
       ],
     );
   }

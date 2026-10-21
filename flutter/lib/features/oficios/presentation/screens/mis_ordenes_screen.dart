@@ -66,9 +66,8 @@ class _MisOrdenesScreenState extends ConsumerState<MisOrdenesScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (_, i) => _OrdenCard(
                       orden: ordenes[i],
-                      onTap: () => context.push(
-                        '/mis-ordenes/${ordenes[i].id}',
-                      ),
+                      onTap: () =>
+                          context.push('/mis-ordenes/${ordenes[i].id}'),
                     ),
                   ),
                 );
@@ -264,8 +263,8 @@ class _EmptyView extends StatelessWidget {
               'Cuando agendes un servicio con un taller, vas a ver las ordenes aca.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -295,10 +294,7 @@ class _ErrorView extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),

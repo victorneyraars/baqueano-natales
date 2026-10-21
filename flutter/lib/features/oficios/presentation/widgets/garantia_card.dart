@@ -39,13 +39,16 @@ class GarantiaCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.verified_outlined,
-                      color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.verified_outlined,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Sin garantia',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -88,14 +91,17 @@ class GarantiaCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Garantia ${g.tipo.label}',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 if (vigente)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: color.shade100,
                       borderRadius: BorderRadius.circular(8),
@@ -111,7 +117,9 @@ class GarantiaCard extends StatelessWidget {
                 else
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(8),

@@ -76,6 +76,7 @@ class _OpsEstadoScreenState extends ConsumerState<OpsEstadoScreen>
     // se vea hasta que la data nueva este lista.
     await ref.read(opsHealthProvider.future);
   }
+
   @override
   Widget build(BuildContext context) {
     final healthAsync = ref.watch(opsHealthProvider);
@@ -100,7 +101,8 @@ class _OpsEstadoScreenState extends ConsumerState<OpsEstadoScreen>
         onRefresh: _refrescarTodo,
         child: healthAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => _VistaError(mensaje: e.toString(), onRetry: _refrescarTodo),
+          error: (e, _) =>
+              _VistaError(mensaje: e.toString(), onRetry: _refrescarTodo),
           data: (health) => ResponsiveLayout(
             phone: _VistaPhone(health: health),
             tablet: _VistaTablet(health: health),
@@ -291,10 +293,13 @@ class _StatBox extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              )),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
               Text(label, style: theme.textTheme.bodySmall),
             ],
           ),
@@ -551,10 +556,7 @@ class _RunRow extends StatelessWidget {
             ),
           ),
           if (run.duracionHumana != null)
-            Text(
-              run.duracionHumana!,
-              style: theme.textTheme.bodySmall,
-            ),
+            Text(run.duracionHumana!, style: theme.textTheme.bodySmall),
         ],
       ),
     );
@@ -664,9 +666,8 @@ class _LinkRow extends StatelessWidget {
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir: $url')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo abrir: $url')));
     }
   }
 }
@@ -794,8 +795,11 @@ class _QuickLinkCategorySection extends StatelessWidget {
           padding: const EdgeInsets.only(top: 8, bottom: 4),
           child: Row(
             children: [
-              Icon(_iconForQuickLink(categoria.icon), size: 16,
-                  color: theme.colorScheme.primary),
+              Icon(
+                _iconForQuickLink(categoria.icon),
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 6),
               Text(
                 categoria.label,
@@ -828,8 +832,11 @@ class _QuickLinkTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: [
-            Icon(_iconForQuickLink(link.icon), size: 20,
-                color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              _iconForQuickLink(link.icon),
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -869,9 +876,8 @@ class _QuickLinkTile extends StatelessWidget {
     if (uri == null || url.isEmpty) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir: $url')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo abrir: $url')));
     }
   }
 }

@@ -62,8 +62,7 @@ class _DetalleOrdenTallerScreenState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
           error: e,
-          onRetry: () =>
-              ref.invalidate(ordenPrestadorDetalleProvider(params)),
+          onRetry: () => ref.invalidate(ordenPrestadorDetalleProvider(params)),
         ),
         data: (orden) => _Contenido(
           orden: orden,
@@ -90,21 +89,21 @@ class _DetalleOrdenTallerScreenState
     try {
       final repo = ref.read(oficiosRepositoryProvider);
       await repo.agregarItem(widget.prestadorId, orden.id, result);
-      ref.invalidate(ordenPrestadorDetalleProvider(
-        OrdenPrestadorDetalleParams(
-          prestadorId: widget.prestadorId,
-          ordenId: orden.id,
+      ref.invalidate(
+        ordenPrestadorDetalleProvider(
+          OrdenPrestadorDetalleParams(
+            prestadorId: widget.prestadorId,
+            ordenId: orden.id,
+          ),
         ),
-      ));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item agregado')),
       );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Item agregado')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -134,17 +133,18 @@ class _DetalleOrdenTallerScreenState
     try {
       final repo = ref.read(oficiosRepositoryProvider);
       await repo.eliminarItem(widget.prestadorId, orden.id, itemId);
-      ref.invalidate(ordenPrestadorDetalleProvider(
-        OrdenPrestadorDetalleParams(
-          prestadorId: widget.prestadorId,
-          ordenId: orden.id,
+      ref.invalidate(
+        ordenPrestadorDetalleProvider(
+          OrdenPrestadorDetalleParams(
+            prestadorId: widget.prestadorId,
+            ordenId: orden.id,
+          ),
         ),
-      ));
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -182,21 +182,21 @@ class _DetalleOrdenTallerScreenState
         cobertura: result.cobertura,
         condiciones: result.condiciones,
       );
-      ref.invalidate(garantiaPrestadorProvider(
-        GarantiaPrestadorParams(
-          prestadorId: widget.prestadorId,
-          ordenId: orden.id,
+      ref.invalidate(
+        garantiaPrestadorProvider(
+          GarantiaPrestadorParams(
+            prestadorId: widget.prestadorId,
+            ordenId: orden.id,
+          ),
         ),
-      ));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Garantia guardada')),
       );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Garantia guardada')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -225,29 +225,28 @@ class _DetalleOrdenTallerScreenState
     setState(() => _procesando = true);
     try {
       final repo = ref.read(oficiosRepositoryProvider);
-      await repo.cambiarEstado(
-        widget.prestadorId,
-        orden.id,
-        nuevo.value,
-      );
-      ref.invalidate(ordenPrestadorDetalleProvider(
-        OrdenPrestadorDetalleParams(
-          prestadorId: widget.prestadorId,
-          ordenId: orden.id,
+      await repo.cambiarEstado(widget.prestadorId, orden.id, nuevo.value);
+      ref.invalidate(
+        ordenPrestadorDetalleProvider(
+          OrdenPrestadorDetalleParams(
+            prestadorId: widget.prestadorId,
+            ordenId: orden.id,
+          ),
         ),
-      ));
-      ref.invalidate(ordenesPrestadorProvider(
-        OrdenesPrestadorParams(prestadorId: widget.prestadorId),
-      ));
+      );
+      ref.invalidate(
+        ordenesPrestadorProvider(
+          OrdenesPrestadorParams(prestadorId: widget.prestadorId),
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Estado actualizado a ${nuevo.label}')),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -355,8 +354,9 @@ class _Contenido extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         'Diagnostico:',
-                        style: theme.textTheme.labelMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(orden.diagnosticoInicial!),
                     ],
@@ -372,8 +372,9 @@ class _Contenido extends StatelessWidget {
               children: [
                 Text(
                   'Presupuesto',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 if (_puedeEditarItems)
@@ -396,12 +397,14 @@ class _Contenido extends StatelessWidget {
                 ),
               )
             else
-              ...orden.items.map((it) => _ItemRow(
-                    item: it,
-                    puedeEditar: _puedeEditarItems,
-                    procesando: procesando,
-                    onEliminar: () => onEliminarItem(it.id),
-                  )),
+              ...orden.items.map(
+                (it) => _ItemRow(
+                  item: it,
+                  puedeEditar: _puedeEditarItems,
+                  procesando: procesando,
+                  onEliminar: () => onEliminarItem(it.id),
+                ),
+              ),
 
             if (orden.tieneItems) ...[
               const SizedBox(height: 12),
@@ -414,20 +417,21 @@ class _Contenido extends StatelessWidget {
             if (_transicionesDisponibles.isNotEmpty) ...[
               Text(
                 'Acciones',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: _transicionesDisponibles
-                    .map((e) => FilledButton.tonal(
-                          onPressed: procesando
-                              ? null
-                              : () => onCambiarEstado(e),
-                          child: Text('Pasar a ${e.label}'),
-                        ))
+                    .map(
+                      (e) => FilledButton.tonal(
+                        onPressed: procesando ? null : () => onCambiarEstado(e),
+                        child: Text('Pasar a ${e.label}'),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -448,8 +452,9 @@ class _Contenido extends StatelessWidget {
             if (orden.historial.isNotEmpty) ...[
               Text(
                 'Historial',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               ...orden.historial.map((ev) => _TimelineRow(evento: ev)),
@@ -498,8 +503,9 @@ class _ItemRow extends StatelessWidget {
                 children: [
                   Text(
                     item.descripcion,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -528,8 +534,9 @@ class _ItemRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               _formatCLP(item.subtotal),
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (puedeEditar)
               IconButton(
@@ -562,8 +569,9 @@ class _TotalesCard extends StatelessWidget {
                 const Text('Total presupuesto'),
                 Text(
                   _formatCLP(orden.totalPresupuesto),
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -667,10 +675,7 @@ class _ModalItemFormState extends State<_ModalItemForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Nuevo item',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Nuevo item', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             DropdownButtonFormField<TipoItemOrden>(
               initialValue: _tipo,
@@ -679,10 +684,7 @@ class _ModalItemFormState extends State<_ModalItemForm> {
                 border: OutlineInputBorder(),
               ),
               items: TipoItemOrden.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label),
-                      ))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _tipo = v);
@@ -736,10 +738,7 @@ class _ModalItemFormState extends State<_ModalItemForm> {
               ],
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _guardar,
-              child: const Text('Agregar'),
-            ),
+            FilledButton(onPressed: _guardar, child: const Text('Agregar')),
           ],
         ),
       ),
@@ -828,20 +827,13 @@ class _GarantiaPrestadorWrapper extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (g) {
         if (g == null) {
-          return GarantiaCard(
-            garantia: null,
-            onCrear: onCrearEditar,
-          );
+          return GarantiaCard(garantia: null, onCrear: onCrearEditar);
         }
-        return GarantiaCard(
-          garantia: g,
-          onEditar: onCrearEditar,
-        );
+        return GarantiaCard(garantia: g, onEditar: onCrearEditar);
       },
     );
   }
 }
-
 
 // =========================================================
 // Modal para crear/editar garantia
@@ -905,10 +897,7 @@ class _ModalGarantiaFormState extends State<_ModalGarantiaForm> {
                 border: OutlineInputBorder(),
               ),
               items: TipoGarantia.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label),
-                      ))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _tipo = v);

@@ -26,7 +26,8 @@ class ReporteKPIs {
   final double? duracionPromedioDias;
 
   factory ReporteKPIs.fromJson(Map<String, dynamic> json) {
-    final rawEstados = json['ordenes_por_estado'] as Map<String, dynamic>? ?? {};
+    final rawEstados =
+        json['ordenes_por_estado'] as Map<String, dynamic>? ?? {};
     return ReporteKPIs(
       totalOrdenes: (json['total_ordenes'] as num?)?.toInt() ?? 0,
       ordenesPorEstado: rawEstados.map(
@@ -36,8 +37,8 @@ class ReporteKPIs {
       ticketPromedio: (json['ticket_promedio'] as num?)?.toDouble() ?? 0.0,
       tasaAprobacionItems:
           (json['tasa_aprobacion_items'] as num?)?.toDouble() ?? 0.0,
-      duracionPromedioDias:
-          (json['duracion_promedio_dias'] as num?)?.toDouble(),
+      duracionPromedioDias: (json['duracion_promedio_dias'] as num?)
+          ?.toDouble(),
     );
   }
 }
@@ -78,8 +79,7 @@ class ReporteTopServicio {
     return ReporteTopServicio(
       descripcion: json['descripcion'] as String,
       cantidad: (json['cantidad'] as num?)?.toInt() ?? 0,
-      ingresosTotales:
-          (json['ingresos_totales'] as num?)?.toDouble() ?? 0.0,
+      ingresosTotales: (json['ingresos_totales'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
@@ -102,8 +102,7 @@ class ReporteTopCliente {
       clienteId: json['cliente_id'] as String,
       clienteNombre: json['cliente_nombre'] as String?,
       ordenes: (json['ordenes'] as num?)?.toInt() ?? 0,
-      ingresosTotales:
-          (json['ingresos_totales'] as num?)?.toDouble() ?? 0.0,
+      ingresosTotales: (json['ingresos_totales'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

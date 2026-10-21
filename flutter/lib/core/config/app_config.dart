@@ -56,10 +56,7 @@ class AppConfig {
   ///
   /// Debe llamarse como PRIMERA línea del main() de cada entry point.
   /// Si no se pasa `env`, se deriva de `--dart-define=ENVIRONMENT`.
-  static void init({
-    required AppType type,
-    Environment? env,
-  }) {
+  static void init({required AppType type, Environment? env}) {
     appType = type;
     if (env != null) {
       environment = env;

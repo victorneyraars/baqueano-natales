@@ -56,9 +56,7 @@ class AdminHomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Contar prestadores pendientes (para badge)
@@ -193,7 +191,6 @@ class AdminHomeScreen extends ConsumerWidget {
               ),
             ),
 
-
             _AdminCard(
               icon: Icons.handyman,
               title: 'Prestadores',
@@ -225,9 +222,7 @@ class AdminHomeScreen extends ConsumerWidget {
                   ? '$cuentasSocialesCount cuenta(s) conectada(s)'
                   : 'Conectar Facebook e Instagram',
               onTap: () => context.push('/admin/social/cuentas'),
-              badge: cuentasSocialesCount > 0
-                  ? '$cuentasSocialesCount'
-                  : null,
+              badge: cuentasSocialesCount > 0 ? '$cuentasSocialesCount' : null,
             ),
 
             _AdminCard(
@@ -389,11 +384,11 @@ class _AdminCard extends StatelessWidget {
               ? null
               : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
-        onTap: onTap ??
+        onTap:
+            onTap ??
             () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Próximamente')),
-              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('Próximamente')));
             },
       ),
     );

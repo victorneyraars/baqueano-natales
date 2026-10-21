@@ -28,10 +28,10 @@ class FcmService {
     FirebaseMessaging? messaging,
     Dio? dio,
     void Function(String path)? onDeepLink,
-  })  : _messaging = messaging ?? FirebaseMessaging.instance,
-        _dio = dio ?? DioClient.instance,
-        // ignore: prefer_initializing_formals
-        _onDeepLink = onDeepLink;
+  }) : _messaging = messaging ?? FirebaseMessaging.instance,
+       _dio = dio ?? DioClient.instance,
+       // ignore: prefer_initializing_formals
+       _onDeepLink = onDeepLink;
 
   final FirebaseMessaging _messaging;
   final Dio _dio;
@@ -47,7 +47,9 @@ class FcmService {
   static final Set<String> _procesadosEnSesion = <String>{};
 
   Future<void> inicializar() async {
-    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
+    const androidInit = AndroidInitializationSettings(
+      '@drawable/ic_notification',
+    );
     const initSettings = InitializationSettings(android: androidInit);
 
     await _localNotif.initialize(
@@ -67,7 +69,8 @@ class FcmService {
     );
     await _localNotif
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {

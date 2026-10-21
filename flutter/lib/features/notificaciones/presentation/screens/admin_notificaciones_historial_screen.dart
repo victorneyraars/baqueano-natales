@@ -22,10 +22,7 @@ class _AdminNotificacionesHistorialScreenState
 
   @override
   Widget build(BuildContext context) {
-    final params = HistorialParams(
-      tipo: _tipoFiltro,
-      estado: _estadoFiltro,
-    );
+    final params = HistorialParams(tipo: _tipoFiltro, estado: _estadoFiltro);
     final async = ref.watch(historialNotificacionesProvider(params));
 
     return Scaffold(
@@ -57,12 +54,22 @@ class _AdminNotificacionesHistorialScreenState
                     ),
                     items: const [
                       DropdownMenuItem(value: null, child: Text('Todos')),
-                      DropdownMenuItem(value: 'sistema', child: Text('Sistema')),
                       DropdownMenuItem(
-                          value: 'promocion', child: Text('Promocion')),
+                        value: 'sistema',
+                        child: Text('Sistema'),
+                      ),
                       DropdownMenuItem(
-                          value: 'recordatorio', child: Text('Recordatorio')),
-                      DropdownMenuItem(value: 'campana', child: Text('Campana')),
+                        value: 'promocion',
+                        child: Text('Promocion'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'recordatorio',
+                        child: Text('Recordatorio'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'campana',
+                        child: Text('Campana'),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _tipoFiltro = v),
                   ),
@@ -78,12 +85,26 @@ class _AdminNotificacionesHistorialScreenState
                     ),
                     items: const [
                       DropdownMenuItem(value: null, child: Text('Todos')),
-                      DropdownMenuItem(value: 'enviada', child: Text('Enviada')),
                       DropdownMenuItem(
-                          value: 'entregada', child: Text('Entregada')),
-                      DropdownMenuItem(value: 'abierta', child: Text('Abierta')),
-                      DropdownMenuItem(value: 'fallida', child: Text('Fallida')),
-                      DropdownMenuItem(value: 'skipped', child: Text('Skipped')),
+                        value: 'enviada',
+                        child: Text('Enviada'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'entregada',
+                        child: Text('Entregada'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'abierta',
+                        child: Text('Abierta'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'fallida',
+                        child: Text('Fallida'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'skipped',
+                        child: Text('Skipped'),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _estadoFiltro = v),
                   ),
@@ -105,8 +126,7 @@ class _AdminNotificacionesHistorialScreenState
                       ref.invalidate(historialNotificacionesProvider(params)),
                   child: ListView.builder(
                     itemCount: items.length,
-                    itemBuilder: (ctx, i) =>
-                        _NotificacionCard(notif: items[i]),
+                    itemBuilder: (ctx, i) => _NotificacionCard(notif: items[i]),
                   ),
                 );
               },
@@ -158,8 +178,10 @@ class _NotificacionCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: _colorEstado().withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
@@ -174,10 +196,7 @@ class _NotificacionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  notif.tipo,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(notif.tipo, style: Theme.of(context).textTheme.bodySmall),
                 const Spacer(),
                 Text(
                   _formatFecha(notif.creadoEn),

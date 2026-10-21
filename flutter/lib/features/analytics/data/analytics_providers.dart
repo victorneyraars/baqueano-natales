@@ -16,17 +16,22 @@ final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
 // =========================================================
 // Stats del admin (con filtro de hostname)
 // =========================================================
-final adminStatsProvider = FutureProvider.family<StatsResponse, ({int days, String? hostname})>(
-  (ref, params) async {
-    final repo = ref.watch(analyticsRepositoryProvider);
-    return repo.fetchStats(days: params.days, hostname: params.hostname);
-  },
-);
+final adminStatsProvider =
+    FutureProvider.family<StatsResponse, ({int days, String? hostname})>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.watch(analyticsRepositoryProvider);
+      return repo.fetchStats(days: params.days, hostname: params.hostname);
+    });
 
 // =========================================================
 // Stats del prestador (auto-filtro)
 // =========================================================
-final myStatsProvider = FutureProvider.family<StatsResponse, int>((ref, days) async {
+final myStatsProvider = FutureProvider.family<StatsResponse, int>((
+  ref,
+  days,
+) async {
   final repo = ref.watch(analyticsRepositoryProvider);
   return repo.fetchMyStats(days: days);
 });

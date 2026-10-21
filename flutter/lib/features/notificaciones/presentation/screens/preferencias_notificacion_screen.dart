@@ -80,14 +80,13 @@ class _ContenidoState extends State<_Contenido> {
           );
       if (!mounted) return;
       widget.ref.invalidate(misPreferenciasProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preferencias guardadas')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Preferencias guardadas')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -100,10 +99,7 @@ class _ContenidoState extends State<_Contenido> {
       hour: int.tryParse(partes[0]) ?? 22,
       minute: int.tryParse(partes.length > 1 ? partes[1] : '0') ?? 0,
     );
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: inicial,
-    );
+    final picked = await showTimePicker(context: context, initialTime: inicial);
     if (picked != null) {
       setState(() {
         final hh = picked.hour.toString().padLeft(2, '0');
@@ -124,8 +120,7 @@ class _ContenidoState extends State<_Contenido> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Tipos de notificacion',
-            style: theme.textTheme.titleMedium),
+        Text('Tipos de notificacion', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
 
         SwitchListTile(
@@ -166,14 +161,18 @@ class _ContenidoState extends State<_Contenido> {
         if (_quietHoursEnabled) ...[
           ListTile(
             title: const Text('Desde'),
-            trailing: Text(_quietHoursInicio ?? '22:00',
-                style: theme.textTheme.titleMedium),
+            trailing: Text(
+              _quietHoursInicio ?? '22:00',
+              style: theme.textTheme.titleMedium,
+            ),
             onTap: () => _pickHora(esInicio: true),
           ),
           ListTile(
             title: const Text('Hasta'),
-            trailing: Text(_quietHoursFin ?? '08:00',
-                style: theme.textTheme.titleMedium),
+            trailing: Text(
+              _quietHoursFin ?? '08:00',
+              style: theme.textTheme.titleMedium,
+            ),
             onTap: () => _pickHora(esInicio: false),
           ),
         ],

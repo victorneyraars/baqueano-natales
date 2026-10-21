@@ -30,10 +30,7 @@ final opsHealthProvider = FutureProvider<SystemHealth>((ref) async {
 
 /// Parametros del listado de runs (inmutables, para cache correcto).
 class RunsParams {
-  const RunsParams({
-    this.limit = 10,
-    this.branch,
-  });
+  const RunsParams({this.limit = 10, this.branch});
 
   final int limit;
   final String? branch;
@@ -51,15 +48,19 @@ class RunsParams {
 }
 
 /// Lista de runs con filtros (family).
-final opsRunsProvider =
-    FutureProvider.family<RunsResponse, RunsParams>((ref, params) async {
+final opsRunsProvider = FutureProvider.family<RunsResponse, RunsParams>((
+  ref,
+  params,
+) async {
   final repo = ref.read(opsRepositoryProvider);
   return repo.runs(limit: params.limit, branch: params.branch);
 });
 
 /// Detalle de un run (family por run id).
-final opsRunDetailProvider =
-    FutureProvider.family<RunDetail, int>((ref, runId) async {
+final opsRunDetailProvider = FutureProvider.family<RunDetail, int>((
+  ref,
+  runId,
+) async {
   final repo = ref.read(opsRepositoryProvider);
   return repo.runDetail(runId);
 });
@@ -90,10 +91,7 @@ final opsQuickLinksProvider = FutureProvider<QuickLinksResponse>((ref) async {
 
 /// Parametros del preview (inmutables).
 class ReleasePreviewParams {
-  const ReleasePreviewParams({
-    required this.versionName,
-    this.branch = 'main',
-  });
+  const ReleasePreviewParams({required this.versionName, this.branch = 'main'});
 
   final String versionName;
   final String branch;
@@ -112,10 +110,13 @@ class ReleasePreviewParams {
 
 /// Preview de un release (family por params).
 final opsReleasePreviewProvider =
-    FutureProvider.family<ReleasePreview, ReleasePreviewParams>((ref, params) async {
-  final repo = ref.read(opsRepositoryProvider);
-  return repo.releasePreview(
-    versionName: params.versionName,
-    branch: params.branch,
-  );
-});
+    FutureProvider.family<ReleasePreview, ReleasePreviewParams>((
+      ref,
+      params,
+    ) async {
+      final repo = ref.read(opsRepositoryProvider);
+      return repo.releasePreview(
+        versionName: params.versionName,
+        branch: params.branch,
+      );
+    });

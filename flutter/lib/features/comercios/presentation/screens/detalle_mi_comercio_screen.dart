@@ -110,16 +110,11 @@ class _Contenido extends StatelessWidget {
         _fila(theme, 'Acepta retiro', comercio.aceptaRetiro ? 'Sí' : 'No'),
         if (comercio.aceptaDelivery) ...[
           _fila(theme, 'Costo de envío', '\$${comercio.costoEnvioClp}'),
-          _fila(
-            theme,
-            'Pedido mínimo',
-            '\$${comercio.pedidoMinimoClp}',
-          ),
+          _fila(theme, 'Pedido mínimo', '\$${comercio.pedidoMinimoClp}'),
           if (comercio.radioEntregaKm != null)
             _fila(theme, 'Radio de entrega', '${comercio.radioEntregaKm} km'),
           if (comercio.tiempoPreparacionMin != null)
-            _fila(theme, 'Preparación',
-                '${comercio.tiempoPreparacionMin} min'),
+            _fila(theme, 'Preparación', '${comercio.tiempoPreparacionMin} min'),
         ],
 
         const SizedBox(height: 16),
@@ -163,8 +158,7 @@ class _Contenido extends StatelessWidget {
         OutlinedButton.icon(
           icon: const Icon(Icons.edit_outlined),
           label: const Text('Editar comercio'),
-          onPressed: () =>
-              context.push('/mis-comercios/${comercio.id}/editar'),
+          onPressed: () => context.push('/mis-comercios/${comercio.id}/editar'),
         ),
 
         const SizedBox(height: 8),
@@ -181,9 +175,7 @@ class _Contenido extends StatelessWidget {
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),
           label: const Text('Eliminar comercio'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.red.shade700,
-          ),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700),
           onPressed: () => _confirmarEliminar(context, ref, comercio),
         ),
 
@@ -208,10 +200,7 @@ class _Contenido extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              valor ?? '—',
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(valor ?? '—', style: theme.textTheme.bodyMedium),
           ),
         ],
       ),
@@ -286,9 +275,7 @@ class _Contenido extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Eliminar'),
           ),
@@ -305,9 +292,8 @@ class _Contenido extends StatelessWidget {
       ref.invalidate(misComerciosProvider);
       if (!context.mounted) return;
       context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comercio eliminado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Comercio eliminado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -444,11 +430,7 @@ class _EstadoCard extends StatelessWidget {
           Icons.schedule_outlined,
         );
       case EstadoComercio.rechazado:
-        return (
-          Colors.red.shade800,
-          Colors.red.shade50,
-          Icons.cancel_outlined,
-        );
+        return (Colors.red.shade800, Colors.red.shade50, Icons.cancel_outlined);
       case EstadoComercio.suspendido:
         return (
           Colors.grey.shade800,
@@ -502,9 +484,9 @@ class _HorariosTabla extends StatelessWidget {
         final texto = todosCerrados
             ? 'Cerrado'
             : lista
-                .where((h) => !h.cerrado)
-                .map((h) => h.rangoLegible)
-                .join(' / ');
+                  .where((h) => !h.cerrado)
+                  .map((h) => h.rangoLegible)
+                  .join(' / ');
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),

@@ -69,9 +69,8 @@ class _FormularioVehiculoScreenState
       setState(() => _tipo = v.tipoVehiculo);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al cargar: $e')));
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -113,9 +112,7 @@ class _FormularioVehiculoScreenState
           'color': _colorCtrl.text.trim().isEmpty
               ? null
               : _colorCtrl.text.trim(),
-          'vin': _vinCtrl.text.trim().isEmpty
-              ? null
-              : _vinCtrl.text.trim(),
+          'vin': _vinCtrl.text.trim().isEmpty ? null : _vinCtrl.text.trim(),
           'notas': _notasCtrl.text.trim().isEmpty
               ? null
               : _notasCtrl.text.trim(),
@@ -131,18 +128,10 @@ class _FormularioVehiculoScreenState
           tipoVehiculo: _tipo,
           kilometrajeActual: km,
           activo: true,
-          alias: _aliasCtrl.text.trim().isEmpty
-              ? null
-              : _aliasCtrl.text.trim(),
-          color: _colorCtrl.text.trim().isEmpty
-              ? null
-              : _colorCtrl.text.trim(),
-          vin: _vinCtrl.text.trim().isEmpty
-              ? null
-              : _vinCtrl.text.trim(),
-          notas: _notasCtrl.text.trim().isEmpty
-              ? null
-              : _notasCtrl.text.trim(),
+          alias: _aliasCtrl.text.trim().isEmpty ? null : _aliasCtrl.text.trim(),
+          color: _colorCtrl.text.trim().isEmpty ? null : _colorCtrl.text.trim(),
+          vin: _vinCtrl.text.trim().isEmpty ? null : _vinCtrl.text.trim(),
+          notas: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
         );
         await repo.crearVehiculo(nuevo);
       }
@@ -151,20 +140,20 @@ class _FormularioVehiculoScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_esEdicion ? 'Vehiculo actualizado' : 'Vehiculo creado'),
+          content: Text(
+            _esEdicion ? 'Vehiculo actualizado' : 'Vehiculo creado',
+          ),
         ),
       );
       context.pop();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inesperado: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -173,9 +162,7 @@ class _FormularioVehiculoScreenState
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -226,11 +213,7 @@ class _FormularioVehiculoScreenState
                 return null;
               },
             ),
-            _campo(
-              controller: _colorCtrl,
-              label: 'Color',
-              hint: 'Rojo',
-            ),
+            _campo(controller: _colorCtrl, label: 'Color', hint: 'Rojo'),
             const SizedBox(height: 8),
             DropdownButtonFormField<TipoVehiculo>(
               initialValue: _tipo,
@@ -239,10 +222,7 @@ class _FormularioVehiculoScreenState
                 border: OutlineInputBorder(),
               ),
               items: TipoVehiculo.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label),
-                      ))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _tipo = v);
@@ -344,9 +324,9 @@ class _Seccion extends StatelessWidget {
       child: Text(
         titulo,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }

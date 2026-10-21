@@ -289,11 +289,7 @@ class _Contenido extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: theme.colorScheme.onSecondaryContainer,
-          ),
+          Icon(icon, size: 14, color: theme.colorScheme.onSecondaryContainer),
           const SizedBox(width: 4),
           Text(
             label,
@@ -318,12 +314,7 @@ class _Contenido extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(
-    ThemeData theme,
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _infoRow(ThemeData theme, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -377,9 +368,9 @@ class _HorariosTabla extends StatelessWidget {
         final texto = todosCerrados
             ? 'Cerrado'
             : lista
-                .where((h) => !h.cerrado)
-                .map((h) => h.rangoLegible)
-                .join(' / ');
+                  .where((h) => !h.cerrado)
+                  .map((h) => h.rangoLegible)
+                  .join(' / ');
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),

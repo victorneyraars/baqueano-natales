@@ -52,8 +52,11 @@ class DioClient {
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
-          client.badCertificateCallback =
-              (X509Certificate cert, String host, int port) => true;
+          client.badCertificateCallback = (
+            X509Certificate cert,
+            String host,
+            int port,
+          ) => true;
           return client;
         },
       );
@@ -80,7 +83,9 @@ class DioClient {
       InterceptorsWrapper(
         onResponse: (response, handler) {
           if (kDebugMode) {
-            debugPrint('[Dio] ${response.statusCode} ${response.requestOptions.uri}');
+            debugPrint(
+              '[Dio] ${response.statusCode} ${response.requestOptions.uri}',
+            );
           }
           handler.next(response);
         },

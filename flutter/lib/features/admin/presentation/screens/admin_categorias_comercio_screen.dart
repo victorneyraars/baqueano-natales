@@ -93,7 +93,8 @@ class _CategoriaCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _hexColor(categoria.colorHex) ??
+                  color:
+                      _hexColor(categoria.colorHex) ??
                       theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -149,10 +150,7 @@ class _CategoriaCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
-                value: activa,
-                onChanged: onToggleActiva,
-              ),
+              Switch(value: activa, onChanged: onToggleActiva),
             ],
           ),
         ),
@@ -210,10 +208,7 @@ class _EmptyState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'Sin categorías',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('Sin categorías', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Creá la primera categoría con el botón +',
@@ -274,18 +269,14 @@ Future<void> _abrirFormulario(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (ctx) => _FormularioCategoriaSheet(
-      categoria: categoriaExistente,
-      ref: ref,
-    ),
+    builder: (ctx) =>
+        _FormularioCategoriaSheet(categoria: categoriaExistente, ref: ref),
   );
 
   if (guardado == true && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          esEdicion ? 'Categoría actualizada' : 'Categoría creada',
-        ),
+        content: Text(esEdicion ? 'Categoría actualizada' : 'Categoría creada'),
       ),
     );
   }
@@ -314,10 +305,7 @@ Future<void> _toggleActiva(
   } on ApiException catch (e) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(e.message),
-        backgroundColor: Colors.red.shade700,
-      ),
+      SnackBar(content: Text(e.message), backgroundColor: Colors.red.shade700),
     );
   }
 }
@@ -326,10 +314,7 @@ Future<void> _toggleActiva(
 // Sheet con el formulario
 // =========================================================
 class _FormularioCategoriaSheet extends StatefulWidget {
-  const _FormularioCategoriaSheet({
-    required this.categoria,
-    required this.ref,
-  });
+  const _FormularioCategoriaSheet({required this.categoria, required this.ref});
 
   final Categoria? categoria;
   final WidgetRef ref;
@@ -339,8 +324,7 @@ class _FormularioCategoriaSheet extends StatefulWidget {
       _FormularioCategoriaSheetState();
 }
 
-class _FormularioCategoriaSheetState
-    extends State<_FormularioCategoriaSheet> {
+class _FormularioCategoriaSheetState extends State<_FormularioCategoriaSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nombreCtrl = TextEditingController();
   final _slugCtrl = TextEditingController();
@@ -655,7 +639,8 @@ class _FormularioCategoriaSheetState
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: _hexColor(_colorCtrl.text) ??
+                            color:
+                                _hexColor(_colorCtrl.text) ??
                                 theme.colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(10),
                           ),

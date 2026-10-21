@@ -31,8 +31,7 @@ class _MisNotificacionesScreenState
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Preferencias',
-            onPressed: () =>
-                context.push('/mis-notificaciones/preferencias'),
+            onPressed: () => context.push('/mis-notificaciones/preferencias'),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -87,8 +86,7 @@ class _MisNotificacionesScreenState
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, st) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -203,7 +201,9 @@ class _NotifCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: _colorEstado().withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),

@@ -40,8 +40,8 @@ class _ConfigurarModalidadesScreenState
     _config = config;
     _radioCtrl.text = config.domicilio.radioKm.toString();
     _costoDespCtrl.text = config.domicilio.costoDesplazamientoClp.toString();
-    _costoTrasladoCtrl.text =
-        config.recogidaEntrega.costoTrasladoClp.toString();
+    _costoTrasladoCtrl.text = config.recogidaEntrega.costoTrasladoClp
+        .toString();
     _puntoDescCtrl.text = config.puntoEstrategico.puntoDescripcion ?? '';
   }
 
@@ -75,19 +75,16 @@ class _ConfigurarModalidadesScreenState
       );
       ref.invalidate(modalidadesConfigProvider(widget.prestadorId));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Modalidades guardadas')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Modalidades guardadas')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -102,9 +99,8 @@ class _ConfigurarModalidadesScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(
-              modalidadesConfigProvider(widget.prestadorId),
-            ),
+            onPressed: () =>
+                ref.invalidate(modalidadesConfigProvider(widget.prestadorId)),
           ),
         ],
       ),
@@ -207,8 +203,7 @@ class _ConfigurarModalidadesScreenState
           activo: config.puntoEstrategico.activo,
           onChanged: (v) => setState(() {
             _config = _config!.copyWith(
-              puntoEstrategico:
-                  _config!.puntoEstrategico.copyWith(activo: v),
+              puntoEstrategico: _config!.puntoEstrategico.copyWith(activo: v),
             );
           }),
           expandido: config.puntoEstrategico.activo,

@@ -27,13 +27,14 @@ class AuthRepository {
     Dio? dio,
     fb.FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-  })  : _dio = dio ?? DioClient.instance,
-        _firebaseAuth = firebaseAuth ?? fb.FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ??
-            GoogleSignIn(
-              scopes: ['email', 'profile'],
-              serverClientId: AppConfig.googleServerClientId,
-            );
+  }) : _dio = dio ?? DioClient.instance,
+       _firebaseAuth = firebaseAuth ?? fb.FirebaseAuth.instance,
+       _googleSignIn =
+           googleSignIn ??
+           GoogleSignIn(
+             scopes: ['email', 'profile'],
+             serverClientId: AppConfig.googleServerClientId,
+           );
 
   final Dio _dio;
   final fb.FirebaseAuth _firebaseAuth;
@@ -63,7 +64,8 @@ class AuthRepository {
           await googleUser.authentication;
       debugPrint('[AuthRepo] idToken null? ${googleAuth.idToken == null}');
       debugPrint(
-          '[AuthRepo] accessToken null? ${googleAuth.accessToken == null}');
+        '[AuthRepo] accessToken null? ${googleAuth.accessToken == null}',
+      );
 
       if (googleAuth.idToken == null) {
         throw const UnknownException(
@@ -78,8 +80,9 @@ class AuthRepository {
       );
 
       debugPrint('[AuthRepo] Paso 4: signInWithCredential');
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
 
       debugPrint('[AuthRepo] Paso 5: getIdToken Firebase');
       final firebaseIdToken = await userCredential.user?.getIdToken();
@@ -166,10 +169,7 @@ class AuthRepository {
   /// Best-effort: si falla, solo loguea; no rompe el flujo de auth.
   Future<void> registrarFcmToken(String token) async {
     try {
-      await _dio.post(
-        '/api/v1/usuarios/me/fcm-token',
-        data: {'token': token},
-      );
+      await _dio.post('/api/v1/usuarios/me/fcm-token', data: {'token': token});
       debugPrint('[AuthRepo] FCM token registrado en backend');
     } catch (e) {
       debugPrint('[AuthRepo] Error registrando FCM token: $e');

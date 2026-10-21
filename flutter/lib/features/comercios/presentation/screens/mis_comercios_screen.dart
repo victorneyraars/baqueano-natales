@@ -264,10 +264,7 @@ class _EmptyState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'Aún no tenés comercios',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('Aún no tenés comercios', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Creá tu primer comercio con el botón +.',

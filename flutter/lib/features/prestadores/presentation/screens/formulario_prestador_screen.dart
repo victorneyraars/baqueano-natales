@@ -116,7 +116,8 @@ class _FormularioPrestadorScreenState
         _sitioWebCtrl.text = p.sitioWeb ?? '';
         _direccionCtrl.text = p.direccion ?? '';
         _horarioCtrl.text = p.horarioDescripcion ?? '';
-        _categoriaId = p.categoriaId ??
+        _categoriaId =
+            p.categoriaId ??
             (p.categoria.id.isNotEmpty ? p.categoria.id : null);
         _atiendeDomicilio = p.atiendeDomicilio;
         _atiendeLocal = p.atiendeLocal;
@@ -192,20 +193,15 @@ class _FormularioPrestadorScreenState
           'atiende_local': _atiendeLocal,
           'atiende_emergencias': _atiendeEmergencias,
           'horario_descripcion': _nullable(_horarioCtrl.text),
-          'especialidades':
-              _especialidades.isEmpty ? null : _especialidades,
+          'especialidades': _especialidades.isEmpty ? null : _especialidades,
           'redes_sociales': redes.isEmpty ? null : redes,
         };
-        await repo.editarPrestador(
-          id: widget.prestadorId!,
-          cambios: cambios,
-        );
+        await repo.editarPrestador(id: widget.prestadorId!, cambios: cambios);
         ref.invalidate(miPrestadorDetalleProvider(widget.prestadorId!));
         ref.invalidate(misPrestadoresProvider);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Oficio actualizado')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Oficio actualizado')));
         context.pop();
       } else {
         final nuevo = await repo.crearPrestador(
@@ -223,15 +219,13 @@ class _FormularioPrestadorScreenState
           atiendeLocal: _atiendeLocal,
           atiendeEmergencias: _atiendeEmergencias,
           horarioDescripcion: _nullable(_horarioCtrl.text),
-          especialidades:
-              _especialidades.isEmpty ? null : _especialidades,
+          especialidades: _especialidades.isEmpty ? null : _especialidades,
           redesSociales: redes.isEmpty ? null : redes,
         );
         ref.invalidate(misPrestadoresProvider);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Oficio creado')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Oficio creado')));
         context.pop();
         context.push('/mis-prestadores/${nuevo.id}');
       }
@@ -532,8 +526,8 @@ class _FormularioPrestadorScreenState
               'Agregá las especialidades específicas de tu oficio '
               '(ej: frenos, motor, suspensión).',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -566,9 +560,9 @@ class _FormularioPrestadorScreenState
               Text(
                 'Sin especialidades cargadas',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
               )
             else
               Wrap(
@@ -595,8 +589,8 @@ class _FormularioPrestadorScreenState
               'Opcional. Agregá tus links para que los clientes '
               'vean tu trabajo.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -723,10 +717,9 @@ class _CategoriaDropdown extends ConsumerWidget {
     return asyncCats.when(
       data: (cats) {
         final idsValidos = cats.map((c) => c.id).toSet();
-        final valor =
-            (categoriaId != null && idsValidos.contains(categoriaId))
-                ? categoriaId
-                : null;
+        final valor = (categoriaId != null && idsValidos.contains(categoriaId))
+            ? categoriaId
+            : null;
 
         return DropdownButtonFormField<String>(
           initialValue: valor,

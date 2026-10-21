@@ -50,8 +50,7 @@ class AdminNotificacionesStatsScreen extends ConsumerWidget {
                 cards: [
                   _MetricCard(
                     titulo: 'Delivery rate',
-                    valor:
-                        '${(stats.deliveryRate * 100).toStringAsFixed(1)}%',
+                    valor: '${(stats.deliveryRate * 100).toStringAsFixed(1)}%',
                     icon: Icons.local_shipping,
                     color: Colors.teal,
                   ),
@@ -64,41 +63,51 @@ class AdminNotificacionesStatsScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              Text('Por estado',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Por estado',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               ...stats.porEstado.map(
                 (e) => ListTile(
                   dense: true,
                   title: Text(e.estado),
-                  trailing: Text('${e.count}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  trailing: Text(
+                    '${e.count}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Por tipo',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text('Por tipo', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ...stats.porTipo.map(
                 (e) => ListTile(
                   dense: true,
                   title: Text(e.tipo),
-                  trailing: Text('${e.count}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  trailing: Text(
+                    '${e.count}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               if (stats.top5.isNotEmpty) ...[
-                Text('Top 5 por aperturas',
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Top 5 por aperturas',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 ...stats.top5.map(
                   (t) => Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       dense: true,
-                      title: Text(t.titulo,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        t.titulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       subtitle: Text(
                         '${t.abiertas}/${t.total} abiertas '
                         '(${(t.openRate * 100).toStringAsFixed(0)}%)',
@@ -161,9 +170,7 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               valor,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
+              style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(titulo, style: Theme.of(context).textTheme.bodySmall),

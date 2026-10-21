@@ -34,10 +34,7 @@ class ReviewSeccion extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (review) {
         if (review == null) {
-          return _CardCalificar(
-            ordenId: orden.id,
-            numeroOrden: orden.numero,
-          );
+          return _CardCalificar(ordenId: orden.id, numeroOrden: orden.numero);
         }
         return _CardReview(review: review);
       },
@@ -66,8 +63,10 @@ class _CardCalificar extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.star_outline,
-                    color: theme.colorScheme.onPrimaryContainer),
+                Icon(
+                  Icons.star_outline,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -89,8 +88,7 @@ class _CardCalificar extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () =>
-                  context.push('/mis-ordenes/$ordenId/review'),
+              onPressed: () => context.push('/mis-ordenes/$ordenId/review'),
               icon: const Icon(Icons.rate_review_outlined),
               label: const Text('Calificar'),
             ),
@@ -132,8 +130,7 @@ class _CardReview extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _EstrellasEstaticas(rating: review.rating),
-            if (review.comentario != null &&
-                review.comentario!.isNotEmpty) ...[
+            if (review.comentario != null && review.comentario!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(review.comentario!),
             ],

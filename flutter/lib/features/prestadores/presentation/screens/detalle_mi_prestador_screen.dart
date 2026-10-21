@@ -32,14 +32,12 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.calendar_month_outlined),
             tooltip: 'Mi Agenda',
-            onPressed: () =>
-                context.push('/mis-prestadores/$id/turnos'),
+            onPressed: () => context.push('/mis-prestadores/$id/turnos'),
           ),
           IconButton(
             icon: const Icon(Icons.rate_review_outlined),
             tooltip: 'Resenas',
-            onPressed: () =>
-                context.push('/mis-prestadores/$id/reviews'),
+            onPressed: () => context.push('/mis-prestadores/$id/reviews'),
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart_outlined),
@@ -92,8 +90,7 @@ class _Contenido extends StatelessWidget {
         if (prestador.descripcion != null)
           _fila(theme, 'Descripción', prestador.descripcion!),
         if (prestador.aniosExperiencia != null)
-          _fila(theme, 'Años de experiencia',
-              '${prestador.aniosExperiencia}'),
+          _fila(theme, 'Años de experiencia', '${prestador.aniosExperiencia}'),
 
         const SizedBox(height: 16),
 
@@ -113,19 +110,23 @@ class _Contenido extends StatelessWidget {
         _fila(theme, 'Región', prestador.region),
         _fila(theme, 'Dirección', prestador.direccion),
         if (prestador.radioCoberturaKm != null)
-          _fila(theme, 'Radio cobertura',
-              '${prestador.radioCoberturaKm} km'),
+          _fila(theme, 'Radio cobertura', '${prestador.radioCoberturaKm} km'),
 
         const SizedBox(height: 16),
 
         // --- Modalidad ---
         _Seccion(titulo: 'Modalidad', theme: theme),
-        _fila(theme, 'Atiende a domicilio',
-            prestador.atiendeDomicilio ? 'Sí' : 'No'),
-        _fila(theme, 'Atiende en local',
-            prestador.atiendeLocal ? 'Sí' : 'No'),
-        _fila(theme, 'Atención emergencias',
-            prestador.atiendeEmergencias ? 'Sí' : 'No'),
+        _fila(
+          theme,
+          'Atiende a domicilio',
+          prestador.atiendeDomicilio ? 'Sí' : 'No',
+        ),
+        _fila(theme, 'Atiende en local', prestador.atiendeLocal ? 'Sí' : 'No'),
+        _fila(
+          theme,
+          'Atención emergencias',
+          prestador.atiendeEmergencias ? 'Sí' : 'No',
+        ),
         _fila(theme, 'Horario', prestador.horarioDescripcion),
 
         const SizedBox(height: 16),
@@ -138,10 +139,12 @@ class _Contenido extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: prestador.especialidades!
-                .map((e) => Chip(
-                      label: Text(_humanizar(e)),
-                      visualDensity: VisualDensity.compact,
-                    ))
+                .map(
+                  (e) => Chip(
+                    label: Text(_humanizar(e)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 16),
@@ -168,9 +171,7 @@ class _Contenido extends StatelessWidget {
             ),
           )
         else
-          ...prestador.servicios
-              .take(5)
-              .map((s) => _ServicioItem(servicio: s)),
+          ...prestador.servicios.take(5).map((s) => _ServicioItem(servicio: s)),
         if (prestador.servicios.length > 5)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -216,9 +217,8 @@ class _Contenido extends StatelessWidget {
         OutlinedButton.icon(
           icon: const Icon(Icons.tune_outlined),
           label: const Text('Modalidades de servicio'),
-          onPressed: () => context.push(
-            '/mis-prestadores/${prestador.id}/modalidades',
-          ),
+          onPressed: () =>
+              context.push('/mis-prestadores/${prestador.id}/modalidades'),
         ),
 
         const SizedBox(height: 8),
@@ -226,27 +226,24 @@ class _Contenido extends StatelessWidget {
         OutlinedButton.icon(
           icon: const Icon(Icons.receipt_long_outlined),
           label: const Text('Ordenes del taller'),
-          onPressed: () => context.push(
-            '/mis-prestadores/${prestador.id}/ordenes',
-          ),
+          onPressed: () =>
+              context.push('/mis-prestadores/${prestador.id}/ordenes'),
         ),
         const SizedBox(height: 8),
 
         OutlinedButton.icon(
           icon: const Icon(Icons.calendar_month_outlined),
           label: const Text('Agenda del taller'),
-          onPressed: () => context.push(
-            '/mis-prestadores/${prestador.id}/turnos',
-          ),
+          onPressed: () =>
+              context.push('/mis-prestadores/${prestador.id}/turnos'),
         ),
 
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.share_outlined),
           label: const Text('Publicaciones en redes'),
-          onPressed: () => context.push(
-            '/mis-prestadores/${prestador.id}/publicaciones',
-          ),
+          onPressed: () =>
+              context.push('/mis-prestadores/${prestador.id}/publicaciones'),
         ),
 
         const SizedBox(height: 8),
@@ -254,9 +251,7 @@ class _Contenido extends StatelessWidget {
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),
           label: const Text('Eliminar prestador'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.red.shade700,
-          ),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700),
           onPressed: () => _confirmarEliminar(context, ref, prestador),
         ),
 
@@ -281,10 +276,7 @@ class _Contenido extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              valor ?? '—',
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(valor ?? '—', style: theme.textTheme.bodyMedium),
           ),
         ],
       ),
@@ -365,9 +357,7 @@ class _Contenido extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Eliminar'),
           ),
@@ -384,9 +374,8 @@ class _Contenido extends StatelessWidget {
       ref.invalidate(misPrestadoresProvider);
       if (!context.mounted) return;
       context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prestador eliminado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Prestador eliminado')));
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -435,10 +424,7 @@ class _ServicioItem extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              servicio.nombre,
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(servicio.nombre, style: theme.textTheme.bodyMedium),
           ),
           Text(
             servicio.precioLegible,
@@ -487,10 +473,7 @@ class _EstadoCard extends StatelessWidget {
                   Icon(Icons.star, color: Colors.amber.shade700),
                 if (prestador.verificado) ...[
                   const SizedBox(width: 8),
-                  Icon(
-                    Icons.verified,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(Icons.verified, color: theme.colorScheme.primary),
                 ],
               ],
             ),
@@ -561,11 +544,7 @@ class _EstadoCard extends StatelessWidget {
           Icons.schedule_outlined,
         );
       case EstadoPrestador.rechazado:
-        return (
-          Colors.red.shade800,
-          Colors.red.shade50,
-          Icons.cancel_outlined,
-        );
+        return (Colors.red.shade800, Colors.red.shade50, Icons.cancel_outlined);
       case EstadoPrestador.suspendido:
         return (
           Colors.grey.shade800,

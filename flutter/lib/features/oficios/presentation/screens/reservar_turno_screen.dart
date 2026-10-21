@@ -63,26 +63,30 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
 
   Future<void> _guardar() async {
     if (_vehiculoSel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un vehiculo')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecciona un vehiculo')));
       return;
     }
     if (_fecha == null || _hora == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona fecha y hora')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecciona fecha y hora')));
       return;
     }
     if (!_formKey.currentState!.validate()) return;
 
     final fechaInicio = DateTime(
-      _fecha!.year, _fecha!.month, _fecha!.day, _hora!.hour, _hora!.minute,
+      _fecha!.year,
+      _fecha!.month,
+      _fecha!.day,
+      _hora!.hour,
+      _hora!.minute,
     );
     if (fechaInicio.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La fecha debe ser futura')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('La fecha debe ser futura')));
       return;
     }
 
@@ -106,20 +110,17 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
       ref.invalidate(misTurnosProvider(null));
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Turno reservado')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Turno reservado')));
       context.pop();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inesperado: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -131,20 +132,20 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
     final misVehiculosAsync = ref.watch(misVehiculosProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.prestadorNombre ?? 'Reservar turno'),
-      ),
+      appBar: AppBar(title: Text(widget.prestadorNombre ?? 'Reservar turno')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // Vehiculo
-            Text('Vehiculo',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                )),
+            Text(
+              'Vehiculo',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
             const SizedBox(height: 8),
             misVehiculosAsync.when(
               loading: () => const Padding(
@@ -182,11 +183,15 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: vehiculos
-                      .map((v) => DropdownMenuItem(
-                            value: v,
-                            child: Text(v.nombreDisplay,
-                                overflow: TextOverflow.ellipsis),
-                          ))
+                      .map(
+                        (v) => DropdownMenuItem(
+                          value: v,
+                          child: Text(
+                            v.nombreDisplay,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => _vehiculoSel = v),
                 );
@@ -195,11 +200,13 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
 
             const SizedBox(height: 20),
             // Fecha y hora
-            Text('Fecha y hora',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                )),
+            Text(
+              'Fecha y hora',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -248,11 +255,13 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
 
             const SizedBox(height: 20),
             // Detalles
-            Text('Detalles',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                )),
+            Text(
+              'Detalles',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _motivoCtrl,
