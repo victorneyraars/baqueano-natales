@@ -139,20 +139,17 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen> {
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              constraints: const BoxConstraints(minHeight: 100, maxHeight: 300),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.grey[900],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: SingleChildScrollView(
-                child: Text(
-                  result,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: Colors.greenAccent,
-                  ),
+              child: SelectableText(
+                result,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: Colors.greenAccent,
                 ),
               ),
             ),
