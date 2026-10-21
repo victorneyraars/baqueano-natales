@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # --- CORS ---
+    # Orígenes permitidos para peticiones cross-origin (navegador → API).
+    # Formato: string comma-separated con esquema completo.
+    # Ej dev:  "http://localhost:4321,http://localhost:3000,https://dev.sealquilamarido.com"
+    # Ej prod: "https://sealquilamarido.com,https://baqueanonatales.com"
+    # Se parsea con la property `cors_origin_list` (ver abajo).
+    # Wildcard "*" prohibido en producción (validado en `cors_origin_list`).
+    CORS_ORIGINS: str = ""
+
     # --- Base de datos ---
     POSTGRES_USER: str = "baqueano_user"
     POSTGRES_PASSWORD: str = "changeme"
@@ -189,6 +198,35 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """
+        Parsea CORS_ORIGINS a una lista limpia de orígenes.
+
+        El field CORS_ORIGINS es un string comma-separated (formato estándar
+        para env vars). Esta property lo divide, elimina espacios y descarta
+        entradas vacías, entregando una lista lista para CORSMiddleware.
+
+        Returns:
+            List[str]: Orígenes sin espacios ni entradas vacías. Lista vacía
+                       si CORS_ORIGINS está vacío (válido en dev).
+
+        Raises:
+            ValueError: Si ENVIRONMENT=production y la lista contiene "*".
+                       Wildcard + allow_credentials=True permite a cualquier
+                       sitio robar cookies y tokens. FastAPI lo permite pero
+                       el navegador lo bloquea o, peor, expone credenciales.
+                       Fallar rápido en prod es preferible a un deploy
+                       inseguro.
+        """
+        origins = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        if self.is_production and "*" in origins:
+            raise ValueError(
+                "CORS wildcard '*' no está permitido en producción con "
+                "allow_credentials=True. Configurar CORS_ORIGINS explícitamente."
+            )
+        return origins
 
 
 @lru_cache

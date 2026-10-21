@@ -136,13 +136,19 @@ app = FastAPI(
 )
 
 # CORS
+# Los orígenes se leen de settings.CORS_ORIGINS (env var por entorno) y se
+# parsean con la property `cors_origin_list`, que además valida que no haya
+# wildcard "*" en producción con credentials (riesgo de seguridad).
+#
+# Antes estaba hardcodeado a baqueanonatales.com, lo que impedía:
+#   - Fetch desde sealquilamarido.com (web pública, dominio separado)
+#   - Fetch desde dev.sealquilamarido.com (staging web, rama dev)
+#   - Fetch desde localhost:4321 (Astro dev server)
+#
+# Ahora cada entorno declara sus orígenes en .env.dev / .env.prod.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://baqueanonatales.com",
-        "https://www.baqueanonatales.com",
-        "http://localhost:3000",
-    ],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
