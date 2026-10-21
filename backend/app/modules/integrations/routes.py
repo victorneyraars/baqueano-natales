@@ -9,7 +9,7 @@ BOOSTR_BASE_URL = "https://api.boostr.cl"
 async def consultar_rut(rut: str):
     if not settings.BOOSTR_RUT_API_KEY:
         raise HTTPException(status_code=500, detail="Falta BOOSTR_RUT_API_KEY")
-    url = f"{BOOSTR_BASE_URL}/rut/{rut}.json"
+    url = f"{BOOSTR_BASE_URL}/rut/name/{rut}.json"
     headers = {"accept": "application/json", "X-API-KEY": settings.BOOSTR_RUT_API_KEY}
     async with httpx.AsyncClient(timeout=10.0) as client:
         res = await client.get(url, headers=headers)
