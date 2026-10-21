@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # --- Integraciones Externas (Boostr) ---
+    # API Keys para validación de identidad y vehículos.
+    # Se consumen exclusivamente desde el backend para no exponerlas en el cliente.
+    BOOSTR_RUT_API_KEY: str = ""
+    BOOSTR_PATENTE_API_KEY: str = ""
+
     # --- CORS ---
     # Orígenes permitidos para peticiones cross-origin (navegador → API).
     # Formato: string comma-separated con esquema completo.
