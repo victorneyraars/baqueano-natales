@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:baqueano_natales/core/config/app_config.dart';
-import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
+import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
 class ApiLabScreen extends ConsumerStatefulWidget {
   const ApiLabScreen({super.key});
@@ -24,7 +24,7 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen> {
   Future<void> _consultarRut() async {
     setState(() => _isLoadingRut = true);
     try {
-      final token = ref.read(authNotifierProvider).token;
+      final token = await SecureStorageService.getAccessToken();
       final url = Uri.parse(
         '${AppConfig.apiBaseUrl}/api/v1/integrations/rut/${_rutController.text.trim()}',
       );
@@ -49,7 +49,7 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen> {
   Future<void> _consultarPatente() async {
     setState(() => _isLoadingPatente = true);
     try {
-      final token = ref.read(authNotifierProvider).token;
+      final token = await SecureStorageService.getAccessToken();
       final url = Uri.parse(
         '${AppConfig.apiBaseUrl}/api/v1/integrations/patente/${_patenteController.text.trim()}',
       );

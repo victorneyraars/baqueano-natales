@@ -157,6 +157,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Admin â€” Prestadores
       // =========================================================
       GoRoute(
+        path: '/admin/api-lab',
+        name: 'admin-api-lab',
+        builder: (context, state) => const ApiLabScreen(),
+      ),
+      GoRoute(
         path: '/admin/prestadores',
         name: 'admin-prestadores',
         builder: (context, state) => const AdminPrestadoresScreen(),
