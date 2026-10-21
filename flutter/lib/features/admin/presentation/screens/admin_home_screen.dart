@@ -190,6 +190,12 @@ class AdminHomeScreen extends ConsumerWidget {
                 '/mis-prestadores/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa/turnos',
               ),
             ),
+            _AdminCard(
+              icon: Icons.science,
+              title: 'Laboratorio de APIs',
+              subtitle: 'Validar RUT y Patentes (Boostr)',
+              onTap: () => context.push('/admin/api-lab'),
+            ),
 
             _AdminCard(
               icon: Icons.handyman,

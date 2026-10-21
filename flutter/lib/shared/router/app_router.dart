@@ -19,6 +19,7 @@ import 'package:baqueano_natales/features/admin/presentation/screens/admin_comer
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_comercio_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_detalle_prestador_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_home_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/api_lab_screen.dart';
 import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_estado_screen.dart';
 import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_release_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
