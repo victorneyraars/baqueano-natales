@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 
 enum AppType { client, admin }
 
-enum Environment { dev, prod }
+enum Environment { dev, staging, prod }
 
 class AppConfig {
   AppConfig._();
@@ -29,9 +29,13 @@ class AppConfig {
   static String get apiBaseUrl {
     const url = String.fromEnvironment('API_URL');
     if (url.isNotEmpty) return url;
-    return environment == Environment.prod
-        ? 'https://api.baqueanonatales.com'
-        : 'https://api-dev.baqueanonatales.com';
+    switch (environment) {
+      case Environment.prod:
+        return 'https://api.baqueanonatales.com';
+      case Environment.staging:
+      case Environment.dev:
+        return 'https://api-dev.baqueanonatales.com';
+    }
   }
 
   /// Web Client ID de Firebase (necesario para Google Sign-In).
@@ -61,7 +65,14 @@ class AppConfig {
       environment = env;
     } else {
       const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev');
-      environment = envStr == 'prod' ? Environment.prod : Environment.dev;
+      switch (envStr) {
+        case 'prod':
+          environment = Environment.prod;
+        case 'staging':
+          environment = Environment.staging;
+        default:
+          environment = Environment.dev;
+      }
     }
     if (kDebugMode) {
       debugPrint(

@@ -11,11 +11,37 @@ on:
         options:
           - clientDev
           - adminDev
+          - clientStaging
+          - adminStaging
           - both
 
 jobs:
+  quality-gate:
+    name: Quality Gate (Analyze + Test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: 'stable'
+          cache: true
+      - name: Flutter pub get
+        working-directory: flutter
+        run: flutter pub get
+      - name: Verify formatting
+        working-directory: flutter
+        run: dart format --set-exit-if-changed .
+      - name: Static analysis
+        working-directory: flutter
+        run: flutter analyze --fatal-infos --fatal-warnings
+      - name: Run tests
+        working-directory: flutter
+        run: flutter test --coverage
+
   build-client:
-    if: github.event.inputs.flavor == 'clientDev' || github.event.inputs.flavor == 'both'
+    needs: quality-gate
+    if: github.event.inputs.flavor == 'clientDev' || github.event.inputs.flavor == 'clientStaging' || github.event.inputs.flavor == 'both'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -127,7 +153,8 @@ jobs:
             EOF
 
   build-admin:
-    if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'both'
+    needs: quality-gate
+    if: github.event.inputs.flavor == 'adminDev' || github.event.inputs.flavor == 'adminStaging' || github.event.inputs.flavor == 'both'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

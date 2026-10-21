@@ -36,6 +36,11 @@ android {
             applicationId = "cl.baqueanonatales.dev"
             resValue("string", "app_name", "Baqueano DEV")
         }
+        create("clientStaging") {
+            dimension = "app"
+            applicationId = "cl.baqueanonatales.staging"
+            resValue("string", "app_name", "Baqueano Staging")
+        }
         create("clientProd") {
             dimension = "app"
             applicationId = "cl.baqueanonatales"
@@ -45,6 +50,11 @@ android {
             dimension = "app"
             applicationId = "cl.baqueanonatales.admin.dev"
             resValue("string", "app_name", "Baqueano Admin DEV")
+        }
+        create("adminStaging") {
+            dimension = "app"
+            applicationId = "cl.baqueanonatales.admin.staging"
+            resValue("string", "app_name", "Baqueano Admin Staging")
         }
         create("adminProd") {
             dimension = "app"
