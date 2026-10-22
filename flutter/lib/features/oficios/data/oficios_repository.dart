@@ -544,6 +544,37 @@ class OficiosRepository {
     }
   }
 
+  /// Completa un turno con detalles (crea orden + items + entrega).
+  Future<Map<String, dynamic>> completarTurnoConDetalles(
+    String prestadorId,
+    String turnoId, {
+    required int precioFinal,
+    required List<Map<String, dynamic>> serviciosRealizados,
+    String? notasPrestador,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'precio_final': precioFinal,
+        'servicios_realizados': serviciosRealizados,
+      };
+      if (notasPrestador != null && notasPrestador.trim().isNotEmpty) {
+        data['notas_prestador'] = notasPrestador.trim();
+      }
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/completar',
+        data: data,
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   /// Cambia el estado de un turno (prestador).
   Future<Turno> cambiarEstadoTurno(
     String prestadorId,

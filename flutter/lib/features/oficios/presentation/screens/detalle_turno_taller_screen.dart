@@ -65,6 +65,10 @@ class _DetalleTurnoTallerScreenState
   }
 
   Future<void> _cambiarEstado(Turno turno, EstadoTurno nuevo) async {
+    if (nuevo == EstadoTurno.completado) {
+      await _abrirModalCompletar(turno);
+      return;
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -99,6 +103,27 @@ class _DetalleTurnoTallerScreenState
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
+  }
+
+  Future<void> _abrirModalCompletar(Turno turno) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CompletarTurnoSheet(
+        prestadorId: widget.prestadorId,
+        turnoId: turno.id,
+      ),
+    );
+    if (result == null || !mounted) return;
+    _invalidar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Turno completado. Orden ${result['numero'] ?? ''} creada.',
+        ),
+        backgroundColor: Colors.green[700],
+      ),
+    );
   }
 
   Future<void> _rechazar(Turno turno) async {
@@ -431,3 +456,226 @@ Color _hexToColor(String hex) {
 
 String _formatFechaHora(DateTime d) =>
     '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+class _CompletarTurnoSheet extends ConsumerStatefulWidget {
+  const _CompletarTurnoSheet({
+    required this.prestadorId,
+    required this.turnoId,
+  });
+  final String prestadorId;
+  final String turnoId;
+
+  @override
+  ConsumerState<_CompletarTurnoSheet> createState() =>
+      _CompletarTurnoSheetState();
+}
+
+class _CompletarTurnoSheetState extends ConsumerState<_CompletarTurnoSheet> {
+  final _precioCtrl = TextEditingController();
+  final _notasCtrl = TextEditingController();
+  final List<_ServicioForm> _servicios = [_ServicioForm()];
+  bool _enviando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _precioCtrl.dispose();
+    _notasCtrl.dispose();
+    for (final s in _servicios) {
+      s.dispose();
+    }
+    super.dispose();
+  }
+
+  int? _parsePrecio(String txt) {
+    final clean = txt.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.isEmpty) return null;
+    return int.tryParse(clean);
+  }
+
+  Future<void> _enviar() async {
+    setState(() => _error = null);
+    final precio = _parsePrecio(_precioCtrl.text);
+    if (precio == null || precio <= 0) {
+      setState(() => _error = 'Ingresá un precio final válido.');
+      return;
+    }
+    final serviciosLimpios = <Map<String, dynamic>>[];
+    for (final s in _servicios) {
+      final nombre = s.nombreCtrl.text.trim();
+      final sp = _parsePrecio(s.precioCtrl.text);
+      if (nombre.isEmpty || sp == null || sp <= 0) {
+        setState(
+          () => _error = 'Cada servicio debe tener nombre y precio > 0.',
+        );
+        return;
+      }
+      serviciosLimpios.add({'nombre': nombre, 'precio': sp});
+    }
+    if (serviciosLimpios.isEmpty) {
+      setState(() => _error = 'Agregá al menos un servicio.');
+      return;
+    }
+    setState(() => _enviando = true);
+    try {
+      final repo = ref.read(oficiosRepositoryProvider);
+      final res = await repo.completarTurnoConDetalles(
+        widget.prestadorId,
+        widget.turnoId,
+        precioFinal: precio,
+        serviciosRealizados: serviciosLimpios,
+        notasPrestador: _notasCtrl.text.trim().isEmpty
+            ? null
+            : _notasCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(res);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _enviando = false;
+        _error = 'Error: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Completar turno',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Se creará una orden de trabajo con los detalles.',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _precioCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Precio final (CLP)',
+                prefixText: r'$ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Servicios realizados',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ..._servicios.asMap().entries.map((e) {
+              final idx = e.key;
+              final srv = e.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: srv.nombreCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'Servicio',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: srv.precioCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: 'Precio',
+                          prefixText: r'$ ',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    if (_servicios.length > 1)
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: () {
+                          setState(() {
+                            srv.dispose();
+                            _servicios.removeAt(idx);
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              );
+            }),
+            TextButton.icon(
+              onPressed: () {
+                setState(() => _servicios.add(_ServicioForm()));
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Agregar servicio'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notasCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Notas internas (opcional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(_error!, style: TextStyle(color: Colors.red[800])),
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _enviando ? null : _enviar,
+              icon: _enviando
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.done_all),
+              label: Text(_enviando ? 'Guardando...' : 'Guardar y entregar'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ServicioForm {
+  final nombreCtrl = TextEditingController();
+  final precioCtrl = TextEditingController();
+  void dispose() {
+    nombreCtrl.dispose();
+    precioCtrl.dispose();
+  }
+}
