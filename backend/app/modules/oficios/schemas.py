@@ -411,6 +411,8 @@ class TurnoResponse(BaseModel):
     orden_id: UUID | None
     created_at: datetime
     updated_at: datetime
+    review_rating: int | None = None
+    review_comentario: str | None = None
 
     # Relaciones expandidas
     cliente: UsuarioResumen | None = None
@@ -452,6 +454,8 @@ class TurnoListItemResponse(BaseModel):
     orden_id: UUID | None
     created_at: datetime
     updated_at: datetime
+    review_rating: int | None = None
+    review_comentario: str | None = None
 
     # Relaciones expandidas
     cliente: UsuarioResumen | None = None

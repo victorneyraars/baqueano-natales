@@ -652,7 +652,8 @@ async def listar_mis_turnos(
     turnos = await services.listar_turnos_cliente(
         db, user.id, estado=estado, limit=limit
     )
-    return [TurnoListItemResponse.model_validate(t) for t in turnos]
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, turnos)
+    return [TurnoListItemResponse(**t) for t in enriquecidos]
 
 
 @router_turnos_cliente.post(
@@ -760,7 +761,8 @@ async def listar_turnos_prestador(
     turnos = await services.listar_turnos_prestador(
         db, prestador_id, estado=estado, desde=desde, hasta=hasta, limit=limit
     )
-    return [TurnoListItemResponse.model_validate(t) for t in turnos]
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, turnos)
+    return [TurnoListItemResponse(**t) for t in enriquecidos]
 
 
 @router_turnos_prestador.get(
@@ -778,7 +780,8 @@ async def detalle_turno_prestador(
     turno = await services.obtener_turno(db, turno_id)
     if turno.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_prestador.post(

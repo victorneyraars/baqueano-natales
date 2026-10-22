@@ -1104,6 +1104,60 @@ async def crear_turno(
     return turno
 
 
+async def enriquecer_turnos_con_reviews(
+    db: AsyncSession, turnos: list[Turno],
+) -> list[dict]:
+    """Devuelve lista de dicts con campos del turno + review_rating/review_comentario.
+
+    Hace un LEFT JOIN manual con reviews activas. Se usa en los endpoints de
+    listado y detalle para que el frontend sepa si un turno ya fue calificado.
+    """
+    from app.modules.prestadores.models import Review
+
+    orden_ids = [t.orden_id for t in turnos if t.orden_id is not None]
+    reviews_by_orden: dict = {}
+    if orden_ids:
+        rows = (
+            await db.execute(
+                select(Review).where(
+                    Review.orden_id.in_(orden_ids),
+                    Review.activo.is_(True),
+                )
+            )
+        ).scalars().all()
+        reviews_by_orden = {r.orden_id: r for r in rows}
+
+    result: list[dict] = []
+    for t in turnos:
+        r = reviews_by_orden.get(t.orden_id) if t.orden_id else None
+        vehiculo = None
+        obj = getattr(t, "objeto_servicio", None)
+        if obj is not None:
+            vehiculo = getattr(obj, "vehiculo", None)
+        result.append(
+            {
+                "id": t.id,
+                "cliente_id": t.cliente_id,
+                "prestador_id": t.prestador_id,
+                "objeto_servicio_id": t.objeto_servicio_id,
+                "fecha_inicio": t.fecha_inicio,
+                "duracion_min": t.duracion_min,
+                "estado": t.estado.value if hasattr(t.estado, "value") else t.estado,
+                "motivo": t.motivo,
+                "notas_cliente": getattr(t, "notas_cliente", None),
+                "notas_prestador": getattr(t, "notas_prestador", None),
+                "orden_id": t.orden_id,
+                "created_at": t.created_at,
+                "updated_at": t.updated_at,
+                "cliente": getattr(t, "cliente", None),
+                "vehiculo": vehiculo,
+                "review_rating": r.rating if r else None,
+                "review_comentario": r.comentario if r else None,
+            }
+        )
+    return result
+
+
 async def listar_turnos_cliente(
     db: AsyncSession,
     cliente_id: UUID,
