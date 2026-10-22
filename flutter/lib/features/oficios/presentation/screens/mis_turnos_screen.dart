@@ -176,6 +176,65 @@ class _TurnoCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Chip de calificación
+              if (turno.hasReview) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade400),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star, size: 14, color: Colors.amber[700]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${turno.reviewRating}  Calificado',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (turno.estado == EstadoTurno.completado) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.green.shade400),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_outline,
+                        size: 14,
+                        color: Colors.green[800],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Calificar ahora',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.green[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (turno.motivo != null) ...[
                 const SizedBox(height: 8),
                 Text(

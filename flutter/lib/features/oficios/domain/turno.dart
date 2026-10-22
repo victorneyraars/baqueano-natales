@@ -122,6 +122,8 @@ class Turno {
     this.ordenId,
     this.cliente,
     this.vehiculo,
+    this.reviewRating,
+    this.reviewComentario,
   });
 
   final String id;
@@ -138,6 +140,10 @@ class Turno {
   final String? notasCliente;
   final String? notasPrestador;
   final String? ordenId;
+  final int? reviewRating;
+  final String? reviewComentario;
+
+  bool get hasReview => reviewRating != null;
 
   /// Relaciones expandidas (opcionales, vienen del backend).
   final ClienteResumen? cliente;
@@ -162,6 +168,8 @@ class Turno {
       notasCliente: json['notas_cliente'] as String?,
       notasPrestador: json['notas_prestador'] as String?,
       ordenId: json['orden_id'] as String?,
+      reviewRating: json['review_rating'] as int?,
+      reviewComentario: json['review_comentario'] as String?,
       cliente: json['cliente'] != null
           ? ClienteResumen.fromJson(json['cliente'] as Map<String, dynamic>)
           : null,

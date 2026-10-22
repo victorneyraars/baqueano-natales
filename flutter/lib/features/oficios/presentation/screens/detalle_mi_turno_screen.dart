@@ -154,7 +154,17 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
                   ),
                 ),
               ],
-              if (turno.ordenId != null) ...[
+              if (turno.hasReview) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      '✓ Ya calificaste este servicio con ${turno.reviewRating}★',
+                    ),
+                  ),
+                ),
+              ] else if (turno.ordenId != null) ...[
                 const SizedBox(height: 12),
                 Card(
                   child: Padding(
