@@ -1252,6 +1252,77 @@ async def actualizar_turno(
     return turno
 
 
+async def _notificar_cambio_turno(
+    db: AsyncSession, turno: Turno, nuevo_estado: EstadoTurno,
+) -> None:
+    """Envia push al cliente con el nuevo estado. Nunca falla (try/except).
+
+    Se llama desde cambiar_estado_turno, rechazar_turno y
+    completar_turno_y_crear_orden. Si FCM falla o el cliente no tiene
+    fcm_token, se ignora silenciosamente para no romper la transaccion.
+    """
+    try:
+        from app.core import push as push_legacy
+        from app.modules.prestadores.models import Prestador
+
+        prestador = (
+            await db.execute(
+                select(Prestador).where(Prestador.id == turno.prestador_id)
+            )
+        ).scalar_one_or_none()
+        nombre = prestador.nombre if prestador else "el prestador"
+        fecha = (
+            turno.fecha_inicio.strftime("%d/%m %H:%M")
+            if turno.fecha_inicio
+            else ""
+        )
+
+        mensajes = {
+            EstadoTurno.CONFIRMADO: (
+                "Turno confirmado",
+                f"{nombre} confirmo tu turno para el {fecha}.",
+            ),
+            EstadoTurno.RECHAZADO: (
+                "Turno rechazado",
+                f"{nombre} rechazo tu turno.",
+            ),
+            EstadoTurno.COMPLETADO: (
+                "Servicio listo",
+                f"{nombre} completo el servicio. Califica tu experiencia!",
+            ),
+            EstadoTurno.CANCELADO: (
+                "Turno cancelado",
+                f"El turno con {nombre} fue cancelado.",
+            ),
+            EstadoTurno.NO_ASISTIO: (
+                "No asististe al turno",
+                f"{nombre} marco que no asististe.",
+            ),
+        }
+        titulo, body = mensajes.get(
+            nuevo_estado,
+            ("Actualizacion de turno", f"Nuevo estado: {nuevo_estado.value}"),
+        )
+
+        await push_legacy.enviar_push_a_usuario(
+            user_id=turno.cliente_id,
+            titulo=titulo,
+            body=body,
+            data={
+                "tipo": "turno_estado",
+                "turno_id": str(turno.id),
+                "estado": nuevo_estado.value,
+                "deep_link": f"/mis-turnos/{turno.id}",
+            },
+            db=db,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"No se pudo enviar push de turno {turno.id}: {e}"
+        )
+
+
 async def cambiar_estado_turno(
     db: AsyncSession,
     turno_id: UUID,
@@ -1281,6 +1352,7 @@ async def cambiar_estado_turno(
 
     turno.estado = nuevo_estado
     await db.flush()
+    await _notificar_cambio_turno(db, turno, nuevo_estado)
     return turno
 
 
@@ -1306,6 +1378,7 @@ async def rechazar_turno(
     if motivo:
         turno.notas_prestador = motivo
     await db.flush()
+    await _notificar_cambio_turno(db, turno, EstadoTurno.RECHAZADO)
     return turno
 
 
@@ -1395,6 +1468,7 @@ async def completar_turno_y_crear_orden(
     await db.commit()
     await db.refresh(turno)
     await db.refresh(orden)
+    await _notificar_cambio_turno(db, turno, EstadoTurno.COMPLETADO)
     return turno, orden
 
 

@@ -244,6 +244,12 @@ class FcmService {
           return '/mis-ordenes/$ordenId';
         }
         return '/mis-notificaciones';
+      case 'turno_estado':
+        final turnoId = message.data['turno_id']?.toString();
+        if (turnoId != null && turnoId.isNotEmpty) {
+          return '/mis-turnos/$turnoId';
+        }
+        return '/mis-turnos';
       case 'sistema':
       case 'promocion':
       default:
