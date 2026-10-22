@@ -23,9 +23,9 @@ async def consultar_rut(rut: str):
             data = res.json()
             if data.get("status") == "error":
                 raise HTTPException(status_code=400, detail=data.get("message", "Error en Boostr"))
-            return data
+            cache_rut[rut] = data
+            return {"cached": False, "data": data}
         except ValueError:
-            # Si no es JSON, devolvemos el texto crudo para ver el error real
             raise HTTPException(status_code=res.status_code, detail=f"Error Boostr: {res.text[:200]}")
 
 @router.get("/patente/{patente}", summary="Consultar Patente en Boostr")
