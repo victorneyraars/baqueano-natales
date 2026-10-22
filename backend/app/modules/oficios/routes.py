@@ -669,7 +669,8 @@ async def crear_turno(
 ):
     turno = await services.crear_turno(db, user.id, data)
     await db.refresh(turno)
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_cliente.get(
@@ -685,7 +686,8 @@ async def detalle_mi_turno(
     turno = await services.obtener_turno(db, turno_id)
     if turno.cliente_id != user.id and user.rol != "admin":
         raise HTTPException(status_code=403, detail="No tenes permiso")
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_cliente.patch(
@@ -701,7 +703,8 @@ async def editar_mi_turno(
 ):
     turno = await services.actualizar_turno(db, turno_id, user.id, data)
     await db.refresh(turno)
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_cliente.post(
@@ -719,7 +722,8 @@ async def cancelar_mi_turno(
         db, turno_id, user.id, es_prestador=False, motivo=data.motivo
     )
     await db.refresh(turno)
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 # =========================================================
@@ -804,7 +808,8 @@ async def cambiar_estado_turno(
         db, turno_id, data.nuevo_estado, user.id, es_prestador=True
     )
     await db.refresh(turno)
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_prestador.post(
@@ -845,7 +850,8 @@ async def rechazar_turno(
         db, turno_id, prestador_id, motivo=data.motivo
     )
     await db.refresh(turno)
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 @router_turnos_prestador.post(
@@ -864,7 +870,8 @@ async def vincular_orden(
     turno = await services.vincular_orden_a_turno(
         db, turno_id, data.orden_id, prestador_id
     )
-    return TurnoResponse.model_validate(turno)
+    enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
+    return TurnoResponse(**enriquecidos[0])
 
 
 # =========================================================
