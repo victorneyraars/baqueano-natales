@@ -150,11 +150,16 @@ async def get_stats_history(
     db: DbSession,
     api: Optional[str] = Query(None, pattern="^(rut|patente)$"),
     was_cached: Optional[bool] = Query(None),
-    limit: int = Query(50, ge=1, le=200),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    events = await telemetry.get_recent_events(db, api=api, was_cached=was_cached,
-                                                limit=limit, offset=offset)
+    events, total = await telemetry.get_recent_events(
+        db, api=api, was_cached=was_cached,
+        date_from=date_from, date_to=date_to,
+        limit=limit, offset=offset,
+    )
     return {
         "items": [
             {
@@ -171,9 +176,11 @@ async def get_stats_history(
             }
             for e in events
         ],
+        "total": total,
         "limit": limit,
         "offset": offset,
         "count": len(events),
+        "has_more": (offset + len(events)) < total,
     }
 
 

@@ -48,18 +48,35 @@ async def get_recent_events(
     db: AsyncSession,
     api: str | None = None,
     was_cached: bool | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
     limit: int = 50,
     offset: int = 0,
-) -> list[ApiUsageEvent]:
-    """Devuelve el historial paginado, más reciente primero."""
-    query = select(ApiUsageEvent).order_by(ApiUsageEvent.created_at.desc())
+) -> tuple[list[ApiUsageEvent], int]:
+    """Devuelve (eventos, total) del historial paginado con filtros opcionales."""
+    from sqlalchemy import func as sql_func
+
+    conditions = []
     if api is not None:
-        query = query.where(ApiUsageEvent.api == api)
+        conditions.append(ApiUsageEvent.api == api)
     if was_cached is not None:
-        query = query.where(ApiUsageEvent.was_cached == was_cached)
-    query = query.limit(limit).offset(offset)
-    result = await db.execute(query)
-    return list(result.scalars().all())
+        conditions.append(ApiUsageEvent.was_cached == was_cached)
+    if date_from is not None:
+        conditions.append(ApiUsageEvent.created_at >= date_from)
+    if date_to is not None:
+        conditions.append(ApiUsageEvent.created_at <= date_to)
+
+    count_query = select(sql_func.count(ApiUsageEvent.id))
+    data_query = select(ApiUsageEvent)
+    for cond in conditions:
+        count_query = count_query.where(cond)
+        data_query = data_query.where(cond)
+
+    total = (await db.execute(count_query)).scalar_one()
+    data_query = data_query.order_by(ApiUsageEvent.created_at.desc()).limit(limit).offset(offset)
+    result = await db.execute(data_query)
+    events = list(result.scalars().all())
+    return events, total
 
 
 async def get_analytics(db: AsyncSession, days: int = 30) -> dict:
