@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class FcmProvider(NotificationProvider):
     """Envia notificaciones via Firebase Cloud Messaging."""
 
-    def __init__(self, channel_id: str = "baqueano_default"):
+    def __init__(self, channel_id: str = "baqueano_default_v2"):
         self.channel_id = channel_id
 
     async def send(self, token, titulo, body, data=None, analytics_label=None,

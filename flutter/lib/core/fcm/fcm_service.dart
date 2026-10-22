@@ -122,7 +122,11 @@ class FcmService {
 
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
+    // Fallback a data si notification es null (payloads data-only).
+    final titulo =
+        notification?.title ?? message.data['titulo']?.toString() ?? 'Baqueano';
+    final body = notification?.body ?? message.data['body']?.toString() ?? '';
+    if (titulo.isEmpty && body.isEmpty) return;
     // El payload del banner local es el logId: al tocar, el callback
     // `onDidReceiveNotificationResponse` lo usa para deduplicar y
     // reportar la apertura.
@@ -130,8 +134,8 @@ class FcmService {
 
     await _localNotif.show(
       id: notification.hashCode,
-      title: notification.title ?? 'Baqueano',
-      body: notification.body ?? '',
+      title: titulo,
+      body: body,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           _canalId,

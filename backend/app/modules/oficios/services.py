@@ -1313,6 +1313,8 @@ async def _notificar_cambio_turno(
                 "turno_id": str(turno.id),
                 "estado": nuevo_estado.value,
                 "deep_link": f"/mis-turnos/{turno.id}",
+                "titulo": titulo,
+                "body": body,
             },
             db=db,
         )
