@@ -28,18 +28,28 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
   Map<String, dynamic> _analytics = {};
   String? _historyFilterApi;
   bool? _historyFilterCached;
+  DateTimeRange? _historyDateRange;
+  int _historyOffset = 0;
+  int _historyTotal = 0;
+  bool _historyHasMore = false;
+  bool _historyLoadingMore = false;
+  final ScrollController _historyScroll = ScrollController();
+  static const _pageSize = 50;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _historyScroll.addListener(_onHistoryScroll);
     _fetchStats();
-    _fetchHistory();
+    _fetchHistory(reset: true);
     _fetchAnalytics();
   }
 
   @override
   void dispose() {
+    _historyScroll.removeListener(_onHistoryScroll);
+    _historyScroll.dispose();
     _tabController.dispose();
     _rutController.dispose();
     _patenteController.dispose();
@@ -61,15 +71,35 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
     } catch (_) {}
   }
 
-  Future<void> _fetchHistory() async {
+  Future<void> _fetchHistory({bool reset = false}) async {
+    if (_historyLoadingMore) return;
+    if (!reset && !_historyHasMore) return;
+    if (reset) {
+      setState(() {
+        _events = [];
+        _historyOffset = 0;
+        _historyTotal = 0;
+        _historyHasMore = true;
+        _historyLoadingMore = false;
+      });
+    } else {
+      setState(() => _historyLoadingMore = true);
+    }
     try {
       final t = await _token();
-      final qp = <String, String>{'limit': '50'};
+      final qp = <String, String>{
+        'limit': '$_pageSize',
+        'offset': '$_historyOffset',
+      };
       if (_historyFilterApi != null) {
         qp['api'] = _historyFilterApi!;
       }
       if (_historyFilterCached != null) {
         qp['was_cached'] = _historyFilterCached.toString();
+      }
+      if (_historyDateRange != null) {
+        qp['date_from'] = _historyDateRange!.start.toUtc().toIso8601String();
+        qp['date_to'] = _historyDateRange!.end.toUtc().toIso8601String();
       }
       final uri = Uri.parse(
         '${AppConfig.apiBaseUrl}/api/v1/integrations/stats/history',
@@ -77,9 +107,25 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
       final r = await http.get(uri, headers: {'Authorization': 'Bearer $t'});
       if (r.statusCode == 200) {
         final data = jsonDecode(r.body);
-        setState(() => _events = data['items'] as List<dynamic>);
+        final items = data['items'] as List<dynamic>;
+        setState(() {
+          _events = [..._events, ...items];
+          _historyTotal = (data['total'] as int?) ?? items.length;
+          _historyHasMore = (data['has_more'] as bool?) ?? false;
+          _historyOffset = _events.length;
+          _historyLoadingMore = false;
+        });
+      } else {
+        setState(() => _historyLoadingMore = false);
       }
-    } catch (_) {}
+    } catch (_) {
+      setState(() => _historyLoadingMore = false);
+    }
+  }
+
+  Future<void> _loadMoreHistory() async {
+    if (!_historyHasMore || _historyLoadingMore) return;
+    await _fetchHistory();
   }
 
   Future<void> _fetchAnalytics() async {
@@ -142,6 +188,28 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
         _patenteResult = '{"error": "$e"}';
         _isLoadingPatente = false;
       });
+    }
+  }
+
+  void _onHistoryScroll() {
+    if (!_historyScroll.hasClients) return;
+    if (_historyScroll.position.pixels >=
+        _historyScroll.position.maxScrollExtent - 200) {
+      _loadMoreHistory();
+    }
+  }
+
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 1),
+      lastDate: now,
+      initialDateRange: _historyDateRange,
+    );
+    if (picked != null) {
+      setState(() => _historyDateRange = picked);
+      await _fetchHistory(reset: true);
     }
   }
 
@@ -308,164 +376,254 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
   Widget _buildHistorialTab() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Wrap(
-            spacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('Todos'),
-                selected:
-                    _historyFilterApi == null && _historyFilterCached == null,
-                onSelected: (_) {
-                  setState(() {
-                    _historyFilterApi = null;
-                    _historyFilterCached = null;
-                  });
-                  _fetchHistory();
-                },
-              ),
-              FilterChip(
-                label: const Text('RUT'),
-                selected: _historyFilterApi == 'rut',
-                onSelected: (_) {
-                  setState(() {
-                    _historyFilterApi = 'rut';
-                    _historyFilterCached = null;
-                  });
-                  _fetchHistory();
-                },
-              ),
-              FilterChip(
-                label: const Text('Patente'),
-                selected: _historyFilterApi == 'patente',
-                onSelected: (_) {
-                  setState(() {
-                    _historyFilterApi = 'patente';
-                    _historyFilterCached = null;
-                  });
-                  _fetchHistory();
-                },
-              ),
-              FilterChip(
-                label: const Text('API'),
-                selected: _historyFilterCached == false,
-                onSelected: (_) {
-                  setState(() {
-                    _historyFilterApi = null;
-                    _historyFilterCached = false;
-                  });
-                  _fetchHistory();
-                },
-              ),
-              FilterChip(
-                label: const Text('Caché'),
-                selected: _historyFilterCached == true,
-                onSelected: (_) {
-                  setState(() {
-                    _historyFilterApi = null;
-                    _historyFilterCached = true;
-                  });
-                  _fetchHistory();
-                },
-              ),
-            ],
-          ),
-        ),
+        _buildHistoryFilters(),
+        _buildHistoryCounter(),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: _fetchHistory,
+            onRefresh: () => _fetchHistory(reset: true),
             child: _events.isEmpty
-                ? Center(
-                    child: Text(
-                      'Sin eventos',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
+                ? ListView(
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.2,
+                      ),
+                      Center(
+                        child: Text(
+                          'Sin consultas registradas',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+                    ],
                   )
-                : ListView.separated(
-                    itemCount: _events.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                : ListView.builder(
+                    controller: _historyScroll,
+                    itemCount: _events.length + (_historyHasMore ? 1 : 0),
                     itemBuilder: (context, i) {
-                      final e = _events[i] as Map<String, dynamic>;
-                      final cached = e['was_cached'] as bool? ?? false;
-                      final err = e['error_message'] as String?;
-                      final created = (e['created_at'] as String?) ?? '';
-                      final shortTime = created.length > 19
-                          ? created.substring(11, 19)
-                          : created;
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: cached
-                              ? Colors.green[100]
-                              : Colors.blue[100],
-                          child: Icon(
-                            cached ? Icons.bolt : Icons.cloud_download,
-                            color: cached
-                                ? Colors.green[800]
-                                : Colors.blue[800],
-                            size: 20,
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Text(
-                              e['api'] == 'rut' ? 'RUT' : 'Patente',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                e['input_value'] ?? '',
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            if (err != null)
-                              Icon(
-                                Icons.error,
-                                color: Colors.red[700],
-                                size: 16,
-                              ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          'Rem: ${e['remaining']}/${e['api_limit']} · ${e['duration_ms']}ms · $shortTime',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cached ? Colors.green[50] : Colors.blue[50],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            cached ? 'CACHÉ' : 'API',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: cached
-                                  ? Colors.green[800]
-                                  : Colors.blue[800],
+                      if (i >= _events.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
-                        ),
+                        );
+                      }
+                      return _buildHistoryRow(
+                        _events[i] as Map<String, dynamic>,
                       );
                     },
                   ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHistoryFilters() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          FilterChip(
+            label: const Text('Todas'),
+            selected: _historyFilterApi == null && _historyFilterCached == null,
+            onSelected: (_) {
+              setState(() {
+                _historyFilterApi = null;
+                _historyFilterCached = null;
+              });
+              _fetchHistory(reset: true);
+            },
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('RUT'),
+            selected: _historyFilterApi == 'rut',
+            onSelected: (_) {
+              setState(() {
+                _historyFilterApi = 'rut';
+                _historyFilterCached = null;
+              });
+              _fetchHistory(reset: true);
+            },
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('Patente'),
+            selected: _historyFilterApi == 'patente',
+            onSelected: (_) {
+              setState(() {
+                _historyFilterApi = 'patente';
+                _historyFilterCached = null;
+              });
+              _fetchHistory(reset: true);
+            },
+          ),
+          const SizedBox(width: 16),
+          FilterChip(
+            label: const Text('API'),
+            selected: _historyFilterCached == false,
+            onSelected: (_) {
+              setState(() {
+                _historyFilterApi = null;
+                _historyFilterCached = false;
+              });
+              _fetchHistory(reset: true);
+            },
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('Caché'),
+            selected: _historyFilterCached == true,
+            onSelected: (_) {
+              setState(() {
+                _historyFilterApi = null;
+                _historyFilterCached = true;
+              });
+              _fetchHistory(reset: true);
+            },
+          ),
+          const SizedBox(width: 16),
+          ActionChip(
+            avatar: const Icon(Icons.calendar_today, size: 16),
+            label: Text(
+              _historyDateRange == null
+                  ? 'Fechas'
+                  : '${_historyDateRange!.start.day}/${_historyDateRange!.start.month} - ${_historyDateRange!.end.day}/${_historyDateRange!.end.month}',
+              style: const TextStyle(fontSize: 12),
+            ),
+            onPressed: _pickDateRange,
+          ),
+          if (_historyDateRange != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.clear, size: 18),
+              onPressed: () {
+                setState(() => _historyDateRange = null);
+                _fetchHistory(reset: true);
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryCounter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            'Mostrando ${_events.length} de $_historyTotal',
+            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+          ),
+          const Spacer(),
+          if (_historyFilterApi != null ||
+              _historyFilterCached != null ||
+              _historyDateRange != null)
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _historyFilterApi = null;
+                  _historyFilterCached = null;
+                  _historyDateRange = null;
+                });
+                _fetchHistory(reset: true);
+              },
+              child: const Text(
+                'Limpiar filtros',
+                style: TextStyle(fontSize: 11),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryRow(Map<String, dynamic> e) {
+    final cached = e['was_cached'] as bool? ?? false;
+    final err = e['error_message'] as String?;
+    final created = (e['created_at'] as String?) ?? '';
+    final time = created.length > 19
+        ? '${created.substring(8, 10)}/${created.substring(5, 7)} ${created.substring(11, 19)}'
+        : created;
+    final tipo = e['api'] == 'rut' ? 'RUT' : 'Pat.';
+    final rem = '${e['remaining'] ?? '?'}/${e['api_limit'] ?? '?'}';
+    final ms = e['duration_ms'] ?? '?';
+    final origenBg = cached ? Colors.green[50] : Colors.blue[50];
+    final origenFg = cached ? Colors.green[800] : Colors.blue[800];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              time,
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            ),
+          ),
+          SizedBox(
+            width: 45,
+            child: Text(
+              tipo,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              e['input_value'] ?? '',
+              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(
+            width: 55,
+            child: Text(
+              rem,
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            ),
+          ),
+          SizedBox(
+            width: 50,
+            child: Text(
+              '${ms}ms',
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ),
+          Container(
+            width: 52,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            decoration: BoxDecoration(
+              color: origenBg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              cached ? 'CACHÉ' : 'API',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: origenFg,
+              ),
+            ),
+          ),
+          if (err != null)
+            const Padding(
+              padding: EdgeInsets.only(left: 4),
+              child: Icon(Icons.error, size: 14, color: Colors.red),
+            ),
+        ],
+      ),
     );
   }
 
