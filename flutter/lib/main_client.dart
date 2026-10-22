@@ -6,6 +6,8 @@
 library;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,8 +18,36 @@ import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
 import 'package:baqueano_natales/core/services/app_update_service.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  final localNotif = FlutterLocalNotificationsPlugin();
+  const initSettings = InitializationSettings(
+    android: AndroidInitializationSettings('@drawable/ic_notification'),
+  );
+  await localNotif.initialize(settings: initSettings);
+  await localNotif.show(
+    id: message.hashCode,
+    title:
+        message.notification?.title ??
+        message.data['titulo']?.toString() ??
+        'Baqueano',
+    body: message.notification?.body ?? message.data['body']?.toString() ?? '',
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'baqueano_turnos_v3',
+        'Notificaciones de Baqueano',
+        importance: Importance.max,
+        priority: Priority.max,
+        icon: '@drawable/ic_notification',
+      ),
+    ),
+  );
+}
+
 Future<void> main() async {
   AppConfig.init(type: AppType.client);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
