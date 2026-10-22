@@ -11,7 +11,7 @@ unitarios y ser consumidas por cualquier endpoint futuro sin acoplamiento.
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.integrations.models import ApiUsageEvent
@@ -50,12 +50,23 @@ async def get_recent_events(
     was_cached: bool | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    q: str | None = None,
+    remaining_min: int | None = None,
+    remaining_max: int | None = None,
+    duration_min: int | None = None,
+    duration_max: int | None = None,
+    has_error: bool | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[ApiUsageEvent], int]:
-    """Devuelve (eventos, total) del historial paginado con filtros opcionales."""
-    from sqlalchemy import func as sql_func
+    """Devuelve (eventos, total) con filtros avanzados y sorting dinamico.
 
+    Busqueda de texto (q): ILIKE sobre input_value y error_message.
+    Rangos: remaining y duration_ms son inclusivos [min, max].
+    has_error: True = solo con error_message, False = solo exitosos, None = todos.
+    """
     conditions = []
     if api is not None:
         conditions.append(ApiUsageEvent.api == api)
@@ -65,18 +76,49 @@ async def get_recent_events(
         conditions.append(ApiUsageEvent.created_at >= date_from)
     if date_to is not None:
         conditions.append(ApiUsageEvent.created_at <= date_to)
+    if q:
+        safe = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{safe}%"
+        conditions.append(
+            or_(
+                ApiUsageEvent.input_value.ilike(pattern, escape="\\"),
+                ApiUsageEvent.error_message.ilike(pattern, escape="\\"),
+            )
+        )
+    if remaining_min is not None:
+        conditions.append(ApiUsageEvent.remaining >= remaining_min)
+    if remaining_max is not None:
+        conditions.append(ApiUsageEvent.remaining <= remaining_max)
+    if duration_min is not None:
+        conditions.append(ApiUsageEvent.duration_ms >= duration_min)
+    if duration_max is not None:
+        conditions.append(ApiUsageEvent.duration_ms <= duration_max)
+    if has_error is True:
+        conditions.append(ApiUsageEvent.error_message.is_not(None))
+    elif has_error is False:
+        conditions.append(ApiUsageEvent.error_message.is_(None))
 
-    count_query = select(sql_func.count(ApiUsageEvent.id))
+    count_query = select(func.count(ApiUsageEvent.id))
     data_query = select(ApiUsageEvent)
     for cond in conditions:
         count_query = count_query.where(cond)
         data_query = data_query.where(cond)
 
+    sort_cols = {
+        "created_at": ApiUsageEvent.created_at,
+        "duration_ms": ApiUsageEvent.duration_ms,
+        "remaining": ApiUsageEvent.remaining,
+    }
+    sort_col = sort_cols.get(sort_by, ApiUsageEvent.created_at)
+    if sort_order == "asc":
+        data_query = data_query.order_by(sort_col.asc().nullslast())
+    else:
+        data_query = data_query.order_by(sort_col.desc().nullslast())
+
     total = (await db.execute(count_query)).scalar_one()
-    data_query = data_query.order_by(ApiUsageEvent.created_at.desc()).limit(limit).offset(offset)
+    data_query = data_query.limit(limit).offset(offset)
     result = await db.execute(data_query)
-    events = list(result.scalars().all())
-    return events, total
+    return list(result.scalars().all()), total
 
 
 async def get_analytics(db: AsyncSession, days: int = 30) -> dict:

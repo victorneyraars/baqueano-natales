@@ -152,12 +152,25 @@ async def get_stats_history(
     was_cached: Optional[bool] = Query(None),
     date_from: Optional[datetime] = Query(None),
     date_to: Optional[datetime] = Query(None),
+    q: Optional[str] = Query(None, max_length=100),
+    remaining_min: Optional[int] = Query(None, ge=0),
+    remaining_max: Optional[int] = Query(None, ge=0),
+    duration_min: Optional[int] = Query(None, ge=0),
+    duration_max: Optional[int] = Query(None, ge=0),
+    has_error: Optional[bool] = Query(None),
+    sort_by: str = Query("created_at", pattern="^(created_at|duration_ms|remaining)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     events, total = await telemetry.get_recent_events(
         db, api=api, was_cached=was_cached,
         date_from=date_from, date_to=date_to,
+        q=q,
+        remaining_min=remaining_min, remaining_max=remaining_max,
+        duration_min=duration_min, duration_max=duration_max,
+        has_error=has_error,
+        sort_by=sort_by, sort_order=sort_order,
         limit=limit, offset=offset,
     )
     return {
