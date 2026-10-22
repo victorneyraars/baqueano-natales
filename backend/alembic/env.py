@@ -17,6 +17,7 @@ from app.core.db import Base
 # Importar TODOS los modelos para que Alembic los detecte
 # (A medida que creamos módulos, se importan aquí)
 from app.modules.auth import models as auth_models  # noqa: F401
+from app.modules.integrations import models as integrations_models  # noqa: F401
 from app.modules.comercios import models as comercios_models  # noqa: F401
 from app.modules.prestadores import models as prestadores_models  # noqa: F401
 from app.modules.social import models as social_models  # noqa: F401
