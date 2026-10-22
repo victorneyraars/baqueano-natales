@@ -35,6 +35,15 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
   bool _historyLoadingMore = false;
   final ScrollController _historyScroll = ScrollController();
   static const _pageSize = 50;
+  // Filtros avanzados
+  String? _historyQ;
+  int? _historyRemainingMin;
+  int? _historyRemainingMax;
+  int? _historyDurationMin;
+  int? _historyDurationMax;
+  bool? _historyHasError;
+  String _historySortBy = 'created_at';
+  String _historySortOrder = 'desc';
 
   @override
   void initState() {
@@ -101,6 +110,26 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
         qp['date_from'] = _historyDateRange!.start.toUtc().toIso8601String();
         qp['date_to'] = _historyDateRange!.end.toUtc().toIso8601String();
       }
+      if (_historyQ != null && _historyQ!.isNotEmpty) {
+        qp['q'] = _historyQ!;
+      }
+      if (_historyRemainingMin != null) {
+        qp['remaining_min'] = _historyRemainingMin.toString();
+      }
+      if (_historyRemainingMax != null) {
+        qp['remaining_max'] = _historyRemainingMax.toString();
+      }
+      if (_historyDurationMin != null) {
+        qp['duration_min'] = _historyDurationMin.toString();
+      }
+      if (_historyDurationMax != null) {
+        qp['duration_max'] = _historyDurationMax.toString();
+      }
+      if (_historyHasError != null) {
+        qp['has_error'] = _historyHasError.toString();
+      }
+      qp['sort_by'] = _historySortBy;
+      qp['sort_order'] = _historySortOrder;
       final uri = Uri.parse(
         '${AppConfig.apiBaseUrl}/api/v1/integrations/stats/history',
       ).replace(queryParameters: qp);
@@ -508,7 +537,272 @@ class _ApiLabScreenState extends ConsumerState<ApiLabScreen>
               },
             ),
           ],
+          const SizedBox(width: 16),
+          ActionChip(
+            avatar: Badge(
+              isLabelVisible: _activeAdvancedFilters > 0,
+              label: Text('$_activeAdvancedFilters'),
+              child: const Icon(Icons.tune, size: 16),
+            ),
+            label: const Text(
+              'Filtros avanzados',
+              style: TextStyle(fontSize: 12),
+            ),
+            onPressed: _showAdvancedFilters,
+          ),
         ],
+      ),
+    );
+  }
+
+  int get _activeAdvancedFilters {
+    var n = 0;
+    if (_historyQ != null && _historyQ!.isNotEmpty) n++;
+    if (_historyRemainingMin != null || _historyRemainingMax != null) n++;
+    if (_historyDurationMin != null || _historyDurationMax != null) n++;
+    if (_historyHasError != null) n++;
+    if (_historySortBy != 'created_at' || _historySortOrder != 'desc') n++;
+    return n;
+  }
+
+  Future<void> _showAdvancedFilters() async {
+    final qCtrl = TextEditingController(text: _historyQ ?? '');
+    final remMinCtrl = TextEditingController(
+      text: _historyRemainingMin?.toString() ?? '',
+    );
+    final remMaxCtrl = TextEditingController(
+      text: _historyRemainingMax?.toString() ?? '',
+    );
+    final durMinCtrl = TextEditingController(
+      text: _historyDurationMin?.toString() ?? '',
+    );
+    final durMaxCtrl = TextEditingController(
+      text: _historyDurationMax?.toString() ?? '',
+    );
+    String? localHasError = _historyHasError?.toString();
+    String localSortBy = _historySortBy;
+    String localSortOrder = _historySortOrder;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocal) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Filtros avanzados',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: qCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar texto',
+                    hintText: 'Ej: 16163631 o "not found"',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Remaining (créditos restantes)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: remMinCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Min',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: remMaxCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Max',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Duración (ms)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: durMinCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Min',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: durMaxCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Max',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: localHasError,
+                  decoration: const InputDecoration(
+                    labelText: 'Estado',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('Todos')),
+                    DropdownMenuItem(
+                      value: 'false',
+                      child: Text('Solo exitosos'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'true',
+                      child: Text('Solo con error'),
+                    ),
+                  ],
+                  onChanged: (v) => setLocal(() => localHasError = v),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: localSortBy,
+                        decoration: const InputDecoration(
+                          labelText: 'Ordenar por',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'created_at',
+                            child: Text('Fecha'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'duration_ms',
+                            child: Text('Duración'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'remaining',
+                            child: Text('Remaining'),
+                          ),
+                        ],
+                        onChanged: (v) =>
+                            setLocal(() => localSortBy = v ?? 'created_at'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: localSortOrder,
+                        decoration: const InputDecoration(
+                          labelText: 'Orden',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'desc', child: Text('Desc')),
+                          DropdownMenuItem(value: 'asc', child: Text('Asc')),
+                        ],
+                        onChanged: (v) =>
+                            setLocal(() => localSortOrder = v ?? 'desc'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          qCtrl.clear();
+                          remMinCtrl.clear();
+                          remMaxCtrl.clear();
+                          durMinCtrl.clear();
+                          durMaxCtrl.clear();
+                          setLocal(() {
+                            localHasError = null;
+                            localSortBy = 'created_at';
+                            localSortOrder = 'desc';
+                          });
+                        },
+                        child: const Text('Limpiar'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _historyQ = qCtrl.text.trim().isEmpty
+                                ? null
+                                : qCtrl.text.trim();
+                            _historyRemainingMin = int.tryParse(
+                              remMinCtrl.text,
+                            );
+                            _historyRemainingMax = int.tryParse(
+                              remMaxCtrl.text,
+                            );
+                            _historyDurationMin = int.tryParse(durMinCtrl.text);
+                            _historyDurationMax = int.tryParse(durMaxCtrl.text);
+                            _historyHasError = localHasError == null
+                                ? null
+                                : localHasError == 'true';
+                            _historySortBy = localSortBy;
+                            _historySortOrder = localSortOrder;
+                          });
+                          Navigator.pop(context);
+                          _fetchHistory(reset: true);
+                        },
+                        child: const Text('Aplicar'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
