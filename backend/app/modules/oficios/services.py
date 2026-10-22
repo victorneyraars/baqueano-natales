@@ -1255,6 +1255,95 @@ async def rechazar_turno(
     return turno
 
 
+async def completar_turno_y_crear_orden(
+    db: AsyncSession,
+    turno_id: UUID,
+    prestador_id: UUID,
+    usuario_id: UUID,
+    data,
+) -> tuple[Turno, OrdenTrabajo]:
+    """Completa un turno: crea orden con items, la entrega y la vincula.
+
+    Transaccion unica:
+    1. Valida turno (estado CONFIRMADO o EN_CURSO).
+    2. Crea OrdenTrabajo en INGRESADO.
+    3. Agrega OrdenItem por cada servicio.
+    4. Cambia la orden a ENTREGADO.
+    5. Vincula la orden al turno.
+    6. Cambia el turno a COMPLETADO.
+    """
+    from datetime import datetime, timezone
+    from decimal import Decimal
+
+    turno = await obtener_turno(db, turno_id)
+    if turno.prestador_id != prestador_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenes permiso",
+        )
+    if turno.estado not in (EstadoTurno.CONFIRMADO, EstadoTurno.EN_CURSO):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"El turno debe estar confirmado o en curso. "
+                f"Actual: {turno.estado.value}"
+            ),
+        )
+
+    numero = await _generar_numero_orden(db)
+    orden = OrdenTrabajo(
+        numero=numero,
+        cliente_id=turno.cliente_id,
+        prestador_id=prestador_id,
+        objeto_servicio_id=turno.objeto_servicio_id,
+        estado=EstadoOrden.INGRESADO,
+        prioridad=PrioridadOrden.NORMAL,
+        notas_internas=data.notas_prestador,
+    )
+    db.add(orden)
+    await db.flush()
+
+    for idx, srv in enumerate(data.servicios_realizados):
+        precio = Decimal(str(srv.precio))
+        item = OrdenItem(
+            orden_id=orden.id,
+            tipo=TipoItemOrden.SERVICIO,
+            descripcion=srv.nombre[:255],
+            cantidad=Decimal("1"),
+            precio_unitario=precio,
+            subtotal=precio,
+            orden_display=idx,
+        )
+        db.add(item)
+
+    await db.flush()
+    await _recalcular_totales(db, orden)
+
+    orden.estado = EstadoOrden.ENTREGADO
+    orden.fecha_entrega_real = datetime.now(timezone.utc)
+    await _registrar_evento(
+        db,
+        orden.id,
+        TipoEventoHistorial.ESTADO_CAMBIO,
+        usuario_id=usuario_id,
+        estado_anterior=EstadoOrden.INGRESADO.value,
+        estado_nuevo=EstadoOrden.ENTREGADO.value,
+        contenido={
+            "motivo": "completado_desde_turno",
+            "turno_id": str(turno.id),
+            "precio_final": data.precio_final,
+        },
+    )
+
+    turno.orden_id = orden.id
+    turno.estado = EstadoTurno.COMPLETADO
+    await db.flush()
+    await db.commit()
+    await db.refresh(turno)
+    await db.refresh(orden)
+    return turno, orden
+
+
 async def cancelar_turno(
     db: AsyncSession,
     turno_id: UUID,

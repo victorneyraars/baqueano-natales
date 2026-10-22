@@ -25,6 +25,7 @@ from app.modules.oficios.schemas import (
     TurnoCreate,
     TurnoListItemResponse,
     TurnoRechazarRequest,
+    TurnoCompletarRequest,
     TurnoResponse,
     TurnoUpdate,
     TurnoVincularOrdenRequest,
@@ -801,6 +802,27 @@ async def cambiar_estado_turno(
     )
     await db.refresh(turno)
     return TurnoResponse.model_validate(turno)
+
+
+@router_turnos_prestador.post(
+    "/{turno_id}/completar",
+    summary="Completar turno: crea orden con items y entrega (prestador)",
+)
+async def completar_turno_endpoint(
+    prestador_id: UUID,
+    turno_id: UUID,
+    data: TurnoCompletarRequest,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno, orden = await services.completar_turno_y_crear_orden(
+        db, turno_id, prestador_id, user.id, data,
+    )
+    return {
+        "turno": TurnoResponse.model_validate(turno),
+        "orden": OrdenTrabajoResponse.model_validate(orden),
+    }
 
 
 @router_turnos_prestador.post(

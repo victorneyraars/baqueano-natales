@@ -179,6 +179,23 @@ class OrdenItemResponse(BaseModel):
     orden_display: int
 
 
+class ServicioRealizadoItem(BaseModel):
+    """Un servicio realizado durante el turno."""
+
+    nombre: str = Field(..., min_length=1, max_length=200)
+    precio: int = Field(..., ge=0, description="Precio en CLP")
+
+
+class TurnoCompletarRequest(BaseModel):
+    """Prestador completa turno: crea orden + items + entrega."""
+
+    precio_final: int = Field(..., ge=0, description="Total en CLP")
+    servicios_realizados: list[ServicioRealizadoItem] = Field(
+        ..., min_length=1, description="Al menos 1 servicio"
+    )
+    notas_prestador: str | None = Field(None, max_length=2000)
+
+
 class OrdenTrabajoCreate(BaseModel):
     """Crear una orden (prestador la crea para un cliente)."""
 
