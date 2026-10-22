@@ -9,7 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
-const _canalId = 'baqueano_default';
+const _canalId = 'baqueano_default_v2';
 const _canalNombre = 'Notificaciones de Baqueano';
 const _canalDescripcion = 'Recordatorios, promociones y avisos';
 
@@ -67,11 +67,17 @@ class FcmService {
       description: _canalDescripcion,
       importance: Importance.high,
     );
-    await _localNotif
+    final androidPlugin = _localNotif
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
+        >();
+    // Borrar el canal viejo si quedó con config incorrecta (bug de cache).
+    try {
+      await androidPlugin?.deleteNotificationChannel(
+        channelId: 'baqueano_default',
+      );
+    } catch (_) {}
+    await androidPlugin?.createNotificationChannel(channel);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint(
