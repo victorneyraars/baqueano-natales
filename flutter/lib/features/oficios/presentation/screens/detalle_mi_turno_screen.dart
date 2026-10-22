@@ -159,8 +159,50 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      '✓ Ya calificaste este servicio con ${turno.reviewRating}★',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Ya calificaste este servicio',
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            for (var i = 0; i < 5; i++)
+                              Icon(
+                                i < (turno.reviewRating ?? 0)
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: Colors.amber[700],
+                                size: 22,
+                              ),
+                          ],
+                        ),
+                        if (turno.reviewComentario != null &&
+                            turno.reviewComentario!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '"${turno.reviewComentario}"',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
