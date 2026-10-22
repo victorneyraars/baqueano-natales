@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     BOOSTR_RUT_API_KEY: str = ""
     BOOSTR_PATENTE_API_KEY: str = ""
 
+    # --- Integraciones externas (auth server-to-server) ---
+    # Lista comma-separated de API Keys para /api/v1/integrations/*.
+    # Permite rotacion sin downtime: agregar, migrar, borrar.
+    INTEGRATIONS_API_KEYS: str = ""
+
     # --- CORS ---
     # Orígenes permitidos para peticiones cross-origin (navegador → API).
     # Formato: string comma-separated con esquema completo.
@@ -204,6 +209,11 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"
+
+    @property
+    def integrations_api_keys_list(self) -> list[str]:
+        """Lista parseada de API Keys validas para integraciones."""
+        return [k.strip() for k in self.INTEGRATIONS_API_KEYS.split(",") if k.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

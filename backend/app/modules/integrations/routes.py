@@ -15,6 +15,7 @@ from cachetools import TTLCache
 from app.core.config import settings
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser
+from app.modules.integrations.deps import AuthorizedIntegrations
 from app.modules.integrations import telemetry
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -137,7 +138,7 @@ async def consultar_patente(patente: str, db: DbSession):
 
 
 @router.get("/stats")
-async def get_stats(admin: AdminUser):
+async def get_stats(_: AuthorizedIntegrations):
     return {
         "rut": {**api_stats["rut"], "reset_seconds_now": _reset_seconds_now("rut")},
         "patente": {**api_stats["patente"], "reset_seconds_now": _reset_seconds_now("patente")},
@@ -146,7 +147,7 @@ async def get_stats(admin: AdminUser):
 
 @router.get("/stats/history")
 async def get_stats_history(
-    admin: AdminUser,
+    _: AuthorizedIntegrations,
     db: DbSession,
     api: Optional[str] = Query(None, pattern="^(rut|patente)$"),
     was_cached: Optional[bool] = Query(None),
@@ -199,7 +200,7 @@ async def get_stats_history(
 
 @router.get("/stats/analytics")
 async def get_stats_analytics(
-    admin: AdminUser,
+    _: AuthorizedIntegrations,
     db: DbSession,
     days: int = Query(30, ge=1, le=365),
 ):
