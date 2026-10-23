@@ -120,9 +120,19 @@ class FcmService {
 
     await _localNotif.initialize(
       settings: initSettings,
-      onDidReceiveNotificationResponse: (response) {
-        final payload = response.payload;
-        if (payload == null || payload.isEmpty) return;
+      onDidReceiveNotificationResponse: (response) async {
+        final actionId = response.actionId;
+        final payload = response.payload ?? '';
+
+        // Si es una acción de botón, manejarla
+        if (actionId != null &&
+            (actionId == 'aceptar' || actionId == 'rechazar')) {
+          await _manejarAccionNotificacion(actionId, payload);
+          return;
+        }
+
+        // Si es tap en el cuerpo, comportamiento actual
+        if (payload.isEmpty) return;
         String logId = payload;
         if (payload.startsWith('{')) {
           try {
@@ -267,7 +277,7 @@ class FcmService {
         const AndroidNotificationAction(
           'aceptar',
           'Aceptar',
-          showsUserInterface: false,
+          showsUserInterface: true,
           cancelNotification: true,
         ),
       );
@@ -275,7 +285,7 @@ class FcmService {
         const AndroidNotificationAction(
           'rechazar',
           'Rechazar',
-          showsUserInterface: false,
+          showsUserInterface: true,
           cancelNotification: true,
         ),
       );
@@ -381,6 +391,45 @@ class FcmService {
   /// Path del banner local (`flutter_local_notifications`).
   ///
   /// El payload es el logId directamente (no tenemos el RemoteMessage).
+  Future<void> _manejarAccionNotificacion(
+    String actionId,
+    String payload,
+  ) async {
+    String turnoId = '';
+    String prestadorId = '';
+    if (payload.startsWith('{')) {
+      try {
+        final j = jsonDecode(payload) as Map<String, dynamic>;
+        turnoId = j['turno_id']?.toString() ?? '';
+        prestadorId = j['prestador_id']?.toString() ?? '';
+      } catch (_) {}
+    }
+    if (turnoId.isEmpty || prestadorId.isEmpty) {
+      debugPrint('[FCM] payload sin turno/prestador');
+      return;
+    }
+
+    final token = await SecureStorageService.getAccessToken();
+    if (token == null) {
+      debugPrint('[FCM] sin token');
+      return;
+    }
+
+    final endpoint = actionId == 'aceptar'
+        ? '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado'
+        : '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/rechazar';
+    final body = actionId == 'aceptar'
+        ? {'nuevo_estado': 'confirmado'}
+        : {'motivo': 'No disponible'};
+
+    try {
+      await _dio.post(endpoint, data: body);
+      debugPrint('[FCM] Acción $actionId OK para turno $turnoId');
+    } catch (e) {
+      debugPrint('[FCM] Error en acción $actionId: $e');
+    }
+  }
+
   Future<void> _procesarTapLocal(String logId) async {
     final key = 'log:$logId';
     if (await _yaProcesado(key)) return;
