@@ -20,6 +20,8 @@ import 'package:baqueano_natales/core/services/app_update_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Si FCM ya incluye bloque notification, Android muestra el banner solo.
+  if (message.notification != null) return;
   await Firebase.initializeApp();
   final localNotif = FlutterLocalNotificationsPlugin();
   const initSettings = InitializationSettings(
@@ -35,7 +37,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     body: message.notification?.body ?? message.data['body']?.toString() ?? '',
     notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
-        'baqueano_turnos_v4',
+        'baqueano_turnos_v5',
         'Notificaciones de Baqueano',
         importance: Importance.max,
         priority: Priority.max,
