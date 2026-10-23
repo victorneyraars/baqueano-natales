@@ -1362,7 +1362,7 @@ async def _notificar_nuevo_turno_prestador(
         from app.core import push as push_legacy
         from app.modules.prestadores.models import Prestador
         from app.modules.oficios.models import ObjetoServicio
-        from app.modules.usuarios.models import Usuario
+        from app.modules.auth.models import Usuario
 
         prestador = (
             await db.execute(
@@ -1420,10 +1420,10 @@ async def _notificar_nuevo_turno_prestador(
             },
             db=db,
         )
-    except Exception as e:
+    except Exception:
         import logging
-        logging.getLogger(__name__).warning(
-            f"No se pudo enviar push al prestador del turno {turno.id}: {e}"
+        logging.getLogger(__name__).exception(
+            f"No se pudo enviar push al prestador del turno {turno.id}"
         )
 
 async def cambiar_estado_turno(
