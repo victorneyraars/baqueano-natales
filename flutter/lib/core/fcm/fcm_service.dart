@@ -212,21 +212,87 @@ class FcmService {
 
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final notification = message.notification;
-    // Fallback a data si notification es null (payloads data-only).
+    final data = message.data;
+    final tipo = data['tipo']?.toString() ?? '';
+
     final titulo =
-        notification?.title ?? message.data['titulo']?.toString() ?? 'Baqueano';
-    final body = notification?.body ?? message.data['body']?.toString() ?? '';
+        notification?.title ?? data['titulo']?.toString() ?? 'Baqueano';
+    final body = notification?.body ?? data['body']?.toString() ?? '';
     if (titulo.isEmpty && body.isEmpty) return;
-    // El payload del banner local es el logId: al tocar, el callback
-    // `onDidReceiveNotificationResponse` lo usa para deduplicar y
-    // reportar la apertura.
-    final logId = message.data['notification_log_id']?.toString();
+
+    final logId = data['notification_log_id']?.toString();
+    final turnoId = data['turno_id']?.toString() ?? '';
+    final prestadorId = data['prestador_id']?.toString() ?? '';
+
+    final fotoKey = tipo == 'turno_nuevo'
+        ? 'cliente_foto_url'
+        : 'prestador_foto_url';
+    final nombreKey = tipo == 'turno_nuevo'
+        ? 'cliente_nombre'
+        : 'prestador_nombre';
+    final fotoUrl = data[fotoKey]?.toString() ?? '';
+    final nombre = data[nombreKey]?.toString() ?? '';
+
+    AndroidBitmap<Object>? largeIcon;
+    if (fotoUrl.isNotEmpty) {
+      try {
+        final r = await http
+            .get(Uri.parse(fotoUrl))
+            .timeout(const Duration(seconds: 3));
+        if (r.statusCode == 200) {
+          largeIcon = ByteArrayAndroidBitmap(r.bodyBytes);
+        }
+      } catch (_) {}
+    }
+
+    final servicio = data['servicio_alias']?.toString() ?? '';
+    final fecha = data['fecha_hora']?.toString() ?? '';
+    final duracion = data['duracion_min']?.toString() ?? '';
+    final notas = data['notas_cliente']?.toString() ?? '';
+
+    final detalleLines = <String>[];
+    if (nombre.isNotEmpty) detalleLines.add('Nombre: $nombre');
+    if (servicio.isNotEmpty) detalleLines.add('Servicio: $servicio');
+    if (fecha.isNotEmpty) {
+      final dur = duracion.isNotEmpty ? ' - $duracion min' : '';
+      detalleLines.add('Fecha: $fecha$dur');
+    }
+    if (notas.isNotEmpty) detalleLines.add('Notas: $notas');
+    final detalle = detalleLines.join('\n');
+
+    final actions = <AndroidNotificationAction>[];
+    if (tipo == 'turno_nuevo' && turnoId.isNotEmpty && prestadorId.isNotEmpty) {
+      actions.add(
+        const AndroidNotificationAction(
+          'aceptar',
+          'Aceptar',
+          showsUserInterface: false,
+          cancelNotification: true,
+          icon: DrawableResourceAndroidBitmap('ic_check'),
+        ),
+      );
+      actions.add(
+        const AndroidNotificationAction(
+          'rechazar',
+          'Rechazar',
+          showsUserInterface: false,
+          cancelNotification: true,
+          icon: DrawableResourceAndroidBitmap('ic_x'),
+        ),
+      );
+    }
+
+    final payloadJson = jsonEncode({
+      'log_id': logId ?? '',
+      'turno_id': turnoId,
+      'prestador_id': prestadorId,
+    });
 
     await _localNotif.show(
       id: notification.hashCode,
       title: titulo,
       body: body,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _canalId,
           _canalNombre,
@@ -234,9 +300,18 @@ class FcmService {
           importance: Importance.max,
           priority: Priority.max,
           icon: '@drawable/ic_notification',
+          largeIcon: largeIcon,
+          actions: actions.isEmpty ? null : actions,
+          styleInformation: detalle.isNotEmpty
+              ? BigTextStyleInformation(
+                  detalle,
+                  contentTitle: titulo,
+                  summaryText: body,
+                )
+              : null,
         ),
       ),
-      payload: logId,
+      payload: payloadJson,
     );
   }
 
