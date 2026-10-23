@@ -46,12 +46,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> main() async {
-  AppConfig.init(type: AppType.client);
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
+  // 1. Binding primero (canal con código nativo)
   WidgetsFlutterBinding.ensureInitialized();
+  // 2. Firebase inicializado antes del handler
   await Firebase.initializeApp();
-
+  // 3. Handler de background de FCM
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // 4. Configuración de la app
+  AppConfig.init(type: AppType.client);
+  // 5. Arranque
   runApp(const ProviderScope(child: BaqueanoClientApp()));
 }
 
