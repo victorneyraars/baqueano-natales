@@ -88,6 +88,9 @@ class FcmService {
       await androidPlugin?.deleteNotificationChannel(
         channelId: 'baqueano_turnos_v3',
       );
+      await androidPlugin?.deleteNotificationChannel(
+        channelId: 'baqueano_turnos_v4',
+      );
     } catch (_) {}
     await androidPlugin?.createNotificationChannel(channel);
 
