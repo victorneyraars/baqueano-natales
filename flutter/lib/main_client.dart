@@ -55,7 +55,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final r = await http
           .get(Uri.parse(fotoUrl))
           .timeout(const Duration(seconds: 3));
-      if (r.statusCode == 200) largeIcon = ByteArrayAndroidBitmap(r.data);
+      if (r.statusCode == 200) largeIcon = ByteArrayAndroidBitmap(r.bodyBytes);
     } catch (_) {}
   }
   final detalle = [
