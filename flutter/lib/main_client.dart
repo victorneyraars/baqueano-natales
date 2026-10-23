@@ -37,7 +37,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     body: message.notification?.body ?? message.data['body']?.toString() ?? '',
     notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
-        'baqueano_turnos_v5',
+        'baqueano_turnos_v6',
         'Notificaciones de Baqueano',
         importance: Importance.max,
         priority: Priority.max,
@@ -52,7 +52,31 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 2. Firebase inicializado antes del handler
   await Firebase.initializeApp();
-  // 3. Handler de background de FCM
+
+  // 3. Crear canal v6 síncronamente antes de runApp
+  final localNotif = FlutterLocalNotificationsPlugin();
+  const androidInit = AndroidInitializationSettings(
+    '@drawable/ic_notification',
+  );
+  await localNotif.initialize(
+    settings: const InitializationSettings(android: androidInit),
+  );
+  await localNotif
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'baqueano_turnos_v6',
+          'Notificaciones de Baqueano',
+          description: 'Recordatorios, promociones y avisos',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+
+  // 4. Handler de background de FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // 4. Configuración de la app
   AppConfig.init(type: AppType.client);

@@ -9,7 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
-const _canalId = 'baqueano_turnos_v5';
+const _canalId = 'baqueano_turnos_v6';
 const _canalNombre = 'Notificaciones de Baqueano';
 const _canalDescripcion = 'Recordatorios, promociones y avisos';
 
