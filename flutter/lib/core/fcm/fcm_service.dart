@@ -260,6 +260,7 @@ class FcmService {
     if (notas.isNotEmpty) detalleLines.add('Notas: $notas');
     final detalle = detalleLines.join('\n');
 
+    debugPrint('[FCM] banner tipo=$tipo turno=$turnoId prest=$prestadorId');
     final actions = <AndroidNotificationAction>[];
     if (tipo == 'turno_nuevo' && turnoId.isNotEmpty && prestadorId.isNotEmpty) {
       actions.add(
@@ -268,7 +269,6 @@ class FcmService {
           'Aceptar',
           showsUserInterface: false,
           cancelNotification: true,
-          icon: DrawableResourceAndroidBitmap('ic_check'),
         ),
       );
       actions.add(
@@ -277,11 +277,11 @@ class FcmService {
           'Rechazar',
           showsUserInterface: false,
           cancelNotification: true,
-          icon: DrawableResourceAndroidBitmap('ic_x'),
         ),
       );
     }
 
+    debugPrint('[FCM] actions=${actions.length}');
     final payloadJson = jsonEncode({
       'log_id': logId ?? '',
       'turno_id': turnoId,
