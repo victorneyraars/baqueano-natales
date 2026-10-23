@@ -1388,10 +1388,7 @@ async def _notificar_nuevo_turno_prestador(
         cliente_nombre = ""
         cliente_foto = ""
         if cliente:
-            cliente_nombre = (
-                f"{cliente.nombres or ''} {cliente.apellidos or ''}".strip()
-                or cliente.email or ""
-            )
+            cliente_nombre = (cliente.nombre or cliente.email or "").strip()
             cliente_foto = str(cliente.avatar_url) if cliente.avatar_url else ""
         servicio = (objeto.alias or "") if objeto else ""
         fecha = (
