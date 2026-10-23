@@ -81,6 +81,7 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
 }
 
 class FcmService {
+  static final Set<String> _procesados = <String>{};
   FcmService({
     FirebaseMessaging? messaging,
     Dio? dio,
@@ -212,6 +213,9 @@ class FcmService {
   }
 
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
+    final msgId = message.messageId ?? '';
+    if (msgId.isNotEmpty && _procesados.contains(msgId)) return;
+    if (msgId.isNotEmpty) _procesados.add(msgId);
     final notification = message.notification;
     final data = message.data;
     final tipo = data['tipo']?.toString() ?? '';
@@ -268,7 +272,7 @@ class FcmService {
         const AndroidNotificationAction(
           'aceptar',
           'Aceptar',
-          showsUserInterface: false,
+          showsUserInterface: true,
           cancelNotification: true,
         ),
       );
@@ -276,7 +280,7 @@ class FcmService {
         const AndroidNotificationAction(
           'rechazar',
           'Rechazar',
-          showsUserInterface: false,
+          showsUserInterface: true,
           cancelNotification: true,
         ),
       );

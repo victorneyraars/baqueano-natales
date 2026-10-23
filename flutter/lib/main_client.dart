@@ -92,13 +92,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           const AndroidNotificationAction(
             'aceptar',
             'Aceptar',
-            showsUserInterface: false,
+            showsUserInterface: true,
             cancelNotification: true,
           ),
           const AndroidNotificationAction(
             'rechazar',
             'Rechazar',
-            showsUserInterface: false,
+            showsUserInterface: true,
             cancelNotification: true,
           ),
         ],
