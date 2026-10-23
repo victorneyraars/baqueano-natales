@@ -39,11 +39,8 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
 
   final actionId = response.actionId;
   final payload = response.payload ?? '';
-  final notificationId = response.id;
 
-  if (notificationId != null) {
-    await FlutterLocalNotificationsPlugin().cancel(id: notificationId);
-  }
+  if (actionId != 'aceptar' && actionId != 'rechazar') return;
 
   String turnoId = '';
   String prestadorId = '';
@@ -54,28 +51,22 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
       prestadorId = j['prestador_id']?.toString() ?? '';
     } catch (_) {}
   }
-
   if (turnoId.isEmpty || prestadorId.isEmpty) return;
-  if (actionId != 'aceptar' && actionId != 'rechazar') return;
 
   final token = await SecureStorageService.getAccessToken();
   if (token == null || token.isEmpty) return;
 
   final baseUrl = AppConfig.apiBaseUrl;
-  final Uri uri;
-  final Map<String, dynamic> body;
-
-  if (actionId == 'aceptar') {
-    uri = Uri.parse(
-      '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado',
-    );
-    body = {'nuevo_estado': 'confirmado'};
-  } else {
-    uri = Uri.parse(
-      '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/rechazar',
-    );
-    body = {'motivo': 'No disponible'};
-  }
+  final uri = actionId == 'aceptar'
+      ? Uri.parse(
+          '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado',
+        )
+      : Uri.parse(
+          '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/rechazar',
+        );
+  final body = actionId == 'aceptar'
+      ? jsonEncode({'nuevo_estado': 'confirmado'})
+      : jsonEncode({'motivo': 'No disponible'});
 
   try {
     await http.post(
@@ -84,7 +75,7 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode(body),
+      body: body,
     );
   } catch (_) {}
 }
@@ -277,7 +268,7 @@ class FcmService {
         const AndroidNotificationAction(
           'aceptar',
           'Aceptar',
-          showsUserInterface: true,
+          showsUserInterface: false,
           cancelNotification: true,
         ),
       );
@@ -285,7 +276,7 @@ class FcmService {
         const AndroidNotificationAction(
           'rechazar',
           'Rechazar',
-          showsUserInterface: true,
+          showsUserInterface: false,
           cancelNotification: true,
         ),
       );
