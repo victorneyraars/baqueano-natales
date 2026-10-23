@@ -1,9 +1,15 @@
 /// Servicio de Firebase Cloud Messaging (FCM).
 library;
 
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
+import 'package:baqueano_natales/core/config/app_config.dart';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:baqueano_natales/core/network/dio_client.dart';
@@ -22,6 +28,66 @@ const _dedupWindowMs = 30 * 1000;
 
 /// Limite del set in-session para no crecer indefinidamente.
 const _dedupSetMaxSize = 30;
+
+@pragma('vm:entry-point')
+Future<void> _notificationTapBackground(NotificationResponse response) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final rootIsolateToken = RootIsolateToken.instance;
+  if (rootIsolateToken != null) {
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+  }
+
+  final actionId = response.actionId;
+  final payload = response.payload ?? '';
+  final notificationId = response.id;
+
+  if (notificationId != null) {
+    await FlutterLocalNotificationsPlugin().cancel(id: notificationId);
+  }
+
+  String turnoId = '';
+  String prestadorId = '';
+  if (payload.startsWith('{')) {
+    try {
+      final j = jsonDecode(payload) as Map<String, dynamic>;
+      turnoId = j['turno_id']?.toString() ?? '';
+      prestadorId = j['prestador_id']?.toString() ?? '';
+    } catch (_) {}
+  }
+
+  if (turnoId.isEmpty || prestadorId.isEmpty) return;
+  if (actionId != 'aceptar' && actionId != 'rechazar') return;
+
+  final token = await SecureStorageService.getAccessToken();
+  if (token == null || token.isEmpty) return;
+
+  final baseUrl = AppConfig.apiBaseUrl;
+  final Uri uri;
+  final Map<String, dynamic> body;
+
+  if (actionId == 'aceptar') {
+    uri = Uri.parse(
+      '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/estado',
+    );
+    body = {'nuevo_estado': 'confirmado'};
+  } else {
+    uri = Uri.parse(
+      '$baseUrl/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/rechazar',
+    );
+    body = {'motivo': 'No disponible'};
+  }
+
+  try {
+    await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+  } catch (_) {}
+}
 
 class FcmService {
   FcmService({
@@ -55,10 +121,19 @@ class FcmService {
     await _localNotif.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (response) {
-        final logId = response.payload;
-        if (logId == null || logId.isEmpty) return;
+        final payload = response.payload;
+        if (payload == null || payload.isEmpty) return;
+        String logId = payload;
+        if (payload.startsWith('{')) {
+          try {
+            final j = jsonDecode(payload) as Map<String, dynamic>;
+            logId = j['log_id']?.toString() ?? '';
+          } catch (_) {}
+        }
+        if (logId.isEmpty) return;
         _procesarTapLocal(logId);
       },
+      onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
     );
 
     const channel = AndroidNotificationChannel(

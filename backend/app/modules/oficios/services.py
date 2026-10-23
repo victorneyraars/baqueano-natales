@@ -1354,6 +1354,78 @@ async def _notificar_cambio_turno(
         )
 
 
+async def _notificar_nuevo_turno_prestador(
+    db: AsyncSession, turno: Turno,
+) -> None:
+    """Envia push al prestador con botones Aceptar/Rechazar."""
+    try:
+        from app.core import push as push_legacy
+        from app.modules.prestadores.models import Prestador
+        from app.modules.oficios.models import ObjetoServicio
+        from app.modules.usuarios.models import Usuario
+
+        prestador = (
+            await db.execute(
+                select(Prestador).where(Prestador.id == turno.prestador_id)
+            )
+        ).scalar_one_or_none()
+        if not prestador or not prestador.usuario_id:
+            return
+
+        cliente = (
+            await db.execute(
+                select(Usuario).where(Usuario.id == turno.cliente_id)
+            )
+        ).scalar_one_or_none()
+        objeto = (
+            await db.execute(
+                select(ObjetoServicio).where(
+                    ObjetoServicio.id == turno.objeto_servicio_id
+                )
+            )
+        ).scalar_one_or_none()
+
+        cliente_nombre = ""
+        cliente_foto = ""
+        if cliente:
+            cliente_nombre = (
+                f"{cliente.nombres or ''} {cliente.apellidos or ''}".strip()
+                or cliente.email or ""
+            )
+            cliente_foto = str(cliente.avatar_url) if cliente.avatar_url else ""
+        servicio = (objeto.alias or "") if objeto else ""
+        fecha = (
+            turno.fecha_inicio.strftime("%d/%m %H:%M")
+            if turno.fecha_inicio else ""
+        )
+
+        titulo = "Nuevo turno solicitado"
+        body = f"{cliente_nombre} solicito {servicio} para el {fecha}"
+
+        await push_legacy.enviar_push_a_usuario(
+            user_id=prestador.usuario_id,
+            titulo=titulo,
+            body=body,
+            data={
+                "tipo": "turno_nuevo",
+                "turno_id": str(turno.id),
+                "prestador_id": str(turno.prestador_id),
+                "estado": turno.estado.value,
+                "cliente_nombre": cliente_nombre,
+                "cliente_foto_url": cliente_foto,
+                "servicio_alias": servicio,
+                "fecha_hora": fecha,
+                "titulo": titulo,
+                "body": body,
+            },
+            db=db,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"No se pudo enviar push al prestador del turno {turno.id}: {e}"
+        )
+
 async def cambiar_estado_turno(
     db: AsyncSession,
     turno_id: UUID,

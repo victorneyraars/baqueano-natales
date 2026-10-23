@@ -834,6 +834,23 @@ async def completar_turno_endpoint(
 
 
 @router_turnos_prestador.post(
+    "/{turno_id}/test-push-acciones",
+    summary="Test push con botones Aceptar/Rechazar",
+)
+async def test_push_acciones(
+    prestador_id: UUID,
+    turno_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    await _validar_prestador_dueno(db, prestador_id, user)
+    turno = await services.obtener_turno(db, turno_id)
+    if not turno or turno.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    await services._notificar_nuevo_turno_prestador(db, turno)
+    return {"ok": True}
+
+@router_turnos_prestador.post(
     "/{turno_id}/rechazar",
     response_model=TurnoResponse,
     summary="Rechazar un turno (prestador)",

@@ -5,6 +5,8 @@
 ///   flutter run --flavor clientProd -t lib/main_client.dart --dart-define-from-file=dart_defines/client_prod.json
 library;
 
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -86,9 +88,29 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           contentTitle: titulo,
           summaryText: body,
         ),
+        actions: <AndroidNotificationAction>[
+          const AndroidNotificationAction(
+            'aceptar',
+            'Aceptar',
+            showsUserInterface: false,
+            cancelNotification: true,
+            icon: DrawableResourceAndroidBitmap('ic_check'),
+          ),
+          const AndroidNotificationAction(
+            'rechazar',
+            'Rechazar',
+            showsUserInterface: false,
+            cancelNotification: true,
+            icon: DrawableResourceAndroidBitmap('ic_x'),
+          ),
+        ],
       ),
     ),
-    payload: logId,
+    payload: jsonEncode({
+      'log_id': logId ?? '',
+      'turno_id': message.data['turno_id']?.toString() ?? '',
+      'prestador_id': message.data['prestador_id']?.toString() ?? '',
+    }),
   );
 }
 
