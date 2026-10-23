@@ -1290,7 +1290,7 @@ async def _notificar_cambio_turno(
             if (prestador and prestador.calificacion_promedio)
             else ""
         )
-        servicio = objeto.alias if objeto else ""
+        servicio = (objeto.alias or "") if objeto else ""
         duracion = str(turno.duracion_min) if turno.duracion_min else ""
         notas = turno.notas_cliente or ""
         fecha = (
