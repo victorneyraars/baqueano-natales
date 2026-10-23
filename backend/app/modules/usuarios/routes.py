@@ -88,7 +88,37 @@ async def registrar_fcm_token(
     db: DbSession,
 ) -> FcmTokenResponse:
     """Registra o actualiza el token FCM del usuario actual."""
+    from sqlalchemy import select, update
+    from app.core.notifications.models import FcmToken
+
+    # 1. Actualizar columna legacy (compatibilidad)
     user.fcm_token = data.token
+
+    # 2. Desactivar tokens viejos del mismo usuario (single-device)
+    await db.execute(
+        update(FcmToken)
+        .where(FcmToken.usuario_id == user.id)
+        .where(FcmToken.token != data.token)
+        .values(activo=False)
+    )
+
+    # 3. UPSERT en fcm_tokens (tabla que usa NotificationService)
+    existing = await db.execute(
+        select(FcmToken).where(FcmToken.token == data.token)
+    )
+    existing_token = existing.scalar_one_or_none()
+
+    if existing_token:
+        existing_token.usuario_id = user.id
+        existing_token.activo = True
+    else:
+        db.add(FcmToken(
+            usuario_id=user.id,
+            token=data.token,
+            plataforma='android',
+            activo=True,
+        ))
+
     await db.flush()
     await db.refresh(user)
     preview = data.token[:20] + "..." if len(data.token) > 20 else data.token
