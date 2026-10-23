@@ -9,7 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
-const _canalId = 'baqueano_turnos_v3';
+const _canalId = 'baqueano_turnos_v4';
 const _canalNombre = 'Notificaciones de Baqueano';
 const _canalDescripcion = 'Recordatorios, promociones y avisos';
 
@@ -73,6 +73,22 @@ class FcmService {
         >();
     // Borrar el canal viejo si quedó con config incorrecta (bug de cache).
 
+    // Bumpeo de canal: Android no permite cambiar la importancia de un canal
+    // existente. Si los canales viejos (v1/v2/v3) fueron creados con
+    // Importance.default, quedan "quemados". Al borrarlos (soft-delete) y
+    // crear v4 limpio con Importance.max, Android lo muestra como Urgente
+    // sin que el usuario tenga que tocar Ajustes.
+    try {
+      await androidPlugin?.deleteNotificationChannel(
+        channelId: 'baqueano_default',
+      );
+      await androidPlugin?.deleteNotificationChannel(
+        channelId: 'baqueano_default_v2',
+      );
+      await androidPlugin?.deleteNotificationChannel(
+        channelId: 'baqueano_turnos_v3',
+      );
+    } catch (_) {}
     await androidPlugin?.createNotificationChannel(channel);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {

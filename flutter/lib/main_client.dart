@@ -35,7 +35,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     body: message.notification?.body ?? message.data['body']?.toString() ?? '',
     notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
-        'baqueano_turnos_v3',
+        'baqueano_turnos_v4',
         'Notificaciones de Baqueano',
         importance: Importance.max,
         priority: Priority.max,
