@@ -1270,7 +1270,29 @@ async def _notificar_cambio_turno(
                 select(Prestador).where(Prestador.id == turno.prestador_id)
             )
         ).scalar_one_or_none()
+        from app.modules.oficios.models import ObjetoServicio
+
+        objeto = (
+            await db.execute(
+                select(ObjetoServicio).where(
+                    ObjetoServicio.id == turno.objeto_servicio_id
+                )
+            )
+        ).scalar_one_or_none()
         nombre = prestador.nombre if prestador else "el prestador"
+        foto_url = (
+            str(prestador.foto_url)
+            if (prestador and prestador.foto_url)
+            else ""
+        )
+        rating = (
+            f"{float(prestador.calificacion_promedio):.1f}"
+            if (prestador and prestador.calificacion_promedio)
+            else ""
+        )
+        servicio = objeto.alias if objeto else ""
+        duracion = str(turno.duracion_min) if turno.duracion_min else ""
+        notas = turno.notas_cliente or ""
         fecha = (
             turno.fecha_inicio.strftime("%d/%m %H:%M")
             if turno.fecha_inicio
@@ -1315,6 +1337,13 @@ async def _notificar_cambio_turno(
                 "deep_link": f"/mis-turnos/{turno.id}",
                 "titulo": titulo,
                 "body": body,
+                "prestador_nombre": nombre,
+                "prestador_foto_url": foto_url,
+                "prestador_rating": rating,
+                "servicio_alias": servicio,
+                "fecha_hora": fecha,
+                "duracion_min": duracion,
+                "notas_cliente": notas,
             },
             db=db,
         )

@@ -8,6 +8,7 @@ library;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,22 +48,44 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final body =
       message.data['body']?.toString() ?? message.notification?.body ?? '';
   final logId = message.data['notification_log_id']?.toString();
+  final fotoUrl = message.data['prestador_foto_url']?.toString() ?? '';
+  AndroidBitmap<Object>? largeIcon;
+  if (fotoUrl.isNotEmpty) {
+    try {
+      final r = await http
+          .get(Uri.parse(fotoUrl))
+          .timeout(const Duration(seconds: 3));
+      if (r.statusCode == 200) largeIcon = ByteArrayAndroidBitmap(r.data);
+    } catch (_) {}
+  }
+  final detalle = [
+    'Servicio: ${message.data["servicio_alias"] ?? ""}',
+    'Prestador: ${message.data["prestador_nombre"] ?? ""}',
+    'Fecha: ${message.data["fecha_hora"] ?? ""}',
+  ].join('\n');
+
   await localNotif.show(
     id: message.hashCode,
     title: titulo,
     body: body,
-    notificationDetails: const NotificationDetails(
+    notificationDetails: NotificationDetails(
       android: AndroidNotificationDetails(
         'baqueano_turnos_v6',
         'Notificaciones de Baqueano',
         importance: Importance.max,
         priority: Priority.max,
         icon: '@drawable/ic_notification',
+        largeIcon: largeIcon,
         fullScreenIntent: true,
         category: AndroidNotificationCategory.call,
         visibility: NotificationVisibility.public,
         playSound: true,
         enableVibration: true,
+        styleInformation: BigTextStyleInformation(
+          detalle,
+          contentTitle: titulo,
+          summaryText: body,
+        ),
       ),
     ),
     payload: logId,
