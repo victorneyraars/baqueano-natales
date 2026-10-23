@@ -1089,14 +1089,42 @@ async def crear_turno(
             detail="El objeto de servicio no es tuyo",
         )
 
+    servicio = None
+    servicio_id = getattr(data, "servicio_id", None)
+    if servicio_id is not None:
+        from app.modules.prestadores.models import PrestadorServicio
+        servicio = (
+            await db.execute(
+                select(PrestadorServicio).where(
+                    PrestadorServicio.id == servicio_id,
+                    PrestadorServicio.prestador_id == data.prestador_id,
+                    PrestadorServicio.activo.is_(True),
+                )
+            )
+        ).scalar_one_or_none()
+        if servicio is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Servicio no encontrado para este prestador",
+            )
+
+    duracion_final = data.duracion_min
+    motivo_final = data.motivo
+    if servicio is not None:
+        if servicio.duracion_estimada_min:
+            duracion_final = servicio.duracion_estimada_min
+        if not motivo_final:
+            motivo_final = servicio.nombre
+
     turno = Turno(
         cliente_id=cliente_id,
         prestador_id=data.prestador_id,
         objeto_servicio_id=data.objeto_servicio_id,
+        servicio_id=servicio_id,
         fecha_inicio=data.fecha_inicio,
-        duracion_min=data.duracion_min,
+        duracion_min=duracion_final,
         estado=EstadoTurno.PENDIENTE,
-        motivo=data.motivo,
+        motivo=motivo_final,
         notas_cliente=data.notas_cliente,
     )
     db.add(turno)
@@ -1399,6 +1427,22 @@ async def _notificar_nuevo_turno_prestador(
         titulo = "Nuevo turno solicitado"
         body = f"{cliente_nombre} solicito {servicio} para el {fecha}"
 
+        servicio_nombre = ""
+        servicio_precio = ""
+        if turno.servicio_id:
+            from app.modules.prestadores.models import PrestadorServicio
+            srv = (
+                await db.execute(
+                    select(PrestadorServicio).where(
+                        PrestadorServicio.id == turno.servicio_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if srv:
+                servicio_nombre = srv.nombre or ""
+                if srv.precio_desde_clp:
+                    servicio_precio = f"${srv.precio_desde_clp:,}".replace(",", ".")
+
         await push_legacy.enviar_push_a_usuario(
             user_id=prestador.usuario_id,
             titulo=titulo,
@@ -1411,6 +1455,8 @@ async def _notificar_nuevo_turno_prestador(
                 "cliente_nombre": cliente_nombre,
                 "cliente_foto_url": cliente_foto,
                 "servicio_alias": servicio,
+                "servicio_nombre": servicio_nombre,
+                "servicio_precio": servicio_precio,
                 "fecha_hora": fecha,
                 "titulo": titulo,
                 "body": body,

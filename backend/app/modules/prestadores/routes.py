@@ -155,6 +155,31 @@ async def crear_mi_prestador(
     return PrestadorPrivadoResponse.model_validate(prestador)
 
 
+@router_publico.get(
+    "/{prestador_id}/servicios",
+    summary="Listar servicios activos de un prestador",
+)
+async def listar_servicios_publicos(
+    prestador_id: UUID,
+    db: DbSession,
+):
+    servicios = await services.listar_servicios_activos(db, prestador_id)
+    return [
+        {
+            "id": str(s.id),
+            "nombre": s.nombre,
+            "descripcion": s.descripcion,
+            "categoria_servicio": s.categoria_servicio,
+            "precio_desde_clp": s.precio_desde_clp,
+            "precio_hasta_clp": s.precio_hasta_clp,
+            "duracion_estimada_min": s.duracion_estimada_min,
+            "garantia_dias": s.garantia_dias,
+            "destacado": s.destacado,
+        }
+        for s in servicios
+    ]
+
+
 @router_propietario.get(
     "",
     response_model=PrestadorPrivadoListResponse,

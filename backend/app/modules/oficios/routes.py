@@ -669,6 +669,7 @@ async def crear_turno(
 ):
     turno = await services.crear_turno(db, user.id, data)
     await db.refresh(turno)
+    await services._notificar_nuevo_turno_prestador(db, turno)
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
 

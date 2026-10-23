@@ -409,6 +409,9 @@ class TurnoResponse(BaseModel):
     notas_cliente: str | None
     notas_prestador: str | None
     orden_id: UUID | None
+    servicio_id: UUID | None = None
+    servicio_nombre: str | None = None
+    servicio_precio_desde_clp: int | None = None
     created_at: datetime
     updated_at: datetime
     review_rating: int | None = None

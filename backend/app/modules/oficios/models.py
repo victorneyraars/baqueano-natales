@@ -893,6 +893,13 @@ class Turno(TimestampMixin, Base):
         index=True,
         comment="Orden generada al atender el turno (opcional)",
     )
+    servicio_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestador_servicios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Servicio del catalogo reservado (opcional)",
+    )
 
     # Relaciones (opcionales, para hidratar)
     objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")

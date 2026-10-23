@@ -732,3 +732,21 @@ async def actualizar_modalidades(db: AsyncSession, prestador, data):
     prestador.modalidades = data.model_dump()
     await db.flush()
     return prestador
+
+
+async def listar_servicios_activos(db, prestador_id):
+    """Lista servicios activos del prestador, ordenados por orden y nombre."""
+    from app.modules.prestadores.models import PrestadorServicio
+    from sqlalchemy import select as _sel
+
+    rows = (
+        await db.execute(
+            _sel(PrestadorServicio)
+            .where(
+                PrestadorServicio.prestador_id == prestador_id,
+                PrestadorServicio.activo.is_(True),
+            )
+            .order_by(PrestadorServicio.orden, PrestadorServicio.nombre)
+        )
+    ).scalars().all()
+    return list(rows)
