@@ -95,18 +95,19 @@ class FcmProvider(NotificationProvider):
 
     def _build_message(self, token, titulo, body, data, analytics_label,
                        prioridad, ttl_hours, collapse_key):
+        payload_data = {k: str(v) for k, v in (data or {}).items()}
+        payload_data["titulo"] = titulo
+        payload_data["body"] = body
+        # SIEMPRE data-only: la app construye la notificacion localmente
+        # con Importance.max. Esto garantiza heads-up en Android 14+,
+        # incluso en OEMs que bloquean heads-up para notification block.
         return messaging.Message(
-            notification=messaging.Notification(title=titulo, body=body),
-            data={k: str(v) for k, v in (data or {}).items()},
+            data=payload_data,
             token=token,
             android=messaging.AndroidConfig(
-                priority=prioridad,
+                priority="high",
                 ttl=timedelta(hours=ttl_hours),
                 collapse_key=collapse_key,
-                notification=messaging.AndroidNotification(
-                    channel_id=self.channel_id,
-                    sound="default",
-                ),
             ),
             fcm_options=(
                 messaging.FCMOptions(analytics_label=analytics_label)

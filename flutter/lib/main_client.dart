@@ -20,21 +20,37 @@ import 'package:baqueano_natales/core/services/app_update_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Si FCM ya incluye bloque notification, Android muestra el banner solo.
-  if (message.notification != null) return;
   await Firebase.initializeApp();
   final localNotif = FlutterLocalNotificationsPlugin();
   const initSettings = InitializationSettings(
     android: AndroidInitializationSettings('@drawable/ic_notification'),
   );
   await localNotif.initialize(settings: initSettings);
+  await localNotif
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'baqueano_turnos_v6',
+          'Notificaciones de Baqueano',
+          description: 'Recordatorios, promociones y avisos',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+  final titulo =
+      message.data['titulo']?.toString() ??
+      message.notification?.title ??
+      'Baqueano';
+  final body =
+      message.data['body']?.toString() ?? message.notification?.body ?? '';
+  final logId = message.data['notification_log_id']?.toString();
   await localNotif.show(
     id: message.hashCode,
-    title:
-        message.notification?.title ??
-        message.data['titulo']?.toString() ??
-        'Baqueano',
-    body: message.notification?.body ?? message.data['body']?.toString() ?? '',
+    title: titulo,
+    body: body,
     notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
         'baqueano_turnos_v6',
@@ -42,8 +58,14 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         importance: Importance.max,
         priority: Priority.max,
         icon: '@drawable/ic_notification',
+        fullScreenIntent: true,
+        category: AndroidNotificationCategory.call,
+        visibility: NotificationVisibility.public,
+        playSound: true,
+        enableVibration: true,
       ),
     ),
+    payload: logId,
   );
 }
 
