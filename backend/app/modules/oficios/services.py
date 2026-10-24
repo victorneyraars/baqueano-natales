@@ -1319,6 +1319,18 @@ async def _notificar_cambio_turno(
             else ""
         )
         servicio = (objeto.alias or "") if objeto else ""
+        servicio_nombre = ""
+        if turno.servicio_id:
+            from app.modules.prestadores.models import PrestadorServicio
+            _srv = (
+                await db.execute(
+                    select(PrestadorServicio).where(
+                        PrestadorServicio.id == turno.servicio_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if _srv:
+                servicio_nombre = _srv.nombre or ""
         duracion = str(turno.duracion_min) if turno.duracion_min else ""
         notas = turno.notas_cliente or ""
         fecha = (
@@ -1369,6 +1381,7 @@ async def _notificar_cambio_turno(
                 "prestador_foto_url": foto_url,
                 "prestador_rating": rating,
                 "servicio_alias": servicio,
+                "servicio_nombre": servicio_nombre,
                 "fecha_hora": fecha,
                 "duracion_min": duracion,
                 "notas_cliente": notas,
