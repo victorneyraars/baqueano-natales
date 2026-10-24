@@ -9,6 +9,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/oficios/domain/servicio.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/servicios_selector.dart';
 
 class ReservarTurnoScreen extends ConsumerStatefulWidget {
   const ReservarTurnoScreen({
@@ -250,19 +251,16 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (e, _) {
-                    debugPrint('[Reserva] error servicios: $e');
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No se pudieron cargar los servicios: $e',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
-                        ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Error: $e',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                   data: (servicios) {
                     if (servicios.isEmpty) return const SizedBox.shrink();
                     return Column(
@@ -276,34 +274,20 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ...servicios.map(
-                          (s) => Card(
-                            margin: const EdgeInsets.only(bottom: 6),
-                            color: _servicioSel?.id == s.id
-                                ? theme.colorScheme.primaryContainer
-                                : null,
-                            child: ListTile(
-                              dense: true,
-                              title: Text(s.nombre),
-                              subtitle: Text(
-                                '${s.precioLabel} · ${s.duracionLabel}',
-                              ),
-                              trailing: _servicioSel?.id == s.id
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      color: theme.colorScheme.primary,
-                                    )
-                                  : null,
-                              onTap: () {
-                                setState(() {
-                                  _servicioSel = s;
-                                  if (s.duracionEstimadaMin != null) {
-                                    _duracionMin = s.duracionEstimadaMin!;
-                                  }
-                                  _motivoCtrl.text = s.nombre;
-                                });
-                              },
-                            ),
+                        SizedBox(
+                          height: 420,
+                          child: ServiciosSelector(
+                            servicios: servicios,
+                            seleccionado: _servicioSel,
+                            onSeleccionado: (s) {
+                              setState(() {
+                                _servicioSel = s;
+                                _motivoCtrl.text = s.nombre;
+                                if (s.duracionEstimadaMin != null) {
+                                  _duracionMin = s.duracionEstimadaMin!;
+                                }
+                              });
+                            },
                           ),
                         ),
                         const SizedBox(height: 20),
