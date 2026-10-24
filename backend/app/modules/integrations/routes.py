@@ -104,8 +104,45 @@ async def consultar_rut(rut: str, db: DbSession):
             raise HTTPException(status_code=res.status_code, detail=f"Error Boostr: {res.text[:200]}")
 
 
+_LETRAS_AUTO = "BCDFGHJKLPRSTVWXYZ"
+_PATRONES_AUTO = [
+    re.compile(r"^[" + _LETRAS_AUTO + r"]{2}\d{4}$"),  # AB1234 (antiguo)
+    re.compile(r"^[" + _LETRAS_AUTO + r"]{4}\d{2}$"),  # ABCD12 (2007-2026)
+    re.compile(r"^[" + _LETRAS_AUTO + r"]{5}\d{1}$"),  # BBBBB0 (desde jul 2026)
+]
+
+
+def _validar_patente_auto(patente: str) -> str:
+    """Normaliza y valida una patente de auto chileno.
+
+    Devuelve la patente limpia (mayusculas, sin puntos/guiones/espacios)
+    o lanza HTTPException(400) si el formato no corresponde a un auto.
+    """
+    p_limpia = (
+        patente.strip().upper().replace(".", "").replace("-", "").replace(" ", "")
+    )
+    if len(p_limpia) != 6:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Patente invalida: debe tener 6 caracteres (sin puntos ni guiones)."
+            ),
+        )
+    if not any(patron.match(p_limpia) for patron in _PATRONES_AUTO):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Patente invalida para auto. Formatos aceptados: "
+                "AB1234 (antiguo), ABCD12 (2007-2026) o BBBBB0 (desde jul 2026). "
+                "No se permiten vocales ni las letras M, N, N-tilde, Q."
+            ),
+        )
+    return p_limpia
+
+
 @router.get("/patente/{patente}")
 async def consultar_patente(patente: str, db: DbSession):
+    patente = _validar_patente_auto(patente)
     started = time.monotonic()
     if patente in cache_patente:
         api_stats["patente"]["cached_hits"] += 1
