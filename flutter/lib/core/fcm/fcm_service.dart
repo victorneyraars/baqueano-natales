@@ -293,8 +293,13 @@ class FcmService {
       'prestador_id': prestadorId,
     });
 
+    final dedupKey =
+        message.messageId ??
+        '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
+    final notifId = dedupKey.hashCode;
+
     await _localNotif.show(
-      id: notification.hashCode,
+      id: notifId,
       title: titulo,
       body: body,
       notificationDetails: NotificationDetails(

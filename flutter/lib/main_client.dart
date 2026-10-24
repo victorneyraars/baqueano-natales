@@ -50,7 +50,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final body =
       message.data['body']?.toString() ?? message.notification?.body ?? '';
   final logId = message.data['notification_log_id']?.toString();
-  final fotoUrl = message.data['prestador_foto_url']?.toString() ?? '';
+  final tipo = message.data['tipo']?.toString() ?? '';
+  final esNuevoTurno = tipo == 'turno_nuevo';
+  final fotoUrl = esNuevoTurno
+      ? (message.data['cliente_foto_url']?.toString() ?? '')
+      : (message.data['prestador_foto_url']?.toString() ?? '');
   AndroidBitmap<Object>? largeIcon;
   if (fotoUrl.isNotEmpty) {
     try {
@@ -60,14 +64,28 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       if (r.statusCode == 200) largeIcon = ByteArrayAndroidBitmap(r.bodyBytes);
     } catch (_) {}
   }
-  final detalle = [
-    'Servicio: ${message.data["servicio_alias"] ?? ""}',
-    'Prestador: ${message.data["prestador_nombre"] ?? ""}',
-    'Fecha: ${message.data["fecha_hora"] ?? ""}',
-  ].join('\n');
+  final servicioNombre =
+      message.data['servicio_nombre']?.toString() ??
+      message.data['servicio_alias']?.toString() ??
+      '';
+  final nombreActor = esNuevoTurno
+      ? (message.data['cliente_nombre']?.toString() ?? '')
+      : (message.data['prestador_nombre']?.toString() ?? '');
+  final nombreLabel = esNuevoTurno ? 'Cliente' : 'Prestador';
+  final fechaHora = message.data['fecha_hora']?.toString() ?? '';
 
+  final detalleLines = <String>[];
+  if (servicioNombre.isNotEmpty) detalleLines.add('Servicio: $servicioNombre');
+  if (nombreActor.isNotEmpty) detalleLines.add('$nombreLabel: $nombreActor');
+  if (fechaHora.isNotEmpty) detalleLines.add('Fecha: $fechaHora');
+  final detalle = detalleLines.join('\n');
+
+  final dedupKey =
+      message.messageId ??
+      '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
+  final notifId = dedupKey.hashCode;
   await localNotif.show(
-    id: message.hashCode,
+    id: notifId,
     title: titulo,
     body: body,
     notificationDetails: NotificationDetails(
