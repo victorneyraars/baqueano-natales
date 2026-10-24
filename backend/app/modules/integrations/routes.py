@@ -162,10 +162,14 @@ async def consultar_patente(patente: str, db: DbSession):
         # Observabilidad: cuota restante y respuesta cruda
         remaining = res.headers.get("X-Remaining-Credits")
         quota = res.headers.get("X-Quota-Limit")
+        rate_remaining = res.headers.get("X-RateLimit-Remaining")
+        rate_limit = res.headers.get("X-RateLimit-Limit")
         logger = __import__("logging").getLogger(__name__)
         logger.info(
-            "Boostr patente=%s status=%s remaining=%s quota=%s body=%s",
-            patente, res.status_code, remaining, quota, res.text[:200],
+            "Boostr patente=%s status=%s credits_remaining=%s "
+            "quota=%s rate_remaining=%s rate_limit=%s body=%s",
+            patente, res.status_code, remaining, quota,
+            rate_remaining, rate_limit, res.text[:200],
         )
         duration_ms = int((time.monotonic() - started) * 1000)
         try:
