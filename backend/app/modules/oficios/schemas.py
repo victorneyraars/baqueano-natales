@@ -331,6 +331,7 @@ class TurnoCreate(BaseModel):
 
     prestador_id: UUID
     objeto_servicio_id: UUID
+    servicio_id: UUID | None = None
     fecha_inicio: datetime
     duracion_min: int = Field(30, ge=15, le=480)
     motivo: str | None = Field(None, max_length=255)
