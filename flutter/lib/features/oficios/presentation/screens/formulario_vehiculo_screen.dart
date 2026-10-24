@@ -5,12 +5,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/patente_auto_formatter.dart';
 
 class FormularioVehiculoScreen extends ConsumerStatefulWidget {
   const FormularioVehiculoScreen({super.key, this.objetoId});
@@ -38,6 +40,7 @@ class _FormularioVehiculoScreenState
   final _notasCtrl = TextEditingController();
 
   TipoVehiculo _tipo = TipoVehiculo.otro;
+  String? _formatoPatenteDetectado;
   bool _guardando = false;
   bool _cargando = false;
 
@@ -175,18 +178,50 @@ class _FormularioVehiculoScreenState
           padding: const EdgeInsets.all(16),
           children: [
             const _Seccion('Identificacion'),
-            _campo(
-              controller: _patenteCtrl,
-              label: 'Patente *',
-              hint: 'ABCD12',
-              enabled: !_esEdicion,
-              maxLength: 10,
-              textCapitalization: TextCapitalization.characters,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requerido';
-                if (v.trim().length < 4) return 'Muy corta';
-                return null;
-              },
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _campo(
+                  controller: _patenteCtrl,
+                  label: 'Patente *',
+                  hint: 'AB1234 o ABCD12',
+                  enabled: !_esEdicion,
+                  maxLength: 6,
+                  textCapitalization: TextCapitalization.characters,
+                  keyboardType: TextInputType.text,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  inputFormatters: [PatenteAutoFormatter()],
+                  helperText:
+                      'Formatos: AB1234 (antiguo), '
+                      'ABCD12 (2007-2026), BBBBB0 (2026+)',
+                  helperMaxLines: 2,
+                  onChanged: _onPatenteChanged,
+                  validator: _validarPatente,
+                ),
+                if (_formatoPatenteDetectado != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 14,
+                          color: Colors.green[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatoPatenteDetectado!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             _campo(
               controller: _marcaCtrl,
@@ -286,6 +321,12 @@ class _FormularioVehiculoScreenState
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.none,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+    String? helperText,
+    int helperMaxLines = 1,
+    bool autocorrect = true,
+    bool enableSuggestions = true,
+    void Function(String)? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -296,15 +337,49 @@ class _FormularioVehiculoScreenState
         maxLines: maxLines,
         keyboardType: keyboardType,
         textCapitalization: textCapitalization,
+        inputFormatters: inputFormatters,
+        autocorrect: autocorrect,
+        enableSuggestions: enableSuggestions,
+        onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
           border: const OutlineInputBorder(),
           counterText: maxLength != null ? null : '',
+          helperText: helperText,
+          helperMaxLines: helperMaxLines,
         ),
         validator: validator,
       ),
     );
+  }
+
+  String? _validarPatente(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Requerido';
+    final p = v.trim().toUpperCase();
+    if (p.length != 6) return 'Deben ser 6 caracteres';
+    final patrones = [
+      RegExp(r'^[A-Z]{2}\d{4}$'),
+      RegExp(r'^[A-Z]{4}\d{2}$'),
+      RegExp(r'^[A-Z]{5}\d{1}$'),
+    ];
+    if (!patrones.any((r) => r.hasMatch(p))) {
+      return 'Formato invalido';
+    }
+    return null;
+  }
+
+  void _onPatenteChanged(String v) {
+    final p = v.trim().toUpperCase();
+    String? formato;
+    if (RegExp(r'^[A-Z]{2}\d{4}$').hasMatch(p)) {
+      formato = 'Formato antiguo (AB1234)';
+    } else if (RegExp(r'^[A-Z]{4}\d{2}$').hasMatch(p)) {
+      formato = 'Formato 2007-2026 (ABCD12)';
+    } else if (RegExp(r'^[A-Z]{5}\d{1}$').hasMatch(p)) {
+      formato = 'Formato 2026 (BBBBB0)';
+    }
+    setState(() => _formatoPatenteDetectado = formato);
   }
 
   String? _req(String? v) {
