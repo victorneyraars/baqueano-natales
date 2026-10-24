@@ -4,6 +4,7 @@ BFF: oculta las API Keys del cliente.
 Caché TTL 24h: evita re-consultas al mismo input.
 Telemetría: persiste cada consulta en api_usage_events para analytics.
 """
+import re
 import time
 from datetime import datetime, timezone
 from typing import Optional
