@@ -82,6 +82,7 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
 
 class FcmService {
   static final Set<String> _procesados = <String>{};
+  static bool _initialized = false;
   FcmService({
     FirebaseMessaging? messaging,
     Dio? dio,
@@ -105,6 +106,11 @@ class FcmService {
   static final Set<String> _procesadosEnSesion = <String>{};
 
   Future<void> inicializar() async {
+    if (_initialized) {
+      debugPrint('[FCM] inicializar() ya ejecutado, skip');
+      return;
+    }
+    _initialized = true;
     const androidInit = AndroidInitializationSettings(
       '@drawable/ic_notification',
     );
@@ -422,9 +428,18 @@ class FcmService {
         ? {'nuevo_estado': 'confirmado'}
         : {'motivo': 'No disponible'};
 
+    final baseUrl = AppConfig.apiBaseUrl;
+    final uri = Uri.parse('$baseUrl$endpoint');
     try {
-      await _dio.post(endpoint, data: body);
-      debugPrint('[FCM] Acción $actionId OK para turno $turnoId');
+      final res = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      debugPrint('[FCM] Acción $actionId status=${res.statusCode}');
     } catch (e) {
       debugPrint('[FCM] Error en acción $actionId: $e');
     }
