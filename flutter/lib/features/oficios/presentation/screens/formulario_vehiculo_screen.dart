@@ -4,6 +4,8 @@
 /// Modo editar: si `objetoId` viene del path (carga el vehiculo existente).
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +43,9 @@ class _FormularioVehiculoScreenState
 
   TipoVehiculo _tipo = TipoVehiculo.otro;
   String? _formatoPatenteDetectado;
+  Timer? _debouncePatente;
+  bool _buscandoPatente = false;
+  bool _patenteNoEncontrada = false;
   bool _guardando = false;
   bool _cargando = false;
 
@@ -81,6 +86,7 @@ class _FormularioVehiculoScreenState
 
   @override
   void dispose() {
+    _debouncePatente?.cancel();
     _patenteCtrl.dispose();
     _marcaCtrl.dispose();
     _modeloCtrl.dispose();
@@ -216,6 +222,47 @@ class _FormularioVehiculoScreenState
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_buscandoPatente)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12, bottom: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Buscando datos del vehiculo...',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (_patenteNoEncontrada)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: Colors.orange[800],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Patente no encontrada. Ingresa los datos manualmente.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[800],
                           ),
                         ),
                       ],
@@ -379,7 +426,42 @@ class _FormularioVehiculoScreenState
     } else if (RegExp(r'^[A-Z]{5}\d{1}$').hasMatch(p)) {
       formato = 'Formato 2026 (BBBBB0)';
     }
-    setState(() => _formatoPatenteDetectado = formato);
+
+    setState(() {
+      _formatoPatenteDetectado = formato;
+      _patenteNoEncontrada = false;
+    });
+
+    _debouncePatente?.cancel();
+    if (formato == null || p.length != 6) return;
+
+    _debouncePatente = Timer(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
+      setState(() => _buscandoPatente = true);
+
+      final repo = ref.read(oficiosRepositoryProvider);
+      final data = await repo.consultarPatente(p);
+
+      if (!mounted) return;
+      setState(() {
+        _buscandoPatente = false;
+        if (data == null) {
+          _patenteNoEncontrada = true;
+        } else {
+          _marcaCtrl.text = (data['make'] ?? '').toString();
+          _modeloCtrl.text = (data['model'] ?? '').toString();
+          final anio = data['year'];
+          if (anio != null) _anioCtrl.text = anio.toString();
+          final color = data['color'];
+          if (color != null) _colorCtrl.text = color.toString();
+          final chassis = data['chassis'];
+          if (chassis != null) _vinCtrl.text = chassis.toString();
+          final km = data['kilometers'];
+          if (km != null) _kmCtrl.text = km.toString();
+          _patenteNoEncontrada = false;
+        }
+      });
+    });
   }
 
   String? _req(String? v) {

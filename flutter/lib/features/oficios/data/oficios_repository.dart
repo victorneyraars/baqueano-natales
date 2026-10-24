@@ -3,8 +3,7 @@
 /// Encapsula las llamadas HTTP al backend. No maneja estado.
 library;
 
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -90,6 +89,19 @@ class OficiosRepository {
   }
 
   /// Obtiene el detalle de un vehiculo por su objeto_servicio_id.
+  Future<Map<String, dynamic>?> consultarPatente(String patente) async {
+    try {
+      final res = await _dio.get('/api/v1/integrations/patente/$patente');
+      final outer = res.data as Map<String, dynamic>?;
+      final inner = outer?['data'] as Map<String, dynamic>?;
+      final data = inner?['data'] as Map<String, dynamic>?;
+      return data;
+    } catch (e) {
+      debugPrint('[Patente] Error: $e');
+      return null;
+    }
+  }
+
   Future<Vehiculo> obtenerVehiculo(String objetoId) async {
     try {
       final res = await _dio.get('/api/v1/mis-vehiculos/$objetoId');
