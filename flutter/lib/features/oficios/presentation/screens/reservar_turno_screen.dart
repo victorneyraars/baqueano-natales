@@ -213,7 +213,19 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (e, _) => const SizedBox.shrink(),
+                  error: (e, _) {
+                    debugPrint('[Reserva] error servicios: $e');
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'No se pudieron cargar los servicios: $e',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  },
                   data: (servicios) {
                     if (servicios.isEmpty) return const SizedBox.shrink();
                     return Column(

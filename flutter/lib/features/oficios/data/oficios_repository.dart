@@ -430,7 +430,7 @@ class OficiosRepository {
   /// Lista los servicios activos del catalogo de un prestador.
   Future<List<Servicio>> listarServiciosPrestador(String prestadorId) async {
     try {
-      final res = await _dio.get('/api/v1/prestadores/\$prestadorId/servicios');
+      final res = await _dio.get('/api/v1/prestadores/$prestadorId/servicios');
       final list = res.data as List<dynamic>;
       return list
           .map((j) => Servicio.fromJson(j as Map<String, dynamic>))
