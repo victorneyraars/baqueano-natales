@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
 import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
+import 'package:baqueano_natales/core/storage/secure_storage.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
@@ -80,9 +81,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (fechaHora.isNotEmpty) detalleLines.add('Fecha: $fechaHora');
   final detalle = detalleLines.join('\n');
 
-  final dedupKey =
-      message.messageId ??
-      '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
+  final msgId = message.messageId ?? '';
+  if (msgId.isNotEmpty) {
+    final lastShown = await SecureStorageService.getLastShownFcmId();
+    if (lastShown == msgId) {
+      return;
+    }
+    await SecureStorageService.saveLastShownFcmId(msgId);
+  }
+  final dedupKey = msgId.isNotEmpty
+      ? msgId
+      : '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
   final notifId = dedupKey.hashCode;
   await localNotif.show(
     id: notifId,

@@ -221,7 +221,15 @@ class FcmService {
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final msgId = message.messageId ?? '';
     if (msgId.isNotEmpty && _procesados.contains(msgId)) return;
-    if (msgId.isNotEmpty) _procesados.add(msgId);
+    if (msgId.isNotEmpty) {
+      final lastShown = await SecureStorageService.getLastShownFcmId();
+      if (lastShown == msgId) {
+        debugPrint('[FCM] duplicado ignorado: $msgId');
+        return;
+      }
+      await SecureStorageService.saveLastShownFcmId(msgId);
+      _procesados.add(msgId);
+    }
     final notification = message.notification;
     final data = message.data;
     final tipo = data['tipo']?.toString() ?? '';

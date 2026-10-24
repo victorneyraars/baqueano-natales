@@ -16,6 +16,7 @@ class SecureStorageService {
   static const _keyUserId = 'user_id';
   static const _keyUserRole = 'user_role';
   static const _keyLastFcmTap = 'last_fcm_tap';
+  static const _keyLastShownFcmId = 'last_shown_fcm_id';
 
   /// Guarda el token de acceso (JWT).
   static Future<void> saveAccessToken(String token) async {
@@ -83,5 +84,16 @@ class SecureStorageService {
   /// Limpia TODOS los datos almacenados (logout).
   static Future<void> clearAll() async {
     await _storage.deleteAll();
+  }
+
+  /// Guarda el messageId del ultimo push mostrado por cualquier handler.
+  /// Se usa para deduplicar entre el background y foreground isolate.
+  static Future<void> saveLastShownFcmId(String messageId) async {
+    await _storage.write(key: _keyLastShownFcmId, value: messageId);
+  }
+
+  /// Lee el messageId del ultimo push mostrado.
+  static Future<String?> getLastShownFcmId() async {
+    return _storage.read(key: _keyLastShownFcmId);
   }
 }
