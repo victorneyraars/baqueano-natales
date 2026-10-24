@@ -105,7 +105,7 @@ async def consultar_rut(rut: str, db: DbSession):
             raise HTTPException(status_code=res.status_code, detail=f"Error Boostr: {res.text[:200]}")
 
 
-_LETRAS_AUTO = "BCDFGHJKLMNPQRSTVWXYZ"
+_LETRAS_AUTO = "BCDFGHJKLNPRSTVWXYZ"
 _PATRONES_AUTO = [
     re.compile(r"^[" + _LETRAS_AUTO + r"]{2}\d{4}$"),  # AB1234 (antiguo)
     re.compile(r"^[" + _LETRAS_AUTO + r"]{4}\d{2}$"),  # ABCD12 (2007-2026)
