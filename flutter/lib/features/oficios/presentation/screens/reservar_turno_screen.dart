@@ -158,45 +158,82 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
               error: (e, _) => Text('Error: $e'),
               data: (vehiculos) {
                 if (vehiculos.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_outlined),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Necesitas agregar un vehiculo en "Mis vehiculos" '
-                            'antes de reservar un turno.',
-                            style: theme.textTheme.bodySmall,
-                          ),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_outlined),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Necesitas agregar un vehiculo en "Mis vehiculos" '
+                                'antes de reservar un turno.',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await context.push('/mis-vehiculos/nuevo');
+                          if (!mounted) return;
+                          ref.invalidate(misVehiculosProvider);
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Agregar mi primer vehiculo'),
+                      ),
+                    ],
                   );
                 }
-                return DropdownButtonFormField<Vehiculo>(
-                  initialValue: _vehiculoSel,
-                  decoration: const InputDecoration(
-                    labelText: 'Vehiculo *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: vehiculos
-                      .map(
-                        (v) => DropdownMenuItem(
-                          value: v,
-                          child: Text(
-                            v.nombreDisplay,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _vehiculoSel = v),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<Vehiculo>(
+                      initialValue: _vehiculoSel,
+                      decoration: const InputDecoration(
+                        labelText: 'Vehiculo *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: vehiculos
+                          .map(
+                            (v) => DropdownMenuItem(
+                              value: v,
+                              child: Text(
+                                v.nombreDisplay,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _vehiculoSel = v),
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await context.push('/mis-vehiculos/nuevo');
+                          if (!mounted) return;
+                          ref.invalidate(misVehiculosProvider);
+                          final v = await ref.read(misVehiculosProvider.future);
+                          if (v.isNotEmpty && mounted) {
+                            setState(() => _vehiculoSel = v.last);
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Agregar otro vehiculo'),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -320,10 +357,13 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
                 border: OutlineInputBorder(),
               ),
               items: const [
+                DropdownMenuItem(value: 20, child: Text('20 minutos')),
                 DropdownMenuItem(value: 30, child: Text('30 minutos')),
+                DropdownMenuItem(value: 45, child: Text('45 minutos')),
                 DropdownMenuItem(value: 60, child: Text('1 hora')),
                 DropdownMenuItem(value: 90, child: Text('1 hora 30 min')),
                 DropdownMenuItem(value: 120, child: Text('2 horas')),
+                DropdownMenuItem(value: 180, child: Text('3 horas')),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => _duracionMin = v);
