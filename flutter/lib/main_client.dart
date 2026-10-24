@@ -17,6 +17,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:baqueano_natales/core/config/app_config.dart';
 import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
+import 'package:baqueano_natales/core/fcm/push_key.dart';
+import 'package:baqueano_natales/core/utils/stable_hash.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/core/theme/app_theme.dart';
 import 'package:baqueano_natales/shared/router/app_router.dart';
@@ -81,18 +83,41 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (fechaHora.isNotEmpty) detalleLines.add('Fecha: $fechaHora');
   final detalle = detalleLines.join('\n');
 
-  final msgId = message.messageId ?? '';
-  if (msgId.isNotEmpty) {
-    final lastShown = await SecureStorageService.getLastShownFcmId();
-    if (lastShown == msgId) {
-      return;
-    }
-    await SecureStorageService.saveLastShownFcmId(msgId);
+  // Dedup estable entre isolates con clave canonica (logId > msgId > fb:...)
+  final pushKey = canonicalPushKey(message);
+  final lastShown = await SecureStorageService.getLastShownFcmId();
+  if (lastShown == pushKey) {
+    return;
   }
-  final dedupKey = msgId.isNotEmpty
-      ? msgId
-      : '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
-  final notifId = dedupKey.hashCode;
+  await SecureStorageService.saveLastShownFcmId(pushKey);
+
+  // ID determinista entre isolates (FNV-1a, no String.hashCode).
+  final notifId = stableHash32(pushKey);
+
+  // Acciones SOLO para turno_nuevo (prestador). El cliente recibe
+  // "turno_estado" (confirmado/rechazado) y NO debe ver botones.
+  final turnoId = message.data['turno_id']?.toString() ?? '';
+  final prestadorId = message.data['prestador_id']?.toString() ?? '';
+  final acciones = <AndroidNotificationAction>[];
+  if (esNuevoTurno && turnoId.isNotEmpty && prestadorId.isNotEmpty) {
+    acciones.add(
+      const AndroidNotificationAction(
+        'aceptar',
+        'Aceptar',
+        showsUserInterface: true,
+        cancelNotification: true,
+      ),
+    );
+    acciones.add(
+      const AndroidNotificationAction(
+        'rechazar',
+        'Rechazar',
+        showsUserInterface: true,
+        cancelNotification: true,
+      ),
+    );
+  }
+
   await localNotif.show(
     id: notifId,
     title: titulo,
@@ -115,26 +140,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           contentTitle: titulo,
           summaryText: body,
         ),
-        actions: <AndroidNotificationAction>[
-          const AndroidNotificationAction(
-            'aceptar',
-            'Aceptar',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-          const AndroidNotificationAction(
-            'rechazar',
-            'Rechazar',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-        ],
+        actions: acciones.isEmpty ? null : acciones,
       ),
     ),
     payload: jsonEncode({
       'log_id': logId ?? '',
-      'turno_id': message.data['turno_id']?.toString() ?? '',
-      'prestador_id': message.data['prestador_id']?.toString() ?? '',
+      'turno_id': turnoId,
+      'prestador_id': prestadorId,
+      'deep_link': message.data['deep_link']?.toString() ?? '',
+      'tipo': tipo,
     }),
   );
 }

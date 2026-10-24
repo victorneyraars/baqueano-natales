@@ -14,6 +14,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
+import 'package:baqueano_natales/core/fcm/push_key.dart';
+import 'package:baqueano_natales/core/utils/stable_hash.dart';
 
 const _canalId = 'baqueano_turnos_v6';
 const _canalNombre = 'Notificaciones de Baqueano';
@@ -226,17 +228,15 @@ class FcmService {
   }
 
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
-    final msgId = message.messageId ?? '';
-    if (msgId.isNotEmpty && _procesados.contains(msgId)) return;
-    if (msgId.isNotEmpty) {
-      final lastShown = await SecureStorageService.getLastShownFcmId();
-      if (lastShown == msgId) {
-        debugPrint('[FCM] duplicado ignorado: $msgId');
-        return;
-      }
-      await SecureStorageService.saveLastShownFcmId(msgId);
-      _procesados.add(msgId);
+    final pushKey = canonicalPushKey(message);
+    if (_procesados.contains(pushKey)) return;
+    final lastShown = await SecureStorageService.getLastShownFcmId();
+    if (lastShown == pushKey) {
+      debugPrint('[FCM] duplicado ignorado: $pushKey');
+      return;
     }
+    await SecureStorageService.saveLastShownFcmId(pushKey);
+    _procesados.add(pushKey);
     final notification = message.notification;
     final data = message.data;
     final tipo = data['tipo']?.toString() ?? '';
@@ -316,10 +316,7 @@ class FcmService {
       'tipo': tipo,
     });
 
-    final dedupKey =
-        message.messageId ??
-        '${message.data['titulo'] ?? ''}|${message.data['body'] ?? ''}';
-    final notifId = dedupKey.hashCode;
+    final notifId = stableHash32(pushKey);
 
     await _localNotif.show(
       id: notifId,
