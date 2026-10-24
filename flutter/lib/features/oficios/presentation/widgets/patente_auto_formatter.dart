@@ -14,10 +14,7 @@ class PatenteAutoFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final texto = newValue.text.toUpperCase();
-    final filtrado = texto
-        .split('')
-        .where(_permitidos.hasMatch)
-        .join();
+    final filtrado = texto.split('').where(_permitidos.hasMatch).join();
     final recortado = filtrado.length > 6 ? filtrado.substring(0, 6) : filtrado;
     return newValue.copyWith(
       text: recortado,
