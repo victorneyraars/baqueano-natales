@@ -105,7 +105,7 @@ async def consultar_rut(rut: str, db: DbSession):
             raise HTTPException(status_code=res.status_code, detail=f"Error Boostr: {res.text[:200]}")
 
 
-_LETRAS_AUTO = "BCDFGHJKLNPRSTVWXYZ"
+_LETRAS_AUTO = "A-Z"
 _PATRONES_AUTO = [
     re.compile(r"^[" + _LETRAS_AUTO + r"]{2}\d{4}$"),  # AB1234 (antiguo)
     re.compile(r"^[" + _LETRAS_AUTO + r"]{4}\d{2}$"),  # ABCD12 (2007-2026)
@@ -135,7 +135,7 @@ def _validar_patente_auto(patente: str) -> str:
             detail=(
                 "Patente invalida para auto. Formatos aceptados: "
                 "AB1234 (antiguo), ABCD12 (2007-2026) o BBBBB0 (desde jul 2026). "
-                "No se permiten vocales ni las letras M, N, N-tilde, Q."
+                "Solo se permiten letras y numeros (sin puntos ni guiones)."
             ),
         )
     return p_limpia
@@ -159,6 +159,14 @@ async def consultar_patente(patente: str, db: DbSession):
     async with httpx.AsyncClient(timeout=10.0) as client:
         res = await client.get(url, headers=headers)
         _update_stats_from_headers("patente", res)
+        # Observabilidad: cuota restante y respuesta cruda
+        remaining = res.headers.get("X-Remaining-Credits")
+        quota = res.headers.get("X-Quota-Limit")
+        logger = __import__("logging").getLogger(__name__)
+        logger.info(
+            "Boostr patente=%s status=%s remaining=%s quota=%s body=%s",
+            patente, res.status_code, remaining, quota, res.text[:200],
+        )
         duration_ms = int((time.monotonic() - started) * 1000)
         try:
             data = res.json()
