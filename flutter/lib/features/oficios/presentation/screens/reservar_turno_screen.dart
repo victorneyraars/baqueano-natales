@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/oficios/domain/servicio.dart';
 
 class ReservarTurnoScreen extends ConsumerStatefulWidget {
   const ReservarTurnoScreen({
@@ -30,6 +31,7 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
   final _notasCtrl = TextEditingController();
 
   Vehiculo? _vehiculoSel;
+  Servicio? _servicioSel;
   DateTime? _fecha;
   TimeOfDay? _hora;
   int _duracionMin = 30;
@@ -99,6 +101,7 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
         objetoId: _vehiculoSel!.objetoId,
         fechaInicio: fechaInicio,
         duracionMin: _duracionMin,
+        servicioId: _servicioSel?.id,
         motivo: _motivoCtrl.text.trim().isEmpty
             ? null
             : _motivoCtrl.text.trim(),
@@ -199,6 +202,68 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
             ),
 
             const SizedBox(height: 20),
+            // Servicio del catalogo
+            Consumer(
+              builder: (context, ref, _) {
+                final serviciosAsync = ref.watch(
+                  serviciosPrestadorProvider(widget.prestadorId),
+                );
+                return serviciosAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (e, _) => const SizedBox.shrink(),
+                  data: (servicios) {
+                    if (servicios.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Servicio',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...servicios.map(
+                          (s) => Card(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            color: _servicioSel?.id == s.id
+                                ? theme.colorScheme.primaryContainer
+                                : null,
+                            child: ListTile(
+                              dense: true,
+                              title: Text(s.nombre),
+                              subtitle: Text(
+                                '${s.precioLabel} · ${s.duracionLabel}',
+                              ),
+                              trailing: _servicioSel?.id == s.id
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: theme.colorScheme.primary,
+                                    )
+                                  : null,
+                              onTap: () {
+                                setState(() {
+                                  _servicioSel = s;
+                                  if (s.duracionEstimadaMin != null) {
+                                    _duracionMin = s.duracionEstimadaMin!;
+                                  }
+                                  _motivoCtrl.text = s.nombre;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
             // Fecha y hora
             Text(
               'Fecha y hora',

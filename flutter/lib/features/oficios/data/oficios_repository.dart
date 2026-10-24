@@ -20,6 +20,7 @@ import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/oficios/domain/servicio.dart';
 
 class OficiosRepository {
   OficiosRepository({Dio? dio}) : _dio = dio ?? DioClient.instance;
@@ -426,11 +427,28 @@ class OficiosRepository {
   }
 
   /// Crea un turno (cliente reserva con un prestador).
+  /// Lista los servicios activos del catalogo de un prestador.
+  Future<List<Servicio>> listarServiciosPrestador(String prestadorId) async {
+    try {
+      final res = await _dio.get('/api/v1/prestadores/\$prestadorId/servicios');
+      final list = res.data as List<dynamic>;
+      return list
+          .map((j) => Servicio.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   Future<Turno> crearTurno({
     required String prestadorId,
     required String objetoId,
     required DateTime fechaInicio,
     int duracionMin = 30,
+    String? servicioId,
     String? motivo,
     String? notasCliente,
   }) async {
@@ -442,6 +460,7 @@ class OficiosRepository {
           'objeto_servicio_id': objetoId,
           'fecha_inicio': fechaInicio.toUtc().toIso8601String(),
           'duracion_min': duracionMin,
+          'servicio_id': ?servicioId,
           'motivo': ?motivo,
           'notas_cliente': ?notasCliente,
         },

@@ -19,6 +19,7 @@ import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/oficios/domain/servicio.dart';
 
 // =========================================================
 // Repositorio
@@ -463,3 +464,9 @@ final miReviewProvider = FutureProvider.family<Review?, String>((
   final repo = ref.watch(oficiosRepositoryProvider);
   return repo.obtenerMiReview(ordenId);
 });
+
+final serviciosPrestadorProvider =
+    FutureProvider.family<List<Servicio>, String>((ref, prestadorId) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarServiciosPrestador(prestadorId);
+    });
