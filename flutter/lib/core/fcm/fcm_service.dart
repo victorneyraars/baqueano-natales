@@ -129,17 +129,24 @@ class FcmService {
           return;
         }
 
-        // Si es tap en el cuerpo, comportamiento actual
+        // Si es tap en el cuerpo, navegar + reportar apertura
         if (payload.isEmpty) return;
         String logId = payload;
+        String deepLink = '';
         if (payload.startsWith('{')) {
           try {
             final j = jsonDecode(payload) as Map<String, dynamic>;
             logId = j['log_id']?.toString() ?? '';
+            deepLink = j['deep_link']?.toString() ?? '';
           } catch (_) {}
         }
-        if (logId.isEmpty) return;
-        _procesarTapLocal(logId);
+        if (logId.isNotEmpty) {
+          await _procesarTapLocal(logId);
+        }
+        if (deepLink.isNotEmpty && _onDeepLink != null) {
+          debugPrint('[FCM] navegando a: $deepLink');
+          _onDeepLink(deepLink);
+        }
       },
       onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
     );
@@ -305,6 +312,8 @@ class FcmService {
       'log_id': logId ?? '',
       'turno_id': turnoId,
       'prestador_id': prestadorId,
+      'deep_link': message.data['deep_link']?.toString() ?? '',
+      'tipo': tipo,
     });
 
     final dedupKey =
