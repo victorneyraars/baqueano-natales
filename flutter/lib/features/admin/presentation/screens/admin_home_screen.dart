@@ -10,7 +10,7 @@
 library;
 
 import 'package:baqueano_natales/core/widgets/version_badge.dart';
-import 'package:baqueano_natales/features/home/presentation/about_screen.dart';
+import 'package:baqueano_natales/features/settings/presentation/about_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
