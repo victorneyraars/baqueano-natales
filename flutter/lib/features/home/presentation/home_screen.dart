@@ -60,25 +60,34 @@ class HomeScreen extends ConsumerWidget {
             : Text(mode == 'prestador' ? 'Mi taller' : 'Inicio'),
         actions: appBarActionsWithBadge(
           extra: [
-            IconButton(
-              icon: const Icon(Icons.info_outline),
-              tooltip: 'Acerca de',
-              onPressed: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const AboutScreen())),
-            ),
-            IconButton(
-              icon: const Icon(Icons.system_update),
-              tooltip: 'Buscar actualización',
-              onPressed: () => AppUpdateService.checkForUpdates(
-                GoRouter.of(context),
-                scaffoldMessengerKey,
-                forceShow: true,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Cerrar sesión',
-              onPressed: () => _handleLogout(context, ref),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'about') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AboutScreen()),
+                  );
+                } else if (value == 'update') {
+                  AppUpdateService.checkForUpdates(
+                    GoRouter.of(context),
+                    scaffoldMessengerKey,
+                    forceShow: true,
+                  );
+                } else if (value == 'logout') {
+                  _handleLogout(context, ref);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'about', child: Text('Acerca de')),
+                const PopupMenuItem(
+                  value: 'update',
+                  child: Text('Buscar actualización'),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Text('Cerrar sesión'),
+                ),
+              ],
             ),
           ],
         ),
