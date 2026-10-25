@@ -12,6 +12,12 @@ import 'package:baqueano_natales/main_client.dart' show scaffoldMessengerKey;
 import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:baqueano_natales/features/settings/presentation/about_screen.dart';
 
+// Feature flags para el MVP mecánica-first.
+// Cambiar a true cuando se implementen las verticales correspondientes.
+const _showComercios = false;
+const _showOficios = false;
+const _showProximamente = false;
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -156,18 +162,20 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            _FeatureCard(
-              icon: Icons.storefront,
-              title: 'Mis comercios',
-              subtitle: 'Gestioná tus locales y servicios',
-              onTap: () => context.push('/mis-comercios'),
-            ),
-            _FeatureCard(
-              icon: Icons.handyman,
-              title: 'Mis oficios',
-              subtitle: 'Gestioná tus perfiles de prestador',
-              onTap: () => context.push('/mis-prestadores'),
-            ),
+            if (_showComercios)
+              _FeatureCard(
+                icon: Icons.storefront,
+                title: 'Mis comercios',
+                subtitle: 'Gestioná tus locales y servicios',
+                onTap: () => context.push('/mis-comercios'),
+              ),
+            if (_showOficios)
+              _FeatureCard(
+                icon: Icons.handyman,
+                title: 'Mis oficios',
+                subtitle: 'Gestioná tus perfiles de prestador',
+                onTap: () => context.push('/mis-prestadores'),
+              ),
             _FeatureCard(
               icon: Icons.calendar_month,
               title: 'Mi taller',
@@ -208,49 +216,52 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            _FeatureCard(
-              icon: Icons.explore,
-              title: 'Comercios',
-              subtitle: 'Explorá locales y servicios de Puerto Natales',
-              onTap: () => context.push('/comercios'),
-            ),
+            if (_showComercios)
+              _FeatureCard(
+                icon: Icons.explore,
+                title: 'Comercios',
+                subtitle: 'Explorá locales y servicios de Puerto Natales',
+                onTap: () => context.push('/comercios'),
+              ),
             _FeatureCard(
               icon: Icons.build_circle_outlined,
-              title: 'Oficios y servicios',
-              subtitle: 'Mecánicos, gasfiteres, electricistas y más',
+              title: 'Mecánicos',
+              subtitle: 'Encontrá mecánicos en Puerto Natales',
               onTap: () => context.push('/prestadores'),
             ),
 
-            const SizedBox(height: 24),
+            if (_showProximamente) ...[
+              const SizedBox(height: 24),
 
-            Text(
-              'Próximamente',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+              Text(
+                'Próximamente',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            const _FeatureCard(
-              icon: Icons.map,
-              title: 'Mapa en vivo',
-              subtitle: 'Vehículos cercanos y pedidos',
-            ),
-            const _FeatureCard(
-              icon: Icons.local_shipping,
-              title: 'Delivery',
-              subtitle: 'Pedidos a domicilio',
-            ),
-            const _FeatureCard(
-              icon: Icons.qr_code,
-              title: 'Carta QR',
-              subtitle: 'Menús interactivos de comercios',
-            ),
-            const _FeatureCard(
-              icon: Icons.redeem,
-              title: 'Recompensas',
-              subtitle: 'Acumulá puntos y canjeá beneficios',
-            ),
+              const _FeatureCard(
+                icon: Icons.map,
+                title: 'Mapa en vivo',
+                subtitle: 'Vehículos cercanos y pedidos',
+              ),
+              const _FeatureCard(
+                icon: Icons.local_shipping,
+                title: 'Delivery',
+                subtitle: 'Pedidos a domicilio',
+              ),
+              const _FeatureCard(
+                icon: Icons.qr_code,
+                title: 'Carta QR',
+                subtitle: 'Menús interactivos de comercios',
+              ),
+              const _FeatureCard(
+                icon: Icons.redeem,
+                title: 'Recompensas',
+                subtitle: 'Acumulá puntos y canjeá beneficios',
+              ),
+            ],
           ],
         ),
       ),
