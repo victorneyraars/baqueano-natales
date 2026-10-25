@@ -17,6 +17,7 @@ class SecureStorageService {
   static const _keyUserRole = 'user_role';
   static const _keyLastFcmTap = 'last_fcm_tap';
   static const _keyLastShownFcmId = 'last_shown_fcm_id';
+  static const _keyActiveMode = 'active_mode';
 
   /// Guarda el token de acceso (JWT).
   static Future<void> saveAccessToken(String token) async {
@@ -95,5 +96,15 @@ class SecureStorageService {
   /// Lee el messageId del ultimo push mostrado.
   static Future<String?> getLastShownFcmId() async {
     return _storage.read(key: _keyLastShownFcmId);
+  }
+
+  /// Guarda el modo activo del usuario ('cliente' o 'prestador').
+  static Future<void> saveActiveMode(String mode) async {
+    await _storage.write(key: _keyActiveMode, value: mode);
+  }
+
+  /// Lee el modo activo del usuario.
+  static Future<String?> getActiveMode() async {
+    return _storage.read(key: _keyActiveMode);
   }
 }
