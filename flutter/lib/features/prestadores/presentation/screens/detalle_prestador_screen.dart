@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/review_list.dart';
 
 class DetallePrestadorScreen extends ConsumerWidget {
   const DetallePrestadorScreen({super.key, required this.slug});
@@ -62,6 +63,21 @@ class _ContenidoState extends State<_Contenido> {
                 children: [
                   _buildInfoHeader(prestador, theme),
                   const SizedBox(height: 16),
+                  if (prestador.descripcion != null &&
+                      prestador.descripcion != '') ...[
+                    Text(
+                      'Sobre el servicio',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      prestador.descripcion ?? '',
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   _buildEspecialidades(prestador, theme),
                   const SizedBox(height: 24),
                   if (catKeys.isNotEmpty) ...[
@@ -81,6 +97,10 @@ class _ContenidoState extends State<_Contenido> {
                   ],
                   const SizedBox(height: 24),
                   _buildHorarioContacto(prestador, theme),
+                  const SizedBox(height: 24),
+                  _buildGaleria(prestador, theme),
+                  const SizedBox(height: 24),
+                  _buildResenas(prestador, theme),
                   const SizedBox(height: 100), // Espacio para el bottom bar
                 ],
               ),
@@ -454,6 +474,57 @@ class _ContenidoState extends State<_Contenido> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGaleria(Prestador p, ThemeData theme) {
+    if (p.fotosTrabajos.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Trabajos recientes',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: p.fotosTrabajos.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  p.fotosTrabajos[i].url,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResenas(Prestador p, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Resenas',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ReviewList(slug: p.slug),
+      ],
     );
   }
 }
