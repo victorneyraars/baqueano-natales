@@ -4,6 +4,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/fcm/fcm_service.dart';
+import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 
 /// Notifier de la ruta pendiente de navegacion (deep link desde una notif).
 class PendingNavigation extends Notifier<String?> {
@@ -26,6 +27,13 @@ final fcmServiceProvider = Provider<FcmService>((ref) {
   return FcmService(
     onDeepLink: (path) {
       ref.read(pendingNavigationProvider.notifier).set(path);
+    },
+    onRefreshNeeded: () {
+      // Refrescar lista de turnos si el usuario está en la pantalla.
+      // Ignora errores si el provider no está montado aún.
+      try {
+        ref.invalidate(misTurnosProvider(null));
+      } catch (_) {}
     },
   );
 });

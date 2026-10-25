@@ -89,14 +89,18 @@ class FcmService {
     FirebaseMessaging? messaging,
     Dio? dio,
     void Function(String path)? onDeepLink,
+    void Function()? onRefreshNeeded,
   }) : _messaging = messaging ?? FirebaseMessaging.instance,
        _dio = dio ?? DioClient.instance,
        // ignore: prefer_initializing_formals
-       _onDeepLink = onDeepLink;
+       _onDeepLink = onDeepLink,
+       // ignore: prefer_initializing_formals
+       _onRefreshNeeded = onRefreshNeeded;
 
   final FirebaseMessaging _messaging;
   final Dio _dio;
   final void Function(String path)? _onDeepLink;
+  final void Function()? _onRefreshNeeded;
   final _localNotif = FlutterLocalNotificationsPlugin();
 
   /// Message keys procesados en esta sesion (FIFO acotado).
@@ -187,11 +191,17 @@ class FcmService {
     await androidPlugin?.createNotificationChannel(channel);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // IMPORTANTE: NO mostrar notificación acá. El background handler ya la
+      // muestra con fullScreenIntent (que fuerza abrir la app y dispara
+      // este listener). Mostrarla acá produce DUPLICADO en Motorola/sideloaded
+      // porque ambos handlers corren en isolates distintos y la race condition
+      // en SecureStorage no se puede evitar de forma síncrona.
       debugPrint(
         '[FCM] foreground: title=${message.notification?.title} '
         'data=${message.data}',
       );
-      _mostrarBannerLocal(message);
+      // Solo refrescar UI para que el nuevo turno aparezca en vivo.
+      _onRefreshNeeded?.call();
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -227,6 +237,7 @@ class FcmService {
     return token;
   }
 
+  // ignore: unused_element
   Future<void> _mostrarBannerLocal(RemoteMessage message) async {
     final pushKey = canonicalPushKey(message);
     if (_procesados.contains(pushKey)) return;
