@@ -41,6 +41,10 @@ class VersionBadge extends StatelessWidget {
     if (AppConfig.environment == Environment.prod) {
       return const SizedBox.shrink();
     }
+    // Responsive: pantallas angostas (< 400dp) fuerzan formato compacto
+    // porque el AppBar tiene espacio limitado.
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final esAngosto = compact || screenWidth < 400;
     final sha = _gitSha.length > 7 ? _gitSha.substring(0, 7) : _gitSha;
     return FutureBuilder<PackageInfo>(
       future: PackageInfo.fromPlatform(),
@@ -48,6 +52,9 @@ class VersionBadge extends StatelessWidget {
         final info = snapshot.data;
         final version = info?.version ?? '...';
         final build = info?.buildNumber ?? '...';
+        final texto = esAngosto
+            ? 'v$version ($build)'
+            : 'v$version ($build) - $_flavorName - $sha';
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -57,9 +64,7 @@ class VersionBadge extends StatelessWidget {
             border: Border.all(color: _badgeColor.withValues(alpha: 0.5)),
           ),
           child: Text(
-            compact
-                ? 'v$version ($build)'
-                : 'v$version ($build) - $_flavorName - $sha',
+            texto,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
