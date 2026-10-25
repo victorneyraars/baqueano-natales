@@ -53,6 +53,8 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0,
+        centerTitle: false,
         title: dual
             ? const ModeSwitcher()
             : Text(mode == 'prestador' ? 'Mi taller' : 'Inicio'),

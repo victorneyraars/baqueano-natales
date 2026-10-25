@@ -52,17 +52,26 @@ class ModeSwitcher extends ConsumerWidget {
           ),
         ),
       ],
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isPrestador ? Icons.handyman_outlined : Icons.person_outline,
-            size: 20,
-          ),
-          const SizedBox(width: 4),
-          Text(isPrestador ? 'Modo Prestador' : 'Modo Cliente'),
-          const Icon(Icons.arrow_drop_down, size: 20),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isPrestador ? Icons.handyman_outlined : Icons.person_outline,
+              size: 20,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                isPrestador ? 'Prestador' : 'Cliente',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down, size: 20),
+          ],
+        ),
       ),
     );
   }
