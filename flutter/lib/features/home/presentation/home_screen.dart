@@ -9,6 +9,8 @@ import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/notificaciones/data/notificaciones_providers.dart';
 import 'package:baqueano_natales/core/services/app_update_service.dart';
 import 'package:baqueano_natales/main_client.dart' show scaffoldMessengerKey;
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
+import 'package:baqueano_natales/features/settings/presentation/about_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -51,6 +53,13 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Inicio'),
         actions: [
+          const Center(child: VersionBadge()),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'Acerca de',
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const AboutScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.system_update),
             tooltip: 'Buscar actualización',
