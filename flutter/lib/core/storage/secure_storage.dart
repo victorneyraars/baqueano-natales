@@ -107,4 +107,15 @@ class SecureStorageService {
   static Future<String?> getActiveMode() async {
     return _storage.read(key: _keyActiveMode);
   }
+
+  static const _keyHasSeenWelcome = 'has_seen_welcome';
+
+  static Future<bool> getHasSeenWelcome() async {
+    final value = await _storage.read(key: _keyHasSeenWelcome);
+    return value == 'true';
+  }
+
+  static Future<void> setHasSeenWelcome(bool value) async {
+    await _storage.write(key: _keyHasSeenWelcome, value: value.toString());
+  }
 }

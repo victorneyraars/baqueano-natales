@@ -38,6 +38,8 @@ import 'package:baqueano_natales/features/notificaciones/presentation/screens/pr
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 import 'package:baqueano_natales/features/auth/presentation/login_screen.dart';
 import 'package:baqueano_natales/features/auth/presentation/splash_screen.dart';
+import 'package:baqueano_natales/features/auth/presentation/screens/welcome_screen.dart';
+import 'package:baqueano_natales/core/storage/secure_storage.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_comercio_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/editor_horarios_screen.dart';
 import 'package:baqueano_natales/features/comercios/presentation/screens/detalle_mi_comercio_screen.dart';
@@ -94,7 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: authChangeNotifier,
     debugLogDiagnostics: true,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final authState = ref.read(authNotifierProvider);
       final location = state.matchedLocation;
       final homePath = _homePathForFlavor();
@@ -109,7 +111,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/login';
 
         case AuthStatus.authenticated:
-          // Si estÃ¡ en splash o login, redirigir al home del flavor
+          // Bienvenida solo en flavor client, solo al salir del splash
+          if (AppConfig.appType == AppType.client && location == '/splash') {
+            final hasSeenWelcome =
+                await SecureStorageService.getHasSeenWelcome();
+            if (hasSeenWelcome == false) {
+              return '/welcome';
+            }
+          }
+          // Si esta en splash o login, redirigir al home del flavor
           if (location == '/splash' || location == '/login') {
             return homePath;
           }
@@ -133,6 +143,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/welcome',
+        name: 'welcome',
+        builder: (context, state) => const WelcomeScreen(),
       ),
 
       // =========================================================
