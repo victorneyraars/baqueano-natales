@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,13 +30,15 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del turno'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.invalidate(miTurnoDetalleProvider(widget.turnoId)),
-          ),
-        ],
+        actions: appBarActionsWithBadge(
+          extra: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () =>
+                  ref.invalidate(miTurnoDetalleProvider(widget.turnoId)),
+            ),
+          ],
+        ),
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),

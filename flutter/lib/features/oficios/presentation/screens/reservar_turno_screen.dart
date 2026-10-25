@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -136,7 +137,10 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
     final misVehiculosAsync = ref.watch(misVehiculosProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.prestadorNombre ?? 'Reservar turno')),
+      appBar: AppBar(
+        title: Text(widget.prestadorNombre ?? 'Reservar turno'),
+        actions: appBarActionsWithBadge(),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(

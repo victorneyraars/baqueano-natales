@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -177,6 +178,7 @@ class _FormularioVehiculoScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(_esEdicion ? 'Editar vehiculo' : 'Nuevo vehiculo'),
+        actions: appBarActionsWithBadge(),
       ),
       body: Form(
         key: _formKey,

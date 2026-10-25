@@ -79,7 +79,8 @@ class VersionBadge extends StatelessWidget {
 }
 
 /// Helper para agregar el badge a `AppBar.actions`.
+/// El badge va primero (izquierda) y los extras después (derecha).
 List<Widget> appBarActionsWithBadge({List<Widget>? extra}) => [
-  ...?extra,
   const Center(child: VersionBadge()),
+  ...?extra,
 ];

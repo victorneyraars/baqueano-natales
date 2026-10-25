@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,13 +22,15 @@ class MisVehiculosScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis vehiculos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refrescar',
-            onPressed: () => ref.invalidate(misVehiculosProvider),
-          ),
-        ],
+        actions: appBarActionsWithBadge(
+          extra: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refrescar',
+              onPressed: () => ref.invalidate(misVehiculosProvider),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/mis-vehiculos/nuevo'),

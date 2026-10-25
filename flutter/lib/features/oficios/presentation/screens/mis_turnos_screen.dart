@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,12 +26,14 @@ class _MisTurnosScreenState extends ConsumerState<MisTurnosScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis turnos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(misTurnosProvider(_estadoFiltro)),
-          ),
-        ],
+        actions: appBarActionsWithBadge(
+          extra: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.invalidate(misTurnosProvider(_estadoFiltro)),
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
