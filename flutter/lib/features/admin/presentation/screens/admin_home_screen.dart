@@ -316,6 +316,7 @@ class AdminHomeScreen extends ConsumerWidget {
               subtitle: 'Crear, editar y desactivar categorías',
               onTap: () => context.push('/admin/categorias-comercio'),
             ),
+            const _OnboardingSwitch(),
 
             const SizedBox(height: 24),
 
@@ -396,6 +397,65 @@ class _AdminCard extends StatelessWidget {
               ScaffoldMessenger.of(context)
                   .showSnackBar(const SnackBar(content: Text('Próximamente')));
             },
+      ),
+    );
+  }
+}
+
+class _OnboardingSwitch extends ConsumerWidget {
+  const _OnboardingSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final modoAsync = ref.watch(onboardingModeProvider);
+    return modoAsync.when(
+      loading: () => const ListTile(
+        title: Text('Permitir registro de prestadores'),
+        trailing: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (e, _) => ListTile(
+        title: const Text('Permitir registro de prestadores'),
+        subtitle: Text('Error: $e'),
+        trailing: const Icon(Icons.error, color: Colors.red),
+      ),
+      data: (modo) => Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: SwitchListTile(
+          title: const Text('Permitir registro de prestadores'),
+          subtitle: const Text(
+            'Los clientes pueden crear prestadores desde la app',
+          ),
+          value: modo == 'open',
+          onChanged: (val) async {
+            try {
+              final repo = ref.read(prestadorRepositoryProvider);
+              await repo.setOnboardingMode(val ? 'open' : 'closed');
+              ref.invalidate(onboardingModeProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      val ? 'Registro abierto' : 'Registro cerrado',
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+        ),
       ),
     );
   }

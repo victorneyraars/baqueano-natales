@@ -88,3 +88,10 @@ class EstadisticasUsuarios(BaseModel):
         ...,
         description="Cantidad de usuarios por rol",
     )
+
+
+class OnboardingModeResponse(BaseModel):
+    modo: str
+
+class OnboardingModeUpdate(BaseModel):
+    modo: str  # open | closed

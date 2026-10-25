@@ -21,14 +21,21 @@ class MisPrestadoresScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncPrestadores = ref.watch(misPrestadoresProvider);
+    final modoAsync = ref.watch(onboardingModeProvider);
+    final puedeCrear = modoAsync.maybeWhen(
+      data: (m) => m == 'open',
+      orElse: () => true,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mis oficios')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/mis-prestadores/nuevo'),
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo'),
-      ),
+      floatingActionButton: puedeCrear
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/mis-prestadores/nuevo'),
+              icon: const Icon(Icons.add),
+              label: const Text('Nuevo'),
+            )
+          : null,
       body: asyncPrestadores.when(
         data: (prestadores) {
           if (prestadores.isEmpty) return const _EmptyState();
@@ -270,12 +277,17 @@ class _EstadoBadge extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final modoAsync = ref.watch(onboardingModeProvider);
+    final puedeCrear = modoAsync.maybeWhen(
+      data: (m) => m == 'open',
+      orElse: () => true,
+    );
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
@@ -332,16 +344,18 @@ class _EmptyState extends StatelessWidget {
               descripcion: 'Un admin lo verifica y ya apareces publico.',
               theme: theme,
             ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: () => context.push('/mis-prestadores/nuevo'),
-              icon: const Icon(Icons.add),
-              label: const Text('Crear mi primer perfil'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 52),
-                textStyle: theme.textTheme.titleMedium,
+            if (puedeCrear) ...[
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: () => context.push('/mis-prestadores/nuevo'),
+                icon: const Icon(Icons.add),
+                label: const Text('Crear mi primer perfil'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  textStyle: theme.textTheme.titleMedium,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -731,4 +731,36 @@ class PrestadorRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  /// Obtiene el modo de onboarding actual ('open' | 'closed').
+  Future<String> getOnboardingMode() async {
+    try {
+      final res = await _dio.get('/api/v1/admin/configuracion/onboarding');
+      return (res.data as Map<String, dynamic>)['modo'] as String;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Cambia el modo de onboarding ('open' | 'closed').
+  Future<void> setOnboardingMode(String modo) async {
+    try {
+      await _dio.put(
+        '/api/v1/admin/configuracion/onboarding',
+        data: {'modo': modo},
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

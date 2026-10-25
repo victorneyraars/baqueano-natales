@@ -12,7 +12,7 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
@@ -150,6 +150,13 @@ async def crear_mi_prestador(
     user: CurrentUser,
     db: DbSession,
 ) -> PrestadorPrivadoResponse:
+    from app.modules.admin.services import obtener_onboarding_mode
+    modo = await obtener_onboarding_mode(db)
+    if modo == "closed":
+        raise HTTPException(
+            status_code=403,
+            detail="El registro de prestadores está cerrado temporalmente.",
+        )
     prestador = await services.crear_prestador(db, user, data)
     await db.refresh(prestador)
     return PrestadorPrivadoResponse.model_validate(prestador)

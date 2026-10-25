@@ -226,3 +226,22 @@ async def get_estadisticas(db: AsyncSession) -> dict:
         "verificados": verificados,
         "por_rol": por_rol,
     }
+
+
+async def obtener_onboarding_mode(db) -> str:
+    from sqlalchemy import select
+    from app.modules.admin.models import Configuracion
+    cfg = (await db.execute(select(Configuracion).where(Configuracion.clave == 'onboarding_mode'))).scalar_one_or_none()
+    return cfg.valor if cfg else 'open'
+
+async def set_onboarding_mode(db, modo: str) -> str:
+    from sqlalchemy import select
+    from app.modules.admin.models import Configuracion
+    cfg = (await db.execute(select(Configuracion).where(Configuracion.clave == 'onboarding_mode'))).scalar_one_or_none()
+    if cfg:
+        cfg.valor = modo
+    else:
+        cfg = Configuracion(clave='onboarding_mode', valor=modo)
+        db.add(cfg)
+    await db.commit()
+    return modo

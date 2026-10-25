@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.db import DbSession
 from app.modules.admin import services
 from app.modules.admin.schemas import (
+    OnboardingModeResponse,
+    OnboardingModeUpdate,
     CambiarRolRequest,
     EstadisticasUsuarios,
     ListarUsuariosQuery,
@@ -228,3 +230,29 @@ async def get_estadisticas(
     """Devuelve estadísticas globales de usuarios."""
     stats = await services.get_estadisticas(db)
     return EstadisticasUsuarios(**stats)
+
+
+@router.get(
+    "/configuracion/onboarding",
+    response_model=OnboardingModeResponse,
+    summary="Leer modo de onboarding",
+)
+async def get_onboarding_mode(admin: AdminUser, db: DbSession) -> OnboardingModeResponse:
+    modo = await services.obtener_onboarding_mode(db)
+    return OnboardingModeResponse(modo=modo)
+
+@router.put(
+    "/configuracion/onboarding",
+    response_model=OnboardingModeResponse,
+    summary="Cambiar modo de onboarding",
+)
+async def set_onboarding_mode(
+    data: OnboardingModeUpdate,
+    admin: AdminUser,
+    db: DbSession,
+) -> OnboardingModeResponse:
+    if data.modo not in ("open", "closed"):
+        raise HTTPException(400, "Modo inválido. Usar open o closed.")
+
+    modo = await services.set_onboarding_mode(db, data.modo)
+    return OnboardingModeResponse(modo=modo)

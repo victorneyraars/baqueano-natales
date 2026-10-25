@@ -257,3 +257,9 @@ final modalidadesConfigProvider =
       final repo = ref.watch(prestadorRepositoryProvider);
       return repo.obtenerModalidades(prestadorId);
     });
+
+// Admin: Onboarding Mode
+final onboardingModeProvider = FutureProvider<String>((ref) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return repo.getOnboardingMode();
+});

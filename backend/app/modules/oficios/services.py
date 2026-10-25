@@ -1071,6 +1071,12 @@ async def crear_turno(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prestador no encontrado",
         )
+    from app.modules.prestadores.models import EstadoPrestador
+    if prestador.estado != EstadoPrestador.VERIFICADO or not prestador.activo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El prestador no está disponible para reservas en este momento.",
+        )
 
     # Validar que el objeto_servicio exista y sea del cliente
     obj = (
