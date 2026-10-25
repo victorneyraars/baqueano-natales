@@ -9,6 +9,9 @@
 /// - Configuración: Categorías de oficio, Categorías de comercio
 library;
 
+import 'package:baqueano_natales/core/widgets/version_badge.dart';
+import 'package:baqueano_natales/features/home/presentation/about_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -91,22 +94,39 @@ class AdminHomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de administración'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.system_update),
-            tooltip: 'Buscar actualización',
-            onPressed: () => AppUpdateService.checkForUpdates(
-              GoRouter.of(context),
-              scaffoldMessengerKey,
-              forceShow: true,
+        actions: appBarActionsWithBadge(
+          extra: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'about') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AboutScreen()),
+                  );
+                } else if (value == 'update') {
+                  AppUpdateService.checkForUpdates(
+                    GoRouter.of(context),
+                    scaffoldMessengerKey,
+                    forceShow: true,
+                  );
+                } else if (value == 'logout') {
+                  _handleLogout(context, ref);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'about', child: Text('Acerca de')),
+                const PopupMenuItem(
+                  value: 'update',
+                  child: Text('Buscar actualización'),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Text('Cerrar sesión'),
+                ),
+              ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
-            onPressed: () => _handleLogout(context, ref),
-          ),
-        ],
+          ],
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
