@@ -222,6 +222,13 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   static const _platform = MethodChannel('com.baqueano/url_launcher');
 
   Future<void> _abrirNavegador(String url) async {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('[DIAG] Boton tocado, iniciando apertura...'),
+        ),
+      );
+    }
     debugPrint('[OAuth] Abriendo URL (MethodChannel): $url');
     try {
       final bool? result = await _platform.invokeMethod('launchUrl', {
@@ -233,6 +240,16 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
           code: 'FALSE',
           message: 'MethodChannel returned false',
         );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '[DIAG] Kotlin devolvió TRUE. El Intent falló silenciosamente en Android.',
+              ),
+            ),
+          );
+        }
       }
     } on PlatformException catch (e) {
       debugPrint('[OAuth] MethodChannel error: ${e.message}');
