@@ -219,78 +219,54 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
     }
   }
 
+  static const _platform = MethodChannel('com.baqueano/url_launcher');
+
   Future<void> _abrirNavegador(String url) async {
-    // 1. Feedback inmediato: confirmar que el boton se toco
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('[DIAG] Boton tocado, intentando abrir...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-    debugPrint('[OAuth] Abriendo URL: $url');
-
+    debugPrint('[OAuth] Abriendo URL (MethodChannel): $url');
     try {
-      final uri = Uri.parse(url);
-      debugPrint('[OAuth] URI parsed OK: $uri');
-
-      // Intento 1: externalApplication (Chrome default)
-      bool ok = false;
-      String diag = '';
+      final bool? result = await _platform.invokeMethod('launchUrl', {
+        'url': url,
+      });
+      debugPrint('[OAuth] MethodChannel result: $result');
+      if (result != true) {
+        throw PlatformException(
+          code: 'FALSE',
+          message: 'MethodChannel returned false',
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('[OAuth] MethodChannel error: ${e.message}');
+      // Fallback a url_launcher
       try {
-        debugPrint('[OAuth] Intentando externalApplication...');
-        ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-        diag = 'externalApplication=${ok ? "OK" : "FALSE"}';
-        debugPrint('[OAuth] externalApplication result: $ok');
-      } catch (e) {
-        diag = 'externalApplication=EXCEPTION:$e';
-        debugPrint('[OAuth] externalApplication error: $e');
-      }
-
-      // Mostrar resultado del intento 1
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('[DIAG] $diag'),
-            duration: const Duration(seconds: 4),
-          ),
+        final ok = await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
         );
-      }
-
-      // Intento 2: inAppBrowserView si fallo el 1
-      if (!ok) {
-        try {
-          debugPrint('[OAuth] Intentando inAppBrowserView...');
-          ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-          debugPrint('[OAuth] inAppBrowserView result: $ok');
-        } catch (e) {
-          debugPrint('[OAuth] inAppBrowserView error: $e');
+        debugPrint('[OAuth] Fallback launchUrl result: $ok');
+      } catch (e2) {
+        debugPrint('[OAuth] Fallback launchUrl error: $e2');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al abrir: $e2'),
+              action: SnackBarAction(
+                label: 'Copiar URL',
+                onPressed: () => _copiarUrl(url),
+              ),
+            ),
+          );
         }
-      }
-
-      // Si ambos fallan, mostrar opcion de copiar
-      if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              '[DIAG] Ningun modo funciono. Copia la URL y abrila manualmente.',
-            ),
-            action: SnackBarAction(
-              label: 'Copiar',
-              onPressed: () => _copiarUrl(url),
-            ),
-            duration: const Duration(seconds: 8),
-          ),
-        );
       }
     } catch (e) {
       debugPrint('[OAuth] Error general: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('[DIAG] Error: $e'),
-            duration: const Duration(seconds: 8),
+            content: Text('Error al abrir: $e'),
+            action: SnackBarAction(
+              label: 'Copiar URL',
+              onPressed: () => _copiarUrl(url),
+            ),
           ),
         );
       }
