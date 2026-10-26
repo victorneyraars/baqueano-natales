@@ -19,6 +19,16 @@ class ActiveModeNotifier extends Notifier<String> {
   }
 
   Future<void> _loadSaved() async {
+    final user = ref.read(authNotifierProvider).user;
+    // Si NO es prestador, solo puede estar en 'cliente'. Ignorar saved.
+    if (user?.role != 'prestador') {
+      if (state != 'cliente') {
+        state = 'cliente';
+      }
+      await SecureStorageService.saveActiveMode('cliente');
+      return;
+    }
+
     final saved = await SecureStorageService.getActiveMode();
     if (saved != null && saved != state) {
       state = saved;

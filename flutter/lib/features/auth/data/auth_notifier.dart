@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:baqueano_natales/core/storage/secure_storage.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/auth/data/auth_repository.dart';
@@ -113,6 +114,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> logout() async {
     state = const AuthState.loading();
     await _repository.logout();
+    await SecureStorageService.clearActiveMode();
     state = const AuthState.unauthenticated();
   }
 

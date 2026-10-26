@@ -50,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
 
     final mode = ref.watch(activeModeProvider);
     final dual = ref.watch(hasDualRoleProvider).value ?? false;
+    // Safeguard: si el usuario no es prestador, forzar modo cliente.
+    final effectiveMode = (user.role != 'prestador') ? 'cliente' : mode;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: false,
         title: dual
             ? const ModeSwitcher()
-            : Text(mode == 'prestador' ? 'Mi taller' : 'Inicio'),
+            : Text(effectiveMode == 'prestador' ? 'Mi taller' : 'Inicio'),
         actions: appBarActionsWithBadge(
           extra: [
             PopupMenuButton<String>(
@@ -92,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-      body: mode == 'prestador'
+      body: effectiveMode == 'prestador'
           ? const HomePrestadorBody()
           : const HomeClienteBody(),
     );

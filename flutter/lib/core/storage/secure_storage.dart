@@ -108,6 +108,11 @@ class SecureStorageService {
     return _storage.read(key: _keyActiveMode);
   }
 
+  /// Borra el modo activo (usar en logout).
+  static Future<void> clearActiveMode() async {
+    await _storage.delete(key: _keyActiveMode);
+  }
+
   static const _keyHasSeenWelcome = 'has_seen_welcome';
 
   static Future<bool> getHasSeenWelcome() async {
