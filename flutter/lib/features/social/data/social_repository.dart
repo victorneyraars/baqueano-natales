@@ -324,9 +324,12 @@ class SocialRepository {
   }
 
   /// Genera la URL de OAuth de Facebook (para el setup inicial).
-  Future<OAuthUrl> getFacebookOAuthUrl() async {
+  Future<OAuthUrl> getFacebookOAuthUrl({bool appRedirect = false}) async {
     try {
-      final res = await _dio.get('/api/v1/admin/social/facebook/oauth/url');
+      final res = await _dio.get(
+        '/api/v1/admin/social/facebook/oauth/url',
+        queryParameters: {'app_redirect': appRedirect},
+      );
       return OAuthUrl.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;

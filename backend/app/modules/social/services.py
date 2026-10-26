@@ -475,20 +475,31 @@ async def obtener_publicacion(
 # OAuth Facebook (Etapa 2)
 # =========================================================
 
-async def generar_url_oauth(user: Usuario) -> tuple[str, str]:
-    """Devuelve `(url_facebook, state)` para que el admin abra el di?logo."""
-    state = oauth_state.generar_state(str(user.id))
+async def generar_url_oauth(
+    user: Usuario,
+    app_redirect: bool = False,
+) -> tuple[str, str]:
+    """Devuelve `(url_facebook, state)` para que el admin abra el di?logo.
+
+    Si `app_redirect=True`, el callback redirige a un deep link
+    `baqueano://oauth/facebook?token_ref=...` (para Chrome Custom Tabs).
+    """
+    state = oauth_state.generar_state(str(user.id), app_redirect=app_redirect)
     url = facebook_service.construir_url_autorizacion(state)
     return url, state
 
 
-async def procesar_callback_oauth(code: str, state: str) -> tuple[str, str]:
+async def procesar_callback_oauth(
+    code: str,
+    state: str,
+) -> tuple[str, str, bool]:
     """Valida state, intercambia code -> short -> long token.
 
-    Devuelve `(user_id, token_ref)`. Lanza ValueError si algo falla.
+    Devuelve `(user_id, token_ref, app_redirect)`.
+    Lanza ValueError si algo falla.
     """
     try:
-        user_id = oauth_state.verificar_state(state)
+        user_id, app_redirect = oauth_state.verificar_state(state)
     except oauth_state.OAuthTokenError as e:
         raise ValueError(f"state inv?lido: {e}")
 
@@ -503,7 +514,7 @@ async def procesar_callback_oauth(code: str, state: str) -> tuple[str, str]:
         raise ValueError(f"No se pudo extender el token: {msg}")
 
     token_ref = oauth_state.generar_token_ref(user_id, long_token)
-    return user_id, token_ref
+    return user_id, token_ref, app_redirect
 
 
 async def listar_paginas_disponibles(

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:baqueano_natales/core/social/deep_link_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,9 +129,41 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   final _tokenRefCtrl = TextEditingController();
   bool _loading = false;
   String? _oauthUrl;
+  StreamSubscription<Uri>? _deepLinkSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupDeepLinkListener();
+  }
+
+  void _setupDeepLinkListener() {
+    // Escuchar links entrantes mientras la app esta en foreground.
+    _deepLinkSub = DeepLinkService.instance.stream.listen(_handleDeepLink);
+    // Tambien chequear si la app arranco desde un deep link.
+    DeepLinkService.instance.getInitial().then((uri) {
+      if (uri != null && mounted) _handleDeepLink(uri);
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    final tokenRef = DeepLinkService.extractFacebookTokenRef(uri);
+    if (tokenRef == null || tokenRef.isEmpty) return;
+    if (!mounted) return;
+    // Auto-completar el token y guardar automaticamente
+    _tokenRefCtrl.text = tokenRef;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Token recibido automaticamente'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    _guardar();
+  }
 
   @override
   void dispose() {
+    _deepLinkSub?.cancel();
     _tokenRefCtrl.dispose();
     super.dispose();
   }
@@ -137,7 +172,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
     setState(() => _loading = true);
     try {
       final repo = ref.read(socialRepositoryProvider);
-      final oauth = await repo.getFacebookOAuthUrl();
+      final oauth = await repo.getFacebookOAuthUrl(appRedirect: true);
       setState(() {
         _oauthUrl = oauth.url;
         _loading = false;
@@ -160,6 +195,8 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
       final repo = ref.read(socialRepositoryProvider);
       await repo.setupAdminToken(tokenRef);
       ref.invalidate(adminTokenStatusProvider);
+      // El widget _AgregarCuentaScreenState escucha este provider
+      // y cambia automaticamente a la lista de paginas.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -185,7 +222,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   Future<void> _abrirNavegador(String url) async {
     try {
       final uri = Uri.parse(url);
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

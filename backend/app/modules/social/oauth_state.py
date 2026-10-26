@@ -66,9 +66,16 @@ def _decode(token: str, tipo_esperado: str) -> dict:
 
 # ---------------------------------------------------------------- state (CSRF)
 
-def generar_state(user_id: str) -> str:
-    """Genera el `state` que viaja a Facebook y vuelve en el callback."""
-    return _encode({"tipo": _TIPO_STATE, "sub": user_id}, STATE_TTL_MIN)
+def generar_state(user_id: str, app_redirect: bool = False) -> str:
+    """JWT con el user_id y flag de redirect a app. TTL: 10 min."""
+    return _encode(
+        {
+            "sub": user_id,
+            "tipo": _TIPO_STATE,
+            "app_redirect": app_redirect,
+        },
+        STATE_TTL_MIN,
+    )
 
 
 def verificar_state(state: str) -> str:

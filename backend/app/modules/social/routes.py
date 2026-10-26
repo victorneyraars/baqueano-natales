@@ -11,7 +11,7 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, Response
 from fastapi.responses import HTMLResponse
 
 from app.core.db import DbSession
@@ -368,8 +368,16 @@ _CALLBACK_HTML = """<!DOCTYPE html>
         "El admin debe abrir `url` en el navegador."
     ),
 )
-async def facebook_oauth_url(_admin: AdminUser) -> OAuthUrlResponse:
-    url, state = await services.generar_url_oauth(_admin)
+async def facebook_oauth_url(
+    _admin: AdminUser,
+    app_redirect: bool = Query(
+        False,
+        description="Si true, el callback redirige a baqueano://oauth/facebook",
+    ),
+) -> OAuthUrlResponse:
+    url, state = await services.generar_url_oauth(
+        _admin, app_redirect=app_redirect,
+    )
     return OAuthUrlResponse(url=url, state=state)
 
 
@@ -386,14 +394,24 @@ async def facebook_oauth_url(_admin: AdminUser) -> OAuthUrlResponse:
 async def facebook_oauth_callback(
     code: str = Query(..., min_length=5),
     state: str = Query(..., min_length=10),
-) -> HTMLResponse:
+) -> Response:
+    from fastapi.responses import RedirectResponse
     try:
-        _, token_ref = await services.procesar_callback_oauth(code, state)
+        _, token_ref, app_redirect = await services.procesar_callback_oauth(
+            code, state,
+        )
     except ValueError as e:
         return HTMLResponse(
             status_code=400,
             content=f"<h1>Error</h1><pre>{e}</pre>",
         )
+
+    # Si el flujo inicio con app_redirect=true, redirigir al deep link
+    if app_redirect:
+        deep_link = f"baqueano://oauth/facebook?token_ref={token_ref}"
+        return RedirectResponse(url=deep_link, status_code=302)
+
+    # Si no, devolver el HTML (compatible con flujo manual/Swagger)
     return HTMLResponse(content=_CALLBACK_HTML.format(token_ref=token_ref))
 
 
