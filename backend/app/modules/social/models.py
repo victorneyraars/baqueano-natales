@@ -414,6 +414,16 @@ class PublicacionSocial(TimestampMixin, Base):
     )
 
     # -----------------------------------------------------
+    # Prioridad (0=Baqueano, 10=Prestador, 20=Comercio)
+    # -----------------------------------------------------
+    prioridad: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default='0',
+        comment='0=Baqueano, 10=Prestador, 20=Comercio',
+    )
+    # -----------------------------------------------------
     # Resultado
     # -----------------------------------------------------
     external_post_id: Mapped[str | None] = mapped_column(

@@ -6,6 +6,8 @@
 /// - Mis vehiculos (cliente).
 library;
 
+import 'package:baqueano_natales/features/oficios/domain/media_asset_turno.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/oficios/data/oficios_repository.dart';
@@ -469,4 +471,13 @@ final serviciosPrestadorProvider =
     FutureProvider.family<List<Servicio>, String>((ref, prestadorId) async {
       final repo = ref.watch(oficiosRepositoryProvider);
       return repo.listarServiciosPrestador(prestadorId);
+    });
+
+// =========================================================
+// Media del turno (evidencia)
+// =========================================================
+final mediaDeTurnoProvider =
+    FutureProvider.family<List<MediaAssetTurno>, String>((ref, turnoId) async {
+      final repo = ref.watch(oficiosRepositoryProvider);
+      return repo.listarMediaDeTurno(turnoId);
     });

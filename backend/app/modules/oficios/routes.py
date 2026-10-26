@@ -691,6 +691,68 @@ async def detalle_mi_turno(
     return TurnoResponse(**enriquecidos[0])
 
 
+@router_turnos_cliente.get(
+    "/{turno_id}/media",
+    summary="Listar evidencia (fotos/videos) de un turno",
+    description=(
+        "Devuelve los assets de evidencia del turno que ya fueron "
+        "aprobados por el admin. Solo el cliente dueno del turno (o "
+        "admin) puede verlos."
+    ),
+)
+async def listar_media_del_turno(
+    turno_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+):
+    from sqlalchemy import text
+    # 1. Validar que el turno exista y sea del cliente
+    result = await db.execute(
+        text("SELECT cliente_id FROM turnos WHERE id = :id"),
+        {"id": str(turno_id)},
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(404, "Turno no encontrado")
+    if str(row[0]) != str(user.id) and user.rol != "admin":
+        raise HTTPException(403, "No tenes permiso para ver este turno")
+
+    # 2. Traer assets aprobados
+    result = await db.execute(
+        text("""
+            SELECT id, tipo, fase, url_publica, descripcion, created_at
+            FROM media_assets
+            WHERE entidad_tipo = 'turno'
+              AND entidad_id = :turno_id
+              AND estado_moderacion = 'aprobado'
+              AND activo = true
+            ORDER BY
+              CASE fase
+                WHEN 'ingreso' THEN 1
+                WHEN 'diagnostico' THEN 2
+                WHEN 'en_proceso' THEN 3
+                WHEN 'entrega' THEN 4
+                WHEN 'reclamo' THEN 5
+                ELSE 6
+              END,
+              created_at ASC
+        """),
+        {"turno_id": str(turno_id)},
+    )
+    rows = result.fetchall()
+    items = []
+    for r in rows:
+        items.append({
+            "id": str(r[0]),
+            "tipo": r[1],
+            "fase": r[2],
+            "url_publica": r[3],
+            "descripcion": r[4],
+            "created_at": r[5].isoformat() if r[5] else None,
+        })
+    return {"items": items, "total": len(items)}
+
+
 @router_turnos_cliente.patch(
     "/{turno_id}",
     response_model=TurnoResponse,

@@ -18,6 +18,7 @@ import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/domain/reporte_taller.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
+import 'package:baqueano_natales/features/oficios/domain/media_asset_turno.dart';
 import 'package:baqueano_natales/features/oficios/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/oficios/domain/servicio.dart';
 
@@ -416,6 +417,24 @@ class OficiosRepository {
   // =========================================================
 
   /// Lista los turnos del cliente autenticado.
+  Future<List<MediaAssetTurno>> listarMediaDeTurno(String turnoId) async {
+    try {
+      final res = await _dio.get('/api/v1/mis-turnos/$turnoId/media');
+      final data = res.data as Map<String, dynamic>;
+      final items = data['items'] as List<dynamic>;
+      return items
+          .map((e) => MediaAssetTurno.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   Future<List<Turno>> listarMisTurnos({String? estado}) async {
     try {
       final query = <String, dynamic>{};

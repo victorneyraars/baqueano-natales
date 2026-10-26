@@ -318,7 +318,9 @@ async def actualizar_config(
 # Publicaciones (encolar + consultar)
 # =========================================================
 async def encolar_publicacion(
-    db: AsyncSession, datos: PublicacionSocialCreate
+    db: AsyncSession,
+    datos: PublicacionSocialCreate,
+    prioridad: int | None = None,
 ) -> PublicacionSocial:
     """
     Encola una publicación.
@@ -343,6 +345,7 @@ async def encolar_publicacion(
         estado=EstadoPublicacion.PENDIENTE,
         intentos=0,
         proximo_intento_en=None,
+        prioridad=prioridad if prioridad is not None else datos.prioridad,
     )
     db.add(pub)
     await db.flush()

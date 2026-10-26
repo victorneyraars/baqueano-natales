@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
+import 'package:baqueano_natales/features/oficios/presentation/widgets/evidencia_timeline.dart';
 
 class DetalleMiTurnoScreen extends ConsumerStatefulWidget {
   const DetalleMiTurnoScreen({super.key, required this.turnoId});
@@ -157,6 +158,10 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
                   ),
                 ),
               ],
+              // === Evidencia del trabajo (fotos/videos) ===
+              const SizedBox(height: 12),
+              EvidenciaTimeline(turnoId: turno.id),
+
               if (turno.hasReview) ...[
                 const SizedBox(height: 12),
                 Card(
