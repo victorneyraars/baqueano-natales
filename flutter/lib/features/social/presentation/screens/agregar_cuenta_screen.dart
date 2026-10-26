@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -181,6 +182,50 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
     }
   }
 
+  Future<void> _abrirNavegador(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'No se pudo abrir el navegador. Copiá la URL y abrila manualmente.',
+            ),
+            action: SnackBarAction(
+              label: 'Copiar',
+              onPressed: () => _copiarUrl(url),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir: $e'),
+            action: SnackBarAction(
+              label: 'Copiar URL',
+              onPressed: () => _copiarUrl(url),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _copiarUrl(String url) async {
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ URL copiada al portapapeles'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -231,26 +276,32 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
                   label: const Text('Generar URL de autorización'),
                 )
               else ...[
-                SelectableText(
-                  _oauthUrl!,
-                  style: theme.textTheme.bodySmall,
-                  maxLines: 3,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    _oauthUrl!,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final uri = Uri.parse(_oauthUrl!);
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        },
+                      child: FilledButton.icon(
+                        onPressed: () => _abrirNavegador(_oauthUrl!),
                         icon: const Icon(Icons.open_in_browser),
                         label: const Text('Abrir en navegador'),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      onPressed: () => _copiarUrl(_oauthUrl!),
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'Copiar URL',
                     ),
                   ],
                 ),
