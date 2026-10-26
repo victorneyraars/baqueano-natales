@@ -12,6 +12,8 @@ class EvidenceService {
     required String turnoId,
     required String fase,
     required String contentType,
+    String? descripcion,
+    bool visiblePublico = false,
     void Function(double)? onProgress,
   }) async {
     try {

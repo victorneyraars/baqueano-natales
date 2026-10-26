@@ -107,7 +107,7 @@ class _MediaCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${asset.tipo.toUpperCase()} · ${asset.fase}',
+                    '${asset.tipo.toUpperCase()} · ${asset.faseLabel}',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -122,13 +122,16 @@ class _MediaCard extends StatelessWidget {
                     color: theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(asset.estado, style: theme.textTheme.labelSmall),
+                  child: Text(
+                    asset.estadoModeracion,
+                    style: theme.textTheme.labelSmall,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              'Turno: ${asset.turnoId.substring(0, 8)}...',
+              '${asset.entidadTipo}: ${asset.entidadId.substring(0, 8)}...',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
