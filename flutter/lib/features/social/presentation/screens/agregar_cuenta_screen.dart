@@ -220,23 +220,47 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   }
 
   Future<void> _abrirNavegador(String url) async {
+    debugPrint('[OAuth] Abriendo URL: $url');
     try {
       final uri = Uri.parse(url);
-      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      debugPrint('[OAuth] URI parsed: $uri');
+
+      // Intento 1: navegador externo (siempre funciona, abre el default)
+      bool ok = false;
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        debugPrint('[OAuth] externalApplication result: $ok');
+      } catch (e) {
+        debugPrint('[OAuth] externalApplication error: $e');
+      }
+
+      // Intento 2: Chrome Custom Tabs (mas lindo, pero no siempre disponible)
+      if (!ok) {
+        try {
+          ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+          debugPrint('[OAuth] inAppBrowserView result: $ok');
+        } catch (e) {
+          debugPrint('[OAuth] inAppBrowserView error: $e');
+        }
+      }
+
+      // Si ambos fallan, mostrar SnackBar con opcion de copiar
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              'No se pudo abrir el navegador. Copiá la URL y abrila manualmente.',
+              'No se pudo abrir el navegador. Copia la URL y abrila manualmente.',
             ),
             action: SnackBarAction(
               label: 'Copiar',
               onPressed: () => _copiarUrl(url),
             ),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
     } catch (e) {
+      debugPrint('[OAuth] Error al abrir: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
