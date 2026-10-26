@@ -10,6 +10,8 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/turno.dart';
 import 'package:baqueano_natales/features/oficios/presentation/widgets/evidencia_timeline.dart';
+import 'package:baqueano_natales/core/social/social_actions_bar.dart';
+import 'package:baqueano_natales/core/social/shareable_entity.dart';
 
 class DetalleMiTurnoScreen extends ConsumerStatefulWidget {
   const DetalleMiTurnoScreen({super.key, required this.turnoId});
@@ -161,6 +163,25 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
               // === Evidencia del trabajo (fotos/videos) ===
               const SizedBox(height: 12),
               EvidenciaTimeline(turnoId: turno.id),
+
+              // === Acciones sociales (Compartir, Reseñar) ===
+              SocialActionsBar(
+                entity: _buildShareableEntity(turno),
+                onReview:
+                    (turno.estado == EstadoTurno.completado &&
+                        !turno.hasReview &&
+                        turno.ordenId != null)
+                    ? () => context.push('/mis-ordenes/${turno.ordenId}/review')
+                    : null,
+                showReview:
+                    turno.estado == EstadoTurno.completado && !turno.hasReview,
+                title: turno.hasReview
+                    ? '¡Gracias por tu reseña!'
+                    : '¿Te gustó el trabajo?',
+                subtitle: turno.hasReview
+                    ? 'Compartilo con tus amigos para que descubran el taller.'
+                    : 'Compartilo con tus amigos y sumá tu experiencia.',
+              ),
 
               if (turno.hasReview) ...[
                 const SizedBox(height: 12),
@@ -322,6 +343,22 @@ class _DetalleMiTurnoScreenState extends ConsumerState<DetalleMiTurnoScreen> {
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
+  }
+
+  ShareableEntity _buildShareableEntity(Turno turno) {
+    final v = turno.vehiculo;
+    final vehiculoDesc = v != null ? '${v.marca} ${v.modelo}' : 'mi auto';
+    return ShareableEntity(
+      type: ShareEntityType.turno,
+      id: turno.id,
+      title: 'Mira como quedo $vehiculoDesc',
+      subtitle: 'Servicio en Baqueano Natales',
+      description:
+          'Hice el servicio con un taller de Baqueano Natales. Recomendado!',
+      publicUrl: 'https://baqueanonatales.com/turnos/${turno.id}',
+      hashtags: const ['BaqueanoNatales', 'PuertoNatales', 'SeAlquilaMarido'],
+      cta: 'Encontra los mejores talleres en Puerto Natales',
+    );
   }
 }
 
