@@ -220,23 +220,48 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   }
 
   Future<void> _abrirNavegador(String url) async {
+    // 1. Feedback inmediato: confirmar que el boton se toco
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('[DIAG] Boton tocado, intentando abrir...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
     debugPrint('[OAuth] Abriendo URL: $url');
+
     try {
       final uri = Uri.parse(url);
-      debugPrint('[OAuth] URI parsed: $uri');
+      debugPrint('[OAuth] URI parsed OK: $uri');
 
-      // Intento 1: navegador externo (siempre funciona, abre el default)
+      // Intento 1: externalApplication (Chrome default)
       bool ok = false;
+      String diag = '';
       try {
+        debugPrint('[OAuth] Intentando externalApplication...');
         ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        diag = 'externalApplication=${ok ? "OK" : "FALSE"}';
         debugPrint('[OAuth] externalApplication result: $ok');
       } catch (e) {
+        diag = 'externalApplication=EXCEPTION:$e';
         debugPrint('[OAuth] externalApplication error: $e');
       }
 
-      // Intento 2: Chrome Custom Tabs (mas lindo, pero no siempre disponible)
+      // Mostrar resultado del intento 1
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('[DIAG] $diag'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
+      // Intento 2: inAppBrowserView si fallo el 1
       if (!ok) {
         try {
+          debugPrint('[OAuth] Intentando inAppBrowserView...');
           ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
           debugPrint('[OAuth] inAppBrowserView result: $ok');
         } catch (e) {
@@ -244,31 +269,28 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
         }
       }
 
-      // Si ambos fallan, mostrar SnackBar con opcion de copiar
+      // Si ambos fallan, mostrar opcion de copiar
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              'No se pudo abrir el navegador. Copia la URL y abrila manualmente.',
+              '[DIAG] Ningun modo funciono. Copia la URL y abrila manualmente.',
             ),
             action: SnackBarAction(
               label: 'Copiar',
               onPressed: () => _copiarUrl(url),
             ),
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 8),
           ),
         );
       }
     } catch (e) {
-      debugPrint('[OAuth] Error al abrir: $e');
+      debugPrint('[OAuth] Error general: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al abrir: $e'),
-            action: SnackBarAction(
-              label: 'Copiar URL',
-              onPressed: () => _copiarUrl(url),
-            ),
+            content: Text('[DIAG] Error: $e'),
+            duration: const Duration(seconds: 8),
           ),
         );
       }
