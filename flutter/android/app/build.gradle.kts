@@ -88,6 +88,9 @@ android {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // Desactivar ofuscacion para que MethodChannel funcione en release
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
