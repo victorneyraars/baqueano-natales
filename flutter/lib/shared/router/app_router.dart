@@ -23,6 +23,7 @@ import 'package:baqueano_natales/features/admin/presentation/screens/api_lab_scr
 import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_estado_screen.dart';
 import 'package:baqueano_natales/features/ops_admin/presentation/screens/ops_release_screen.dart';
 import 'package:baqueano_natales/features/admin/presentation/screens/admin_prestadores_screen.dart';
+import 'package:baqueano_natales/features/admin/presentation/screens/admin_media_moderacion_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_cuentas_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_config_screen.dart';
 import 'package:baqueano_natales/features/social/presentation/screens/admin_social_publicaciones_screen.dart';
@@ -175,6 +176,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/api-lab',
         name: 'admin-api-lab',
         builder: (context, state) => const ApiLabScreen(),
+      ),
+      GoRoute(
+        path: '/admin/media',
+        name: 'admin-media',
+        builder: (context, state) => const AdminMediaModeracionScreen(),
       ),
       GoRoute(
         path: '/admin/prestadores',

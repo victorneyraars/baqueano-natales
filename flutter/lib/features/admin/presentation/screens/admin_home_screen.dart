@@ -230,6 +230,12 @@ class AdminHomeScreen extends ConsumerWidget {
             ),
 
             _AdminCard(
+              icon: Icons.perm_media,
+              title: 'Moderar evidencia',
+              subtitle: 'Revisar fotos y videos de trabajos',
+              onTap: () => context.push('/admin/media'),
+            ),
+            _AdminCard(
               icon: Icons.storefront,
               title: 'Comercios',
               subtitle: comerciosPendientesCount > 0
