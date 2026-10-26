@@ -83,6 +83,7 @@ from app.modules.ops.worker import (
     start_worker as start_cleanup_worker,
     stop_worker as stop_cleanup_worker,
 )
+from app.modules.media.routes import router as media_router
 from app.modules.oficios.worker import (
 
     start_worker as start_recordatorios_worker,
@@ -206,6 +207,7 @@ app.include_router(prestadores_reviews_prestador_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")
 
 # Ops Dashboard (admin — solo lectura, Fase 1)
+app.include_router(media_router, prefix="/api/v1")
 app.include_router(ops_admin_router, prefix="/api/v1")
 
 # Analytics (Cloudflare Web Analytics)

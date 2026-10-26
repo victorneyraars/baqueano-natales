@@ -1,7 +1,11 @@
 /// Pantalla prestador: detalle del turno con acciones (confirmar, rechazar, etc).
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:baqueano_natales/features/oficios/data/evidence_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -399,6 +403,10 @@ class _Contenido extends StatelessWidget {
                 ),
               ),
             ],
+            _EvidenciaSection(
+              turnoId: turno.id,
+              prestadorId: turno.prestadorId,
+            ),
             if (acciones.isNotEmpty) ...[
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 8, children: acciones),
@@ -677,5 +685,141 @@ class _ServicioForm {
   void dispose() {
     nombreCtrl.dispose();
     precioCtrl.dispose();
+  }
+}
+
+class _EvidenciaSection extends StatefulWidget {
+  const _EvidenciaSection({required this.turnoId, required this.prestadorId});
+  final String turnoId;
+  final String prestadorId;
+  @override
+  State<_EvidenciaSection> createState() => _EvidenciaSectionState();
+}
+
+class _EvidenciaSectionState extends State<_EvidenciaSection> {
+  final _service = EvidenceService();
+  bool _subiendo = false;
+
+  Future<void> _subirFoto(String fase) async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1920,
+    );
+    if (file == null) return;
+    setState(() => _subiendo = true);
+    final result = await _service.uploadEvidence(
+      file: File(file.path),
+      turnoId: widget.turnoId,
+      fase: fase,
+      contentType: 'image/jpeg',
+    );
+    if (mounted) setState(() => _subiendo = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result != null ? '✅ Foto subida' : '❌ Error al subir'),
+          backgroundColor: result != null ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _grabarVideo(String fase) async {
+    final picker = ImagePicker();
+    final file = await picker.pickVideo(
+      source: ImageSource.camera,
+      maxDuration: const Duration(seconds: 60),
+    );
+    if (file == null) return;
+    setState(() => _subiendo = true);
+    final result = await _service.uploadEvidence(
+      file: File(file.path),
+      turnoId: widget.turnoId,
+      fase: fase,
+      contentType: 'video/mp4',
+    );
+    if (mounted) setState(() => _subiendo = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result != null ? '✅ Video subido' : '❌ Error al subir'),
+          backgroundColor: result != null ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.camera_alt, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Evidencia del trabajo',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_subiendo) ...[
+                  const Spacer(),
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Subí fotos o videos del antes, durante y después.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _subiendo ? null : () => _subirFoto('antes'),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: const Text('Foto antes'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _subiendo ? null : () => _grabarVideo('durante'),
+                    icon: const Icon(Icons.videocam_outlined, size: 18),
+                    label: const Text('Video'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _subiendo ? null : () => _subirFoto('despues'),
+                icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                label: const Text('Foto después'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
