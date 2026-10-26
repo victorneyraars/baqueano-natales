@@ -9,6 +9,10 @@
 ///   POST   /api/v1/admin/social/publicaciones/procesar-ahora
 library;
 
+import 'package:baqueano_natales/features/social/domain/oauth_url.dart';
+import 'package:baqueano_natales/features/social/domain/admin_token_status.dart';
+import 'package:baqueano_natales/features/social/domain/pagina_facebook.dart';
+
 import 'package:dio/dio.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -288,6 +292,113 @@ class SocialRepository {
     try {
       final resp = await _dio.post('$_base/publicaciones/procesar-ahora');
       return resp.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // Facebook admin token (setup escalable)
+  // =========================================================
+
+  /// Devuelve el estado del admin token (has_token + updated_at).
+  Future<AdminTokenStatus> getAdminTokenStatus() async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/admin/social/facebook/admin-token/status',
+      );
+      return AdminTokenStatus.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Genera la URL de OAuth de Facebook (para el setup inicial).
+  Future<OAuthUrl> getFacebookOAuthUrl() async {
+    try {
+      final res = await _dio.get('/api/v1/admin/social/facebook/oauth/url');
+      return OAuthUrl.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Guarda el admin token (setup inicial).
+  Future<AdminTokenStatus> setupAdminToken(String tokenRef) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/admin/social/facebook/admin-token/setup',
+        data: {'token_ref': tokenRef},
+      );
+      return AdminTokenStatus.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Lista las paginas de Facebook usando el admin token guardado.
+  Future<List<PaginaFacebook>> listarPaginasAdmin() async {
+    try {
+      final res = await _dio.get('/api/v1/admin/social/facebook/paginas');
+      final data = res.data as Map<String, dynamic>;
+      final paginas = data['paginas'] as List<dynamic>;
+      return paginas
+          .map((e) => PaginaFacebook.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Conecta una pagina de Facebook usando el admin token guardado.
+  Future<CuentaSocial> conectarPaginaAdmin({
+    required String pageId,
+    required String propietarioTipo,
+    String? propietarioId,
+    String? alias,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'page_id': pageId,
+        'propietario_tipo': propietarioTipo,
+      };
+      if (propietarioId != null && propietarioId.isNotEmpty) {
+        data['propietario_id'] = propietarioId;
+      }
+      if (alias != null && alias.isNotEmpty) {
+        data['alias'] = alias;
+      }
+      final res = await _dio.post(
+        '/api/v1/admin/social/facebook/conectar-directo',
+        data: data,
+      );
+      final resp = res.data as Map<String, dynamic>;
+      return CuentaSocial.fromJson(resp['cuenta'] as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

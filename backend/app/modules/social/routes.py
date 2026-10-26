@@ -38,6 +38,9 @@ from app.modules.social.schemas import (
     PublicacionSocialCreate,
     PublicacionSocialListResponse,
     PublicacionSocialResponse,
+    FacebookAdminTokenSetup,
+    FacebookAdminTokenStatus,
+    ConectarPaginaDirectoRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -488,3 +491,117 @@ async def toggle_auto_publish(
     await db.commit()
     await db.refresh(cuenta)
     return CuentaSocialResponse.model_validate(cuenta)
+
+# =========================================================
+# Admin token de Facebook (setup escalable)
+# =========================================================
+
+@router_admin.get(
+    "/facebook/admin-token/status",
+    response_model=FacebookAdminTokenStatus,
+    summary="Estado del admin token de Facebook",
+    description=(
+        "Indica si hay un admin token guardado. NO expone el token. "
+        "La app usa esto para saber si mostrar 'Configurar' o 'Agregar cuenta'."
+    ),
+)
+async def facebook_admin_token_status(
+    db: DbSession,
+    _admin: AdminUser,
+) -> FacebookAdminTokenStatus:
+    from app.modules.social import services as social_services
+    cfg = await social_services.obtener_config(db)
+    return FacebookAdminTokenStatus(
+        has_token=bool(cfg and cfg.facebook_admin_token),
+        updated_at=cfg.facebook_admin_token_updated_at if cfg else None,
+    )
+
+
+@router_admin.post(
+    "/facebook/admin-token/setup",
+    response_model=FacebookAdminTokenStatus,
+    summary="Configurar admin token de Facebook (setup inicial)",
+    description=(
+        "Recibe un token_ref del OAuth, extrae el user_access_token, "
+        "lo cifra y lo guarda en la config global. "
+        "Despues de esto, el admin puede conectar paginas sin re-autenticarse."
+    ),
+)
+async def facebook_admin_token_setup(
+    data: FacebookAdminTokenSetup,
+    db: DbSession,
+    _admin: AdminUser,
+) -> FacebookAdminTokenStatus:
+    from app.modules.social import services as social_services
+    try:
+        cfg = await social_services.guardar_admin_token(db, data.token_ref)
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    await db.commit()
+    await db.refresh(cfg)
+    return FacebookAdminTokenStatus(
+        has_token=True,
+        updated_at=cfg.facebook_admin_token_updated_at,
+    )
+
+
+@router_admin.get(
+    "/facebook/paginas",
+    response_model=ListarPaginasResponse,
+    summary="Listar paginas del admin (usando admin token guardado)",
+    description=(
+        "Lista las paginas de Facebook usando el admin token guardado. "
+        "No requiere token_ref. Marca cuales ya estan conectadas."
+    ),
+)
+async def facebook_listar_paginas_admin(
+    db: DbSession,
+    _admin: AdminUser,
+) -> ListarPaginasResponse:
+    from app.modules.social import services as social_services
+    try:
+        paginas = await social_services.listar_paginas_admin(db)
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    return ListarPaginasResponse(paginas=paginas)
+
+
+@router_admin.post(
+    "/facebook/conectar-directo",
+    response_model=ConectarCuentaResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Conectar pagina usando admin token guardado",
+    description=(
+        "Conecta una pagina de Facebook usando el admin token guardado. "
+        "No requiere token_ref."
+    ),
+)
+async def facebook_conectar_directo(
+    data: ConectarPaginaDirectoRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> ConectarCuentaResponse:
+    from app.modules.social import services as social_services
+    try:
+        cuenta, nombre = await social_services.conectar_cuenta_admin(
+            db=db,
+            user=_admin,
+            page_id=data.page_id,
+            propietario_tipo=data.propietario_tipo,
+            propietario_id=data.propietario_id,
+            alias=data.alias,
+        )
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    await db.commit()
+    return ConectarCuentaResponse(cuenta=cuenta, nombre_pagina=nombre)
+

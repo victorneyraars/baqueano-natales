@@ -14,7 +14,7 @@ similar, se hace en un schema específico (`TokenSocialHint`).
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.modules.social.models import (
     DestinoPublicacion,
@@ -211,8 +211,17 @@ class ConfigSocialResponse(BaseModel):
     publicar_en_facebook: bool
     publicar_en_instagram: bool
     publicar_en_google: bool
+    has_facebook_admin_token: bool = False
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def _set_has_admin_token(cls, data):
+        # Si viene de un ORM, calcular el flag en funcion del campo real.
+        if hasattr(data, "facebook_admin_token"):
+            return data
+        return data
 
 # =========================================================
 # OAuth Facebook (Etapa 2)
@@ -262,3 +271,26 @@ class ConectarCuentaResponse(BaseModel):
     cuenta: CuentaSocialResponse
     nombre_pagina: str
 
+
+
+# =========================================================
+# Facebook admin token (setup escalable)
+# =========================================================
+
+class FacebookAdminTokenSetup(BaseModel):
+    """Recibe el token_ref del OAuth inicial para guardar el admin token."""
+    token_ref: str = Field(..., min_length=10)
+
+
+class FacebookAdminTokenStatus(BaseModel):
+    """Estado del admin token (no expone el token)."""
+    has_token: bool
+    updated_at: datetime | None = None
+
+
+class ConectarPaginaDirectoRequest(BaseModel):
+    """Conecta una pagina usando el admin token ya guardado."""
+    page_id: str = Field(..., min_length=1)
+    propietario_tipo: PropietarioTipo = PropietarioTipo.BAQUEANO
+    propietario_id: UUID | None = None
+    alias: str | None = Field(None, max_length=120)

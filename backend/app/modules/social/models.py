@@ -559,6 +559,25 @@ class ConfigSocial(TimestampMixin, Base):
         server_default="false",
     )
 
+    # -----------------------------------------------------
+    # Facebook admin token (para conectar paginas sin OAuth)
+    # -----------------------------------------------------
+    facebook_admin_token: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="User access token de Facebook (cifrado con Fernet).",
+    )
+    facebook_admin_token_updated_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Ultima vez que se actualizo el admin token.",
+    )
+
+    @property
+    def has_facebook_admin_token(self) -> bool:
+        """True si hay un admin token de Facebook configurado."""
+        return bool(self.facebook_admin_token)
+
     def __repr__(self) -> str:
         return (
             f"<ConfigSocial(propietario_tipo={self.propietario_tipo}, "

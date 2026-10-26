@@ -1,3 +1,4 @@
+from app.modules.social import oauth_state
 """
 Funciones del módulo social.
 
@@ -844,4 +845,181 @@ async def obtener_instagram_id_de_cuenta(
     }
     await db.commit()
     return ig_id
+
+# =========================================================
+# Admin token de Facebook (setup escalable)
+# =========================================================
+
+async def guardar_admin_token(db: AsyncSession, token_ref: str) -> ConfigSocial:
+    """
+    Guarda el admin token de Facebook a partir de un token_ref del OAuth.
+
+    El token_ref contiene el user_access_token de larga duracion cifrado.
+    Lo desciframos, lo volvemos a cifrar con la clave del backend, y lo
+    guardamos en la config global.
+
+    Esto permite que el admin conecte paginas SIN re-autenticarse.
+    """
+    # 1. Leer el token_ref (devuelve el user_access_token de larga duracion)
+    try:
+        _user_id, user_token = oauth_state.leer_token_ref(token_ref)
+    except oauth_state.OAuthTokenError as e:
+        raise ValueError(f"token_ref invalido: {e}")
+
+    # 2. Verificar que el token sea valido consultando /me en FB
+    from app.modules.social import facebook_service
+    paginas, err = await facebook_service.listar_paginas(user_token)
+    if err:
+        raise ValueError(f"Token invalido: {err.message}")
+
+    # 3. Guardar cifrado en la config global
+    cfg = await obtener_o_crear_config_global(db)
+    cfg.facebook_admin_token = crypto.cifrar(user_token)
+    from datetime import datetime, timezone
+    cfg.facebook_admin_token_updated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(cfg)
+    return cfg
+
+
+async def obtener_admin_token(db: AsyncSession) -> str | None:
+    """Devuelve el admin token descifrado, o None si no hay."""
+    cfg = await obtener_config(db)
+    if cfg is None or not cfg.facebook_admin_token:
+        return None
+    return crypto.descifrar(cfg.facebook_admin_token)
+
+
+async def listar_paginas_admin(
+    db: AsyncSession,
+) -> list[PaginaFacebookPublic]:
+    """
+    Lista las paginas de Facebook usando el admin token guardado.
+
+    A diferencia de `listar_paginas_disponibles`, no requiere token_ref.
+    """
+    user_token = await obtener_admin_token(db)
+    if not user_token:
+        raise ValueError(
+            "No hay admin token de Facebook configurado. "
+            "Primero configure el token con /setup-admin-token."
+        )
+
+    from app.modules.social import facebook_service
+    paginas, err = await facebook_service.listar_paginas(user_token)
+    if err:
+        raise ValueError(f"Error al listar paginas: {err.message}")
+
+    # Marcar cuales ya estan conectadas
+    existing_rows = await db.execute(
+        select(CuentaSocial.external_id).where(CuentaSocial.red == Red.FACEBOOK)
+    )
+    conectadas = {row[0] for row in existing_rows.all()}
+
+    result = []
+    for p in paginas:
+        result.append(
+            PaginaFacebookPublic(
+                id=p.id,
+                name=p.name,
+                category=p.category,
+                tasks=p.tasks,
+                ya_conectada=p.id in conectadas,
+            )
+        )
+    return result
+
+
+async def conectar_cuenta_admin(
+    db: AsyncSession,
+    user: Usuario,
+    page_id: str,
+    propietario_tipo: PropietarioTipo,
+    propietario_id: UUID | None,
+    alias: str | None = None,
+) -> tuple[CuentaSocial, str]:
+    """
+    Conecta una pagina de Facebook usando el admin token guardado.
+
+    Similar a `conectar_cuenta_facebook`, pero no requiere token_ref.
+    """
+    user_token = await obtener_admin_token(db)
+    if not user_token:
+        raise ValueError(
+            "No hay admin token de Facebook configurado."
+        )
+
+    from app.modules.social import facebook_service
+    paginas, err = await facebook_service.listar_paginas(user_token)
+    if err:
+        raise ValueError(f"Error al listar paginas: {err.message}")
+
+    pagina = facebook_service.buscar_pagina(paginas, page_id)
+    if not pagina:
+        raise ValueError(f"La pagina {page_id} no esta entre las del admin")
+    if not pagina.access_token:
+        raise ValueError("La pagina no devolvio access_token (permisos?)")
+
+    # Verificar el token de la pagina
+    nombre, verr = await facebook_service.verificar_token_pagina(
+        pagina.id, pagina.access_token
+    )
+    if verr:
+        raise ValueError(f"Token de pagina invalido: {verr.message}")
+    nombre_final = nombre or pagina.name
+
+    # Upsert CuentaSocial
+    existing = await db.execute(
+        select(CuentaSocial).where(
+            CuentaSocial.red == Red.FACEBOOK,
+            CuentaSocial.external_id == pagina.id,
+        )
+    )
+    cuenta = existing.scalar_one_or_none()
+
+    if cuenta:
+        cuenta.activo = True
+        cuenta.external_name = nombre_final
+        cuenta.propietario_tipo = propietario_tipo
+        cuenta.propietario_id = propietario_id
+        if alias:
+            cuenta.metadata_extra = {
+                **(cuenta.metadata_extra or {}),
+                "alias": alias,
+            }
+    else:
+        cuenta = CuentaSocial(
+            red=Red.FACEBOOK,
+            propietario_tipo=propietario_tipo,
+            propietario_id=propietario_id,
+            external_id=pagina.id,
+            external_name=nombre_final,
+            activo=True,
+            auto_publish=False,
+            metadata_extra={"alias": alias} if alias else None,
+        )
+        db.add(cuenta)
+        await db.flush()
+
+    # Guardar token de la pagina cifrado
+    from app.modules.social.models import TokenSocial
+    existing_token = await db.execute(
+        select(TokenSocial).where(TokenSocial.cuenta_id == cuenta.id)
+    )
+    token = existing_token.scalar_one_or_none()
+    if token:
+        token.access_token = crypto.cifrar(pagina.access_token)
+        token.scope = "pages_manage_posts,pages_read_engagement"
+    else:
+        token = TokenSocial(
+            cuenta_id=cuenta.id,
+            access_token=crypto.cifrar(pagina.access_token),
+            token_type="Bearer",
+            scope="pages_manage_posts,pages_read_engagement",
+        )
+        db.add(token)
+
+    await db.flush()
+    await db.refresh(cuenta)
+    return cuenta, nombre_final
 

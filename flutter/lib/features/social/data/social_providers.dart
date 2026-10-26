@@ -6,6 +6,9 @@
 /// - Config global.
 library;
 
+import 'package:baqueano_natales/features/social/domain/admin_token_status.dart';
+import 'package:baqueano_natales/features/social/domain/pagina_facebook.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/features/social/data/social_repository.dart';
@@ -140,3 +143,17 @@ final actualizarConfigProvider =
         return result;
       };
     });
+
+// =========================================================
+// Facebook admin token (setup escalable)
+// =========================================================
+
+final adminTokenStatusProvider = FutureProvider<AdminTokenStatus>((ref) async {
+  final repo = ref.watch(socialRepositoryProvider);
+  return repo.getAdminTokenStatus();
+});
+
+final paginasAdminProvider = FutureProvider<List<PaginaFacebook>>((ref) async {
+  final repo = ref.watch(socialRepositoryProvider);
+  return repo.listarPaginasAdmin();
+});

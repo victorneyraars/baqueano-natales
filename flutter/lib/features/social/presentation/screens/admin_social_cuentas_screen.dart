@@ -6,6 +6,8 @@
 /// Endpoints: GET /api/v1/admin/social/cuentas
 library;
 
+import 'package:baqueano_natales/features/social/presentation/screens/agregar_cuenta_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +23,16 @@ class AdminSocialCuentasScreen extends ConsumerWidget {
     final async = ref.watch(cuentasSocialesProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => const AgregarCuentaScreen()),
+          );
+          ref.invalidate(cuentasSocialesProvider);
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Agregar cuenta'),
+      ),
       appBar: AppBar(
         title: const Text('Redes sociales'),
         actions: [
