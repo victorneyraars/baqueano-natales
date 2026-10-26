@@ -109,3 +109,7 @@ deploy/apks/version.json
 HANDOFF_IA.md
 deploy/apks/version-admin.json
 deploy/apks/version-client.json
+
+# Kotlin compiler session files
+**/.kotlin/sessions/*.salive
+**/.kotlin/**
