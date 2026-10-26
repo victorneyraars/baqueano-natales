@@ -224,18 +224,10 @@ class _CuentaCard extends ConsumerWidget {
                         icon: cuenta.activo ? Icons.check_circle : Icons.cancel,
                         color: cuenta.activo ? Colors.green : Colors.grey,
                       ),
-                      const SizedBox(width: 6),
-                      _Pill(
-                        label: cuenta.autoPublish ? 'Auto' : 'Manual',
-                        icon: cuenta.autoPublish
-                            ? Icons.bolt
-                            : Icons.pan_tool_alt,
-                        color: cuenta.autoPublish
-                            ? Colors.amber.shade700
-                            : Colors.grey,
-                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  _AutoPublishSwitch(cuenta: cuenta),
                 ],
               ),
             ),
