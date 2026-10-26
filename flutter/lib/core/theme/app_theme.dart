@@ -67,6 +67,9 @@ class AppTheme {
           vertical: 16,
         ),
       ),
+      dialogTheme: const DialogThemeData(
+        insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -111,6 +114,9 @@ class AppTheme {
           horizontal: 16,
           vertical: 16,
         ),
+      ),
+      dialogTheme: const DialogThemeData(
+        insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       ),
       cardTheme: CardThemeData(
         elevation: 0,

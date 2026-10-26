@@ -91,11 +91,18 @@ class AppUpdateService {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Row(
           children: [
             Icon(Icons.system_update, color: Colors.blue),
             SizedBox(width: 8),
-            Text('Actualizacion disponible'),
+            Expanded(
+              child: Text(
+                'Actualizacion disponible',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -108,9 +115,11 @@ class AppUpdateService {
               'Novedades:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            Text(changelog),
+            Text(changelog, maxLines: 6, overflow: TextOverflow.ellipsis),
           ],
         ),
+        actionsOverflowDirection: VerticalDirection.down,
+        actionsOverflowAlignment: OverflowBarAlignment.end,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -160,7 +169,12 @@ class AppUpdateService {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 20),
-            Text('Descargando actualizacion...'),
+            Flexible(
+              child: Text(
+                'Descargando actualizacion...',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),

@@ -730,7 +730,12 @@ class _OpsReleaseScreenState extends ConsumerState<OpsReleaseScreen> {
                   color: Colors.orange.shade700,
                 ),
                 const SizedBox(width: 8),
-                const Text('Confirmar release'),
+                const Expanded(
+                  child: Text(
+                    'Confirmar release',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: Column(
