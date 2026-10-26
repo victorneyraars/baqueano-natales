@@ -24,8 +24,6 @@ from app.modules.prestadores.schemas import (
     CategoriaOficioCreate,
     CategoriaOficioResponse,
     CategoriaOficioUpdate,
-    FotoTrabajoResponse,
-    FotosTrabajoBulkUpdate,
     PaginacionMeta,
     PrestadorCreate,
     PrestadorDetalleResponse,
@@ -375,20 +373,6 @@ async def eliminar_servicio_mi_prestador(
 # ---------------------------------------------------------
 # Fotos de trabajos (dueño)
 # ---------------------------------------------------------
-@router_propietario.put(
-    "/{prestador_id}/fotos",
-    response_model=list[FotoTrabajoResponse],
-    summary="Reemplazar galería de fotos",
-    description="Reemplaza TODAS las fotos del prestador (bulk).",
-)
-async def setear_fotos_mi_prestador(
-    prestador: PrestadorPropietario,
-    data: FotosTrabajoBulkUpdate,
-    db: DbSession,
-) -> list[FotoTrabajoResponse]:
-    nuevas = await services.setear_fotos_trabajo(db, prestador, data.fotos)
-    return [FotoTrabajoResponse.model_validate(f) for f in nuevas]
-
 
 # =========================================================
 # Admin — Categorías

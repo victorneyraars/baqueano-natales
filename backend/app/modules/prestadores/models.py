@@ -387,12 +387,6 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         lazy="selectin",
         order_by="Review.created_at.desc()",
     )
-    fotos_trabajos: Mapped[list["FotoTrabajo"]] = relationship(
-        back_populates="prestador",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-        order_by="FotoTrabajo.orden",
-    )
 
     def __repr__(self) -> str:
         return (
@@ -502,57 +496,6 @@ class PrestadorServicio(TimestampMixin, Base):
 # =========================================================
 # Fotos de trabajos
 # =========================================================
-class FotoTrabajo(TimestampMixin, Base):
-    """
-    Foto de un trabajo anterior. Parte de la galería del prestador.
-
-    A diferencia del legacy (JSON string), esto es tabla relacional:
-    - Se puede ordenar, filtrar, paginar
-    - Se pueden agregar campos (descripción, fecha del trabajo, etc.)
-    - Se puede relacionar con `solicitudes_servicio` a futuro
-    """
-
-    __tablename__ = "fotos_trabajo"
-    __table_args__ = (
-        UniqueConstraint(
-            "prestador_id",
-            "orden",
-            name="uq_foto_trabajo_prestador_orden",
-        ),
-    )
-
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
-    )
-    prestador_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("prestadores.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    url: Mapped[str] = mapped_column(String(500), nullable=False)
-    descripcion: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
-    orden: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=0,
-        server_default="0",
-    )
-
-    # Relaciones
-    prestador: Mapped[Prestador] = relationship(back_populates="fotos_trabajos")
-
-    def __repr__(self) -> str:
-        return (
-            f"<FotoTrabajo(prestador_id={self.prestador_id}, "
-            f"orden={self.orden})>"
-        )
 
 # =========================================================
 # M6: Reviews (calificaciones del cliente al prestador)

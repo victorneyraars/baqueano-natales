@@ -41,7 +41,6 @@ async def get_prestador_del_propietario(
         )
         .options(
             selectinload(Prestador.categoria),
-            selectinload(Prestador.fotos_trabajos),
         )
     )
     prestador = (await db.execute(stmt)).scalar_one_or_none()

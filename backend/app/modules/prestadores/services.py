@@ -24,14 +24,12 @@ from app.modules.auth.models import Usuario
 from app.modules.prestadores.models import (
     CategoriaOficio,
     EstadoPrestador,
-    FotoTrabajo,
     Prestador,
     PrestadorServicio,
 )
 from app.modules.prestadores.schemas import (
     CategoriaOficioCreate,
     CategoriaOficioUpdate,
-    FotoTrabajoCreate,
     PrestadorCreate,
     PrestadorServicioCreate,
     PrestadorServicioUpdate,
@@ -48,7 +46,6 @@ def _prestador_select_full():
     return select(Prestador).options(
         selectinload(Prestador.categoria),
         selectinload(Prestador.servicios),
-        selectinload(Prestador.fotos_trabajos),
     )
 
 
@@ -219,7 +216,7 @@ async def crear_prestador(
     await db.flush()
     await db.refresh(
         prestador,
-        attribute_names=["categoria", "servicios", "fotos_trabajos"],
+        attribute_names=["categoria", "servicios"],
     )
     return prestador
 
@@ -303,7 +300,7 @@ async def editar_prestador(
     await db.flush()
     await db.refresh(
         prestador,
-        attribute_names=["categoria", "servicios", "fotos_trabajos"],
+        attribute_names=["categoria", "servicios"],
     )
     # Solo revalidar si el prestador está verificado (público)
     if prestador.estado == EstadoPrestador.VERIFICADO:
@@ -538,32 +535,6 @@ async def eliminar_servicio(
 # =========================================================
 # Fotos de trabajos
 # =========================================================
-async def setear_fotos_trabajo(
-    db: AsyncSession,
-    prestador: Prestador,
-    fotos_data: list[FotoTrabajoCreate],
-) -> list[FotoTrabajo]:
-    """
-    Reemplaza TODA la galería del prestador.
-    Elimina las existentes y crea las nuevas en una transacción.
-    """
-    for foto in list(prestador.fotos_trabajos):
-        await db.delete(foto)
-    await db.flush()
-
-    nuevas: list[FotoTrabajo] = []
-    for idx, fdata in enumerate(fotos_data):
-        foto = FotoTrabajo(
-            prestador_id=prestador.id,
-            url=fdata.url,
-            descripcion=fdata.descripcion,
-            orden=fdata.orden if fdata.orden > 0 else idx,
-        )
-        db.add(foto)
-        nuevas.append(foto)
-    await db.flush()
-    return nuevas
-
 
 # =========================================================
 # Listados públicos y admin
@@ -664,8 +635,7 @@ async def listar_prestadores_admin(
         .options(
             selectinload(Prestador.categoria),
             selectinload(Prestador.servicios),
-            selectinload(Prestador.fotos_trabajos),
-        )
+            )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

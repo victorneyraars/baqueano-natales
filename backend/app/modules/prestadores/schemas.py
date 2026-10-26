@@ -179,11 +179,6 @@ class FotoTrabajoResponse(FotoTrabajoBase):
     updated_at: datetime
 
 
-class FotosTrabajoBulkUpdate(BaseModel):
-    """Payload para reemplazar toda la galería de fotos."""
-
-    fotos: list[FotoTrabajoCreate] = Field(min_length=0, max_length=30)
-
 
 # =========================================================
 # Prestadores — Crear / Editar
@@ -348,7 +343,7 @@ class PrestadorDetalleResponse(PrestadorPublicoResponse):
     redes_sociales: dict | None
     modalidades: dict | None = None
     servicios: list[PrestadorServicioResponse] = []
-    fotos_trabajos: list[FotoTrabajoResponse] = []
+    fotos_trabajos: list = []
 
 
 class PrestadorPrivadoResponse(BaseModel):
@@ -395,7 +390,7 @@ class PrestadorPrivadoResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     servicios: list[PrestadorServicioResponse] = []
-    fotos_trabajos: list[FotoTrabajoResponse] = []
+    fotos_trabajos: list = []
 
 
 # =========================================================
