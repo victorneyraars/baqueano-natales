@@ -262,6 +262,27 @@ class SocialRepository {
     }
   }
 
+  /// Activa/desactiva publicacion automatica en una cuenta.
+  Future<CuentaSocial> toggleAutoPublishCuenta({
+    required String cuentaId,
+    required bool activo,
+  }) async {
+    try {
+      final resp = await _dio.patch(
+        '$_base/cuentas/$cuentaId/toggle-auto-publish',
+        queryParameters: {'activo': activo},
+      );
+      return CuentaSocial.fromJson(resp.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   /// Fuerza un ciclo del worker y devuelve stats.
   Future<Map<String, dynamic>> procesarColaAhora() async {
     try {

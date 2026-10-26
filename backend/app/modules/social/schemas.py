@@ -148,6 +148,10 @@ class PublicacionSocialCreate(BaseModel):
         ...,
         description="{'message': str, 'image_urls': [str], 'link': str}",
     )
+    prioridad: int = Field(
+        default=0,
+        description='Prioridad de la cola. 0=Baqueano, 10=Prestador, 20=otros',
+    )
 
 
 class PublicacionSocialResponse(BaseModel):

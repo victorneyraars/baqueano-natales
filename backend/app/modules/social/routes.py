@@ -464,3 +464,27 @@ async def facebook_conectar(
 async def procesar_cola_ahora(_admin: AdminUser) -> dict:
     return await worker.ejecutar_ciclo_manual()
 
+
+
+@router_admin.patch(
+    "/cuentas/{cuenta_id}/toggle-auto-publish",
+    response_model=CuentaSocialResponse,
+    summary="Activar/desactivar publicacion automatica por cuenta",
+)
+async def toggle_auto_publish(
+    cuenta_id: UUID,
+    activo: bool,
+    db: DbSession,
+    _admin: AdminUser,
+) -> CuentaSocialResponse:
+    cuenta = await services.obtener_cuenta(db, cuenta_id)
+    if cuenta is None:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta social no encontrada",
+        )
+    cuenta.auto_publish = activo
+    await db.commit()
+    await db.refresh(cuenta)
+    return CuentaSocialResponse.model_validate(cuenta)

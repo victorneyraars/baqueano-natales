@@ -136,7 +136,7 @@ class _ErrorView extends StatelessWidget {
 // ---------------------------------------------------------
 // Card de cuenta
 // ---------------------------------------------------------
-class _CuentaCard extends StatelessWidget {
+class _CuentaCard extends ConsumerWidget {
   const _CuentaCard({required this.cuenta});
 
   final CuentaSocial cuenta;
@@ -164,7 +164,7 @@ class _CuentaCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
@@ -304,6 +304,93 @@ class _Pill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Switch para activar/desactivar publicacion automatica de una cuenta.
+class _AutoPublishSwitch extends ConsumerStatefulWidget {
+  const _AutoPublishSwitch({required this.cuenta});
+  final CuentaSocial cuenta;
+
+  @override
+  ConsumerState<_AutoPublishSwitch> createState() => _AutoPublishSwitchState();
+}
+
+class _AutoPublishSwitchState extends ConsumerState<_AutoPublishSwitch> {
+  bool _loading = false;
+
+  Future<void> _toggle(bool value) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final repo = ref.read(socialRepositoryProvider);
+      await repo.toggleAutoPublishCuenta(
+        cuentaId: widget.cuenta.id,
+        activo: value,
+      );
+      ref.invalidate(cuentasSocialesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? '✅ Auto-publicacion activada'
+                  : '⏸️ Auto-publicacion desactivada',
+            ),
+            backgroundColor: value ? Colors.green : Colors.grey.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.cuenta.autoPublish
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SwitchListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        secondary: Icon(
+          widget.cuenta.autoPublish ? Icons.bolt : Icons.pan_tool_alt,
+          color: widget.cuenta.autoPublish
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
+          size: 20,
+        ),
+        title: Text(
+          'Publicar automaticamente',
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          widget.cuenta.autoPublish
+              ? 'Esta cuenta recibe publicaciones automaticas'
+              : 'Esta cuenta no recibe publicaciones automaticas',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        value: widget.cuenta.autoPublish,
+        onChanged: _loading ? null : _toggle,
       ),
     );
   }
