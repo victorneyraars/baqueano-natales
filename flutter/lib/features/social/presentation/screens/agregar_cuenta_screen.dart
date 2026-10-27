@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:baqueano_natales/core/social/deep_link_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+
+import '../../../../core/utils/safe_browser_launcher.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -222,72 +225,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   static const _platform = MethodChannel('com.baqueano/url_launcher');
 
   Future<void> _abrirNavegador(String url) async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('[DIAG] Boton tocado, iniciando apertura...'),
-        ),
-      );
-    }
-    debugPrint('[OAuth] Abriendo URL (MethodChannel): $url');
-    try {
-      final bool? result = await _platform.invokeMethod('launchUrl', {
-        'url': url,
-      });
-      debugPrint('[OAuth] MethodChannel result: $result');
-      if (result != true) {
-        throw PlatformException(
-          code: 'FALSE',
-          message: 'MethodChannel returned false',
-        );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '[DIAG] Kotlin devolvió TRUE. El Intent falló silenciosamente en Android.',
-              ),
-            ),
-          );
-        }
-      }
-    } on PlatformException catch (e) {
-      debugPrint('[OAuth] MethodChannel error: ${e.message}');
-      // Fallback a url_launcher
-      try {
-        final ok = await launchUrl(
-          Uri.parse(url),
-          mode: LaunchMode.externalApplication,
-        );
-        debugPrint('[OAuth] Fallback launchUrl result: $ok');
-      } catch (e2) {
-        debugPrint('[OAuth] Fallback launchUrl error: $e2');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al abrir: $e2'),
-              action: SnackBarAction(
-                label: 'Copiar URL',
-                onPressed: () => _copiarUrl(url),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('[OAuth] Error general: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al abrir: $e'),
-            action: SnackBarAction(
-              label: 'Copiar URL',
-              onPressed: () => _copiarUrl(url),
-            ),
-          ),
-        );
-      }
-    }
+    await SafeBrowserLauncher.open(url, context: context);
   }
 
   Future<void> _copiarUrl(String url) async {
