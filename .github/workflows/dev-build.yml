@@ -260,9 +260,11 @@ jobs:
             # Generar manifest para Admin
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             SHA=$(cat app-admindev.apk.sha256 | awk '{print $1}')
+            BUILD_NUMBER=${{ github.run_number }}
             cat > version-admin.json <<EOF
             {
               "latest_version": "$VERSION",
+              "build_number": "$BUILD_NUMBER",
               "url": "https://api-dev.baqueanonatales.com/apks/app-admindev.apk",
               "sha256": "$SHA",
               "changelog": "$COMMIT_MSG"

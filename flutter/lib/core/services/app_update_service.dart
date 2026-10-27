@@ -43,6 +43,8 @@ class AppUpdateService {
 
       final data = response.data as Map<String, dynamic>;
       final latestVersion = data['latest_version'] as String?;
+      final latestBuildNumber =
+          int.tryParse((data['build_number'] as String?) ?? '0') ?? 0;
       final changelog =
           data['changelog'] as String? ?? 'Mejoras y correcciones.';
 
@@ -50,8 +52,14 @@ class AppUpdateService {
 
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
+      final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-      if (_isNewerVersion(latestVersion, currentVersion)) {
+      // Actualizar si el versionName es mayor O si el versionCode es mayor
+      // (aunque el versionName sea igual)
+      final hasNewerVersion = _isNewerVersion(latestVersion, currentVersion);
+      final hasNewerBuild = latestBuildNumber > currentBuildNumber;
+
+      if (hasNewerVersion || hasNewerBuild) {
         final ctx = router.routerDelegate.navigatorKey.currentContext;
         if (ctx != null && ctx.mounted) {
           _showUpdateDialog(ctx, latestVersion, changelog);
