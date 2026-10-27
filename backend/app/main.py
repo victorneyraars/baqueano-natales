@@ -73,6 +73,12 @@ from app.modules.oficios.routes import (
 from app.modules.social.routes import (
     router_admin as social_admin_router,
 )
+from app.modules.rentacar.routes import (
+    router_admin as rentacar_admin_router,
+)
+from app.modules.rentacar.public_routes import (
+    router_publico as rentacar_publico_router,
+)
 from app.modules.social.worker import start_worker, stop_worker
 # Ops Dashboard (admin — CI/CD, tracks, health)
 from app.modules.ops.routes import router as ops_admin_router
@@ -183,6 +189,10 @@ app.include_router(prestadores_admin_router, prefix="/api/v1")
 
 # Social (redes: Facebook, Instagram, Google Business)
 app.include_router(social_admin_router, prefix="/api/v1")
+
+# Rent a Car Vásquez (vertical de alquiler de vehículos)
+app.include_router(rentacar_admin_router, prefix="/api/v1")
+app.include_router(rentacar_publico_router, prefix="/api/v1")
 
 # Promocion (afiches SVG)
 app.include_router(promocion_admin_router, prefix="/api/v1")
