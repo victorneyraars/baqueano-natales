@@ -13,6 +13,7 @@ class RentacarVehiculoBase(BaseModel):
     categoria: str
     precio_dia: float
     disponible: bool = True
+    imagen_url: str | None = None
 
 
 class RentacarVehiculoCreate(RentacarVehiculoBase):
@@ -51,3 +52,14 @@ class RentacarReservaOut(RentacarReservaBase):
 
     class Config:
         from_attributes = True
+
+
+class RentacarImagenPresignedRequest(BaseModel):
+    filename: str
+    content_type: str
+
+
+class RentacarImagenPresignedResponse(BaseModel):
+    upload_url: str
+    object_key: str
+    imagen_url: str

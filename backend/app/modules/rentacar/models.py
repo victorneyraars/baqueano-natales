@@ -54,6 +54,7 @@ class RentacarVehiculo(TimestampMixin, Base):
     anio: Mapped[int] = mapped_column(Integer)
     categoria: Mapped[str] = mapped_column(String(50))
     precio_dia: Mapped[float] = mapped_column(Numeric(10, 2))
+    imagen_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     disponible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

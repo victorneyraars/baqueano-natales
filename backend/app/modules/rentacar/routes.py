@@ -107,3 +107,76 @@ async def crear_reserva(
     data: RentacarReservaCreate, db: DbSession, _admin: AdminUser,
 ):
     return await services.crear_reserva(db, data)
+
+
+
+# ---------------------------- Upload de imagen (R2) ----------------------------
+from app.core.storage import (
+    generate_object_key,
+    generate_presigned_upload_url,
+    get_public_url,
+)
+from .schemas import (
+    RentacarImagenPresignedRequest,
+    RentacarImagenPresignedResponse,
+)
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+@router_admin.post(
+    "/vehiculos/{vehiculo_id}/imagen/presigned",
+    response_model=RentacarImagenPresignedResponse,
+    summary="Genera URL prefirmada para subir imagen a R2",
+)
+async def presigned_upload_imagen(
+    vehiculo_id: UUID,
+    data: RentacarImagenPresignedRequest,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    """Devuelve una URL prefirmada de R2 para que el cliente suba la foto
+    directamente. Dura 15 minutos. Después el cliente debe hacer
+    PUT /vehiculos/{id}/imagen/confirmar con el object_key."""
+    if data.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo no permitido: {data.content_type}. Usar JPG, PNG o WebP.",
+        )
+
+    vehiculo = await services.get_vehiculo(db, vehiculo_id)
+    if vehiculo is None:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+
+    object_key = generate_object_key(f"rentacar/vehiculos/{vehiculo_id}", data.filename)
+    upload_url = generate_presigned_upload_url(object_key, data.content_type)
+    imagen_url = get_public_url(object_key)
+
+    return RentacarImagenPresignedResponse(
+        upload_url=upload_url,
+        object_key=object_key,
+        imagen_url=imagen_url,
+    )
+
+
+@router_admin.post(
+    "/vehiculos/{vehiculo_id}/imagen/confirmar",
+    response_model=RentacarVehiculoOut,
+    summary="Confirma la subida de imagen y actualiza el vehículo",
+)
+async def confirmar_imagen_vehiculo(
+    vehiculo_id: UUID,
+    object_key: str,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    """Después del PUT exitoso a R2, el cliente llama este endpoint con
+    el object_key devuelto por el presigned para guardar la imagen_url."""
+    vehiculo = await services.get_vehiculo(db, vehiculo_id)
+    if vehiculo is None:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+
+    vehiculo.imagen_url = get_public_url(object_key)
+    await db.commit()
+    await db.refresh(vehiculo)
+    return vehiculo
