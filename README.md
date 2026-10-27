@@ -43,3 +43,19 @@ Privado. Todos los derechos reservados.
 
 ## 🐛 Bugs resueltos
 - [Épico: OAuth Motorola](docs/EPIC-OAUTH-MOTOROLA.md)
+
+## Verticales
+
+Cada vertical de Baqueano Natales tiene su propio dominio, backend y web premium. Ver [docs/verticals/](docs/verticals/) para la documentación completa.
+
+| Vertical | Dominio | Estado |
+|---|---|---|
+| Oficios | sealquilamarido.cl | ✅ Producción |
+| Rent a Car Vásquez | rentacarvasquez.com | ✅ Producción |
+
+**Documentación:**
+- [Patrón Backend](docs/verticals/01-backend-pattern.md)
+- [Patrón Frontend](docs/verticals/02-frontend-pattern.md)
+- [Patrón Deploy](docs/verticals/03-deploy-pattern.md)
+- [Troubleshooting](docs/verticals/04-troubleshooting.md)
+- [Caso: Rent a Car Vásquez](docs/verticals/rentacar-vasquez-case-study.md)
