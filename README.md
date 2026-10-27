@@ -40,3 +40,6 @@ curl http://localhost/health
 ## Licencia
 
 Privado. Todos los derechos reservados.
+
+## 🐛 Bugs resueltos
+- [Épico: OAuth Motorola](docs/EPIC-OAUTH-MOTOROLA.md)
