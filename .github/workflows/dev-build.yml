@@ -145,9 +145,11 @@ jobs:
             cp app-clientdev.apk.sha256 archive/app-clientdev-v${VERSION}.apk.sha256 || true
             
             SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
+            CLIENT_BUILD_NUMBER=${{ github.run_number }}
             cat > version-client.json <<EOF
             {
               "latest_version": "$VERSION",
+              "build_number": "$CLIENT_BUILD_NUMBER",
               "url": "https://api-dev.baqueanonatales.com/apks/app-clientdev.apk",
               "sha256": "$SHA",
               "changelog": "$COMMIT_MSG"
