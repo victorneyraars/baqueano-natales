@@ -231,3 +231,146 @@ git add backend/app/modules/<vertical>/ backend/alembic/versions/*.py backend/ap
 git commit -m "feat(<vertical>): módulo backend completo con admin + public ETag"
 git push origin main
 ~~~
+
+## Paso 9: Storage de imágenes con Cloudflare R2
+
+Todas las imágenes (fotos de vehículos, habitaciones, productos, etc.) se guardan en **Cloudflare R2** mediante **presigned URLs**. El cliente sube directo a R2 sin pasar por el backend.
+
+### Arquitectura
+
+~~~text
+Cliente (Flutter/Next.js)
+  ↓ 1. POST /admin/<vertical>/<entidad>/{id}/imagen/presigned
+  ↓ ← { upload_url, object_key, imagen_url }
+  ↓ 2. PUT upload_url (directo a R2) con el archivo binario
+  ↓ 3. POST /admin/<vertical>/<entidad>/{id}/imagen/confirmar?object_key=...
+  ↓ ← { vehiculo/con entidad actualizada con imagen_url }
+~~~
+
+**Ventajas**:
+- El backend no procesa binarios (0 CPU, 0 ancho de banda).
+- Upload directo a R2 (más rápido, aprovecha el edge de Cloudflare).
+- Presigned URL expira a los 15 min (seguridad).
+
+### Helper reutilizable: `backend/app/core/storage.py`
+
+Contiene 4 funciones que se usan en TODAS las verticales:
+
+~~~python
+from app.core.storage import (
+    generate_object_key,       # "rentacar/vehiculos/abc/foto.jpg"
+    generate_presigned_upload_url,  # URL prefirmada (15 min)
+    get_public_url,            # URL pública R2
+    delete_object,             # Eliminar de R2
+)
+~~~
+
+### Endpoint presigned (patrón)
+
+~~~python
+from app.core.storage import (
+    generate_object_key,
+    generate_presigned_upload_url,
+    get_public_url,
+)
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+@router_admin.post(
+    "/<entidad>/{id}/imagen/presigned",
+    response_model=<Vertical>ImagenPresignedResponse,
+)
+async def presigned_upload(
+    id: UUID,
+    data: <Vertical>ImagenPresignedRequest,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    if data.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(400, f"Tipo no permitido: {data.content_type}")
+
+    object_key = generate_object_key(f"<vertical>/<entidad>/{id}", data.filename)
+    upload_url = generate_presigned_upload_url(object_key, data.content_type)
+    imagen_url = get_public_url(object_key)
+
+    return <Vertical>ImagenPresignedResponse(
+        upload_url=upload_url,
+        object_key=object_key,
+        imagen_url=imagen_url,
+    )
+~~~
+
+### Endpoint confirmar (patrón)
+
+~~~python
+@router_admin.post("/<entidad>/{id}/imagen/confirmar")
+async def confirmar_imagen(
+    id: UUID,
+    object_key: str,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    entidad = await services.get_<entidad>(db, id)
+    if entidad is None:
+        raise HTTPException(404, "No encontrado")
+
+    entidad.imagen_url = get_public_url(object_key)
+    await db.commit()
+    await db.refresh(entidad)
+    return entidad
+~~~
+
+### Modelo: agregar `imagen_url`
+
+~~~python
+imagen_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+~~~
+
+### Migración
+
+~~~python
+op.add_column('<vertical>_<entidad>', sa.Column('imagen_url', sa.String(500), nullable=True))
+~~~
+
+### Configuración R2 (env vars)
+
+~~~text
+R2_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=<access-key>
+R2_SECRET_ACCESS_KEY=<secret-key>
+R2_BUCKET_NAME=baqueano-public
+R2_PUBLIC_URL=https://pub-<hash>.r2.dev
+~~~
+
+**Bucket**: usar `baqueano-public` (público, CDN) para imágenes de producto/vehículos/habitaciones.
+**Bucket privado**: `baqueano-evidence` para evidencias de trabajos (con acceso firmado).
+
+### Crear el bucket vía API (una vez por proyecto)
+
+~~~bash
+ACCOUNT_ID="<account-id>"
+
+# Crear bucket
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/r2/buckets" \
+  -H "X-Auth-Email: $CF_API_EMAIL" -H "X-Auth-Key: $CF_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "baqueano-public"}'
+
+# Habilitar acceso público (R2.dev subdomain)
+curl -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/r2/buckets/baqueano-public/domains/managed" \
+  -H "X-Auth-Email: $CF_API_EMAIL" -H "X-Auth-Key: $CF_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+~~~
+
+### Convención de object keys
+
+~~~text
+<vertical>/<entidad>/<id>/<uuid>.<ext>
+# Ejemplo:
+rentacar/vehiculos/bbcc12/e9d4beeecf264dd7aac9743176655f91.jpg
+hostales/habitaciones/<id>/<uuid>.jpg
+delivery/productos/<id>/<uuid>.webp
+~~~
+
+El `<uuid>` único evita colisiones y permite cachear por 1 año (`Cache-Control: immutable`).

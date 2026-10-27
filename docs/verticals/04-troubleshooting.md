@@ -301,3 +301,164 @@ private val CHANNEL = "com.baqueano/url_launcher"  // MISMO NOMBRE
 | **Frontend** | 5, 6, 7 |
 | **Deploy** | 8, 9 |
 | **Flutter** | 10, 11, 12 |
+
+---
+
+### 13. `Failed to fetch` en el navegador (CORS)
+
+**Causa**: El dominio del frontend no está en `CORS_ORIGINS` del backend. El navegador bloquea el POST silenciosamente (solo visible en DevTools → Network → `(failed) net::ERR_FAILED`).
+
+**Síntomas**:
+- Formulario muestra `Failed to fetch` (o `TypeError: Failed to fetch`).
+- La API responde bien con `curl` (porque curl no hace preflight).
+- DevTools muestra `CORS policy: No 'Access-Control-Allow-Origin' header`.
+
+**Diagnóstico**:
+
+~~~bash
+# Preflight (simula lo que hace el navegador)
+curl -s -o /dev/null -w "HTTP %{http_code}\n" -X OPTIONS \
+  "https://api-dev.baqueanonatales.com/api/v1/public/rentacar/reservas" \
+  -H "Origin: https://rentacarvasquez.com" \
+  -H "Access-Control-Request-Method: POST"
+# 200 = OK, 400 = CORS bloqueado
+~~~
+
+**Solución**:
+
+1. Agregar el dominio en `.env.dev` y `.env.prod`:
+
+~~~text
+CORS_ORIGINS=http://localhost:3000,...,https://rentacarvasquez.com,https://www.rentacarvasquez.com
+~~~
+
+2. **Recrear el container** (NO restart — restart no recarga env vars):
+
+~~~bash
+cd ~/baqueano-natales
+sudo docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate backend-dev
+~~~
+
+3. Verificar:
+
+~~~bash
+docker exec baqueano_backend_dev env | grep CORS_ORIGINS
+# Debe incluir el nuevo dominio
+~~~
+
+**Regla**: `docker restart` NO recarga env vars. Solo `up -d --force-recreate` lo hace.
+
+---
+
+### 14. `R2_PUBLIC_URL` con placeholder no sirve imágenes
+
+**Causa**: Si el `.env.dev` tiene `R2_PUBLIC_URL=https://pub-xxxx.r2.dev` (literal `xxxx`), las URLs devueltas no funcionan → `HTTP 401` de Cloudflare.
+
+**Síntomas**:
+- Las imágenes devuelven `HTTP 401` (no 404, porque R2.dev requiere enable explícito).
+- En logs de nginx: `access forbidden` o similar.
+
+**Solución**:
+
+1. Habilitar acceso público al bucket vía API:
+
+~~~bash
+ACCOUNT_ID="<account-id>"
+curl -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/r2/buckets/<bucket>/domains/managed" \
+  -H "X-Auth-Email: $CF_API_EMAIL" \
+  -H "X-Auth-Key: $CF_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+~~~
+
+2. Copiar el `<hash>` que devuelve (ej. `pub-26428d066b4c...`).
+
+3. Actualizar `.env.dev`:
+
+~~~text
+R2_PUBLIC_URL=https://pub-26428d066b4c...r2.dev
+~~~
+
+4. Recrear backend.
+
+**Regla**: cada bucket tiene su propio `pub-<hash>.r2.dev`. No se puede reutilizar uno entre buckets.
+
+---
+
+### 15. `create-next-app --turbopack` deja CSS vacío en producción
+
+**Causa**: `--turbopack` **NO** crea `postcss.config.mjs` (solo lo usa en `dev`). En `build` (Webpack) no procesa Tailwind → CSS = 0 bytes.
+
+**Síntomas**:
+- Sitio se ve sin estilos (Times New Roman, links azules subrayados).
+- `ls -la .next/static/chunks/*.css` → archivo <1000 bytes.
+- `curl .../css | wc -c` → 0.
+
+**Solución**: ver Doc 04, bug #6.
+
+**Diagnóstico rápido**:
+
+~~~bash
+# Verificar tamaño del CSS compilado
+ls -la .next/static/chunks/*.css
+# Si es <1000 bytes, falta postcss.config.mjs
+~~~
+
+---
+
+### 16. Nginx `proxy_cache` cachea respuestas vacías de CSS
+
+**Causa**: `proxy_cache_valid 200 1y` en `/_next/static/` cachea respuestas 200, incluso si son vacías (0 bytes). Si el CSS aún no existía en el primer request, se cachea vacío por 1 año.
+
+**Síntomas**:
+- Container tiene CSS (19977 bytes).
+- Nginx interno sirve CSS (19977 bytes).
+- `curl` desde internet → 0 bytes.
+- El sitio sigue sin estilos a pesar de rebuild.
+
+**Solución**:
+
+1. **Quitar `proxy_cache`** de `/_next/static/`:
+
+~~~nginx
+location /_next/static/ {
+    proxy_pass http://<vertical>_web:3000;
+    # NO usar proxy_cache: Next.js ya maneja el cache con hashes
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+~~~
+
+2. Limpiar el cache existente:
+
+~~~bash
+sudo docker exec baqueano_nginx sh -c "rm -rf /var/cache/nginx/*"
+sudo docker exec baqueano_nginx nginx -s reload
+~~~
+
+3. Verificar:
+
+~~~bash
+curl -s https://<dominio>.com/_next/static/chunks/xxx.css | wc -c
+# Debe ser >10000
+~~~
+
+**Regla**: nunca cachear assets de Next.js con hash en nginx. Next.js ya envía `Cache-Control: immutable` en los nombres con hash.
+
+---
+
+### 17. `docker restart` no recarga env vars
+
+**Causa**: `docker restart` solo reinicia el proceso dentro del container existente. Los env vars se setean al **crear** el container (en `docker run` o `docker compose up`).
+
+**Síntomas**:
+- Editas `.env.dev`.
+- `docker restart baqueano_backend_dev`.
+- `docker exec ... env | grep X` muestra el valor viejo.
+
+**Solución**: usar `--force-recreate`:
+
+~~~bash
+sudo docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate backend-dev
+~~~
+
+**Regla**: cada vez que cambies `.env*`, hay que recrear el container. `restart` solo sirve para reiniciar código que ya está dentro del container.

@@ -35,6 +35,7 @@
 4. **Web premium independiente**: dominio propio, deploy en Docker, diseño adaptado al público.
 5. **SSL automático**: Let's Encrypt via `acme.sh` + Cloudflare DNS-01, renovación cada 60 días.
 6. **Sin desinstalación de app**: builds usan `--build-number=${{ github.run_number }}` para auto-update in-app.
+7. **Imágenes en Cloudflare R2**: todas las fotos (vehículos, productos, habitaciones) viven en R2 con presigned URLs. Cero carga en el backend, CDN global de Cloudflare, cache 1 año.
 
 ## Flujo estándar para agregar una nueva vertical
 

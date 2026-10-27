@@ -245,3 +245,78 @@ Cambiar `proxied: false` a `proxied: true` + Cloudflare Origin cert (en lugar de
 
 **Última actualización**: 2026-10-27
 **Estado**: ✅ Producción
+
+---
+
+## Actualización 2026-10-27 (tarde): Completado del corto plazo
+
+Después de la primera sesión, se completaron los 3 ítems del corto plazo:
+
+### ✅ Página de detalle de vehículo
+
+- Ruta: `/vehiculos/[id]`
+- Componente: Server Component con `revalidate: 30`
+- Layout: 2 columnas en desktop (`md:grid-cols-5`, 3 para imágenes, 2 para formulario sticky), 1 en móvil.
+- Incluye: foto grande, specs en cards (año, categoría, seguro, soporte), formulario de reserva.
+
+### ✅ Formulario de reserva funcional
+
+- Componente: `components/ReservaForm.tsx` (Client Component).
+- Cálculo dinámico de días + precio total en vivo.
+- POST a `/api/v1/public/rentacar/reservas` (público, sin auth).
+- Crea reserva en PostgreSQL con estado `pendiente`.
+- Soporta cliente invitado: `nombre_cliente`, `email_cliente`, `telefono_cliente`, `metodo_pago`.
+- Migración `manual_rentacar_002`: `cliente_id` nullable + datos de contacto.
+
+### ✅ Fotos reales con Cloudflare R2
+
+- Bucket: `baqueano-public` (creado vía API).
+- URL pública: `https://pub-26428d066b4c4eeab91fc8fedf8c036c.r2.dev`.
+- Helper reutilizable: `backend/app/core/storage.py`.
+- Endpoints presigned:
+  - `POST /admin/rentacar/vehiculos/{id}/imagen/presigned`
+  - `POST /admin/rentacar/vehiculos/{id}/imagen/confirmar`
+- Frontend: `VehiculoCard.tsx` y `[id]/page.tsx` usan `imagen_url || CATEGORIA_IMAGEN[...] || DEFAULT_IMG`.
+- 3 fotos subidas:
+  - BBCC12 (Toyota RAV4): `rentacar/vehiculos/bbcc12/e9d4beee...jpg`
+  - DDEE34 (Nissan Versa): `rentacar/vehiculos/ddee34/e6761d7d...jpg`
+  - FFGG56 (Mitsubishi L200): `rentacar/vehiculos/ffgg56/26c7d03a...jpg`
+
+### ✅ Bugs adicionales resueltos
+
+| # | Bug | Fix |
+|---|---|---|
+| 13 | CORS `Failed to fetch` | Agregar `rentacarvasquez.com` a `CORS_ORIGINS` + `--force-recreate` |
+| 14 | R2 `pub-xxxx.r2.dev` placeholder | Habilitar public access vía API + copiar URL real |
+| 15 | `create-next-app --turbopack` sin `postcss.config.mjs` | Agregar `@tailwindcss/postcss` + `postcss.config.mjs` |
+| 16 | Nginx `proxy_cache` cachea CSS vacío | Eliminar `proxy_cache_valid` de `/_next/static/` |
+| 17 | `docker restart` no recarga env vars | Usar `docker compose up -d --force-recreate` |
+
+### 📊 Estado final del proyecto
+
+| Componente | Estado |
+|---|---|
+| Homepage con catálogo | ✅ |
+| Página de detalle | ✅ |
+| Formulario de reserva | ✅ |
+| Fotos reales en R2 | ✅ |
+| Reservas en PostgreSQL | ✅ |
+| CORS configurado | ✅ |
+| SSL + DNS + Docker + Nginx | ✅ |
+| Repo backend (`baqueano-natales`) | ✅ Pusheado a GitHub |
+| Repo frontend (`rentacarvasquez-web`) | ✅ Pusheado a GitHub |
+
+### 🔮 Próximos pasos (mediano plazo)
+
+1. **Panel admin Flutter**: subir fotos desde la app (usa los presigned URLs ya listos).
+2. **Integración de pagos**: MercadoPago / Transbank con webhooks.
+3. **Sistema de reservas completo**: estados `pendiente` → `confirmada` → `completada`, con notificaciones.
+4. **Notificaciones push**: al confirmar reservas, al admin de Vásquez.
+5. **CI/CD al frontend**: workflow de GitHub Actions para auto-deploy en push a `main`.
+6. **Custom domain para R2**: `media.rentacarvasquez.com` (CNAME a R2) en lugar de `pub-xxx.r2.dev`.
+7. **Replicar a nueva vertical**: Hostales, Delivery o Taxis (usar `docs/verticals/` como guía).
+
+---
+
+**Última actualización**: 2026-10-27 17:00 UTC
+**Estado**: ✅ Producción completa (corto plazo)

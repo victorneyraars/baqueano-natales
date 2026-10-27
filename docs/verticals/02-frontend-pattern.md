@@ -288,3 +288,87 @@ git init
 git add -A
 git commit -m "feat: <Nombre> - sitio web premium Next.js 16 + ISR"
 ~~~
+
+## Paso 15: Consumir imágenes desde Cloudflare R2
+
+El backend guarda en cada entidad una `imagen_url` que apunta a R2 (ver Doc 01, Paso 9).
+
+### Regla: siempre usar `imagen_url` con fallback
+
+**NUNCA** hardcodear URLs de Unsplash en producción. Usar el campo `imagen_url` del backend, y solo caer al placeholder si no existe.
+
+Patrón (en el componente de card):
+
+~~~typescript
+// components/<Entidad>Card.tsx
+const CATEGORIA_IMAGEN: Record<string, string> = {
+  SUV: "https://images.unsplash.com/photo-...",
+  SEDAN: "https://images.unsplash.com/photo-...",
+};
+
+export default function <Entidad>Card({ entidad }: Props) {
+  const img =
+    entidad.imagen_url ||                    // ← Prioridad 1: R2
+    CATEGORIA_IMAGEN[entidad.categoria] ||   // ← Prioridad 2: categoría
+    DEFAULT_IMG;                             // ← Prioridad 3: default
+  // ...
+}
+~~~
+
+Mismo patrón en `[id]/page.tsx` para la página de detalle.
+
+### `next.config.ts`: agregar dominio R2
+
+Next.js requiere whitelist de dominios para `next/image` y para evitar warnings en `<img>`:
+
+~~~typescript
+// next.config.ts
+images: {
+  remotePatterns: [
+    { protocol: "https", hostname: "images.unsplash.com" },
+    { protocol: "https", hostname: "api-dev.baqueanonatales.com" },
+    { protocol: "https", hostname: "pub-<hash>.r2.dev" },  // ← R2
+  ],
+},
+~~~
+
+**Nota**: cada proyecto R2 tiene un `<hash>` distinto. Obtener con:
+
+~~~bash
+ACCOUNT_ID="<account-id>"
+curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/r2/buckets/baqueano-public/domains/managed" \
+  -H "X-Auth-Email: $CF_API_EMAIL" \
+  -H "X-Auth-Key: $CF_API_KEY" | python3 -m json.tool
+~~~
+
+### Tipos TypeScript
+
+Agregar `imagen_url` al interface:
+
+~~~typescript
+// lib/types.ts
+export interface <Entidad> {
+  id: string;
+  // ... otros campos
+  imagen_url?: string | null;
+}
+~~~
+
+### Subir imagen desde el panel admin (futuro)
+
+Cuando el admin suba una foto, el flujo es:
+
+1. `POST /admin/<vertical>/<entidad>/{id}/imagen/presigned` → `{ upload_url, object_key, imagen_url }`.
+2. `PUT upload_url` con `Content-Type: <mismo que se pasó>` y el body = file binario (fetch directo, no axios necesario).
+3. `POST /admin/<vertical>/<entidad>/{id}/imagen/confirmar?object_key=<key>` → entidad con `imagen_url` actualizada.
+
+Ver `components/ReservaForm.tsx` para ejemplo de llamadas API.
+
+### Cache y rendimiento
+
+R2 sirve las imágenes con:
+- `Cache-Control: public, max-age=31536000, immutable` (1 año).
+- CDN global de Cloudflare (edge en ~300 ciudades).
+- Compresión automática de imágenes.
+
+**Regla**: los `object_key` deben incluir un UUID único, así si se reemplaza la foto, se sirve una URL nueva (no se queda cacheada la vieja).
