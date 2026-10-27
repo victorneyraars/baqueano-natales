@@ -132,6 +132,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   bool _loading = false;
   String? _oauthUrl;
   StreamSubscription<Uri>? _deepLinkSub;
+  bool _deepLinkProcessed = false;
 
   @override
   void initState() {
@@ -149,9 +150,12 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   }
 
   void _handleDeepLink(Uri uri) {
+    // Protección contra doble disparo (stream + getInitial + Intent duplicado)
+    if (_deepLinkProcessed) return;
     final tokenRef = DeepLinkService.extractFacebookTokenRef(uri);
     if (tokenRef == null || tokenRef.isEmpty) return;
     if (!mounted) return;
+    _deepLinkProcessed = true;
     // Auto-completar el token y guardar automaticamente
     _tokenRefCtrl.text = tokenRef;
     ScaffoldMessenger.of(context).showSnackBar(

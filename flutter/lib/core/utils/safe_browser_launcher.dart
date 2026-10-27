@@ -16,24 +16,38 @@ class SafeBrowserLauncher {
     String errorMessage = 'No se pudo abrir el enlace automáticamente.';
 
     if (Platform.isAndroid) {
+      // 1. Intentar In-App Browser (Custom Tabs) primero
       try {
-        final bool? result = await _channel.invokeMethod('launchUrl', {
-          'url': url,
-        });
-        if (result == true) success = true;
-      } on MissingPluginException {
-        debugPrint(
-          '[SafeBrowserLauncher] Canal nativo no encontrado. Fallback...',
+        success = await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.inAppBrowserView,
         );
-      } on PlatformException catch (e) {
-        errorMessage = e.message ?? errorMessage;
+      } catch (e) {
+        debugPrint('[SafeBrowserLauncher] In-App falló: $e');
       }
-    }
 
-    if (!success) {
+      // 2. Fallback a MethodChannel (Chrome Externo)
+      if (!success) {
+        try {
+          final bool? result = await _channel.invokeMethod('launchUrl', {
+            'url': url,
+          });
+          if (result == true) success = true;
+        } on MissingPluginException {
+          debugPrint(
+            '[SafeBrowserLauncher] Canal nativo no encontrado. Fallback...',
+          );
+        } on PlatformException catch (e) {
+          errorMessage = e.message ?? errorMessage;
+        }
+      }
+    } else {
+      // 3. iOS / Web
       try {
-        final uri = Uri.parse(url);
-        success = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        success = await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
       } catch (e) {
         debugPrint('[SafeBrowserLauncher] Error fallback: $e');
       }
