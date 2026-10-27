@@ -78,13 +78,14 @@ def generar_state(user_id: str, app_redirect: bool = False) -> str:
     )
 
 
-def verificar_state(state: str) -> str:
-    """Valida el `state` y devuelve el user_id (`sub`)."""
+def verificar_state(state: str) -> tuple[str, bool]:
+    """Valida el `state` y devuelve `(user_id, app_redirect)`."""
     data = _decode(state, _TIPO_STATE)
     sub = data.get("sub")
     if not sub:
         raise OAuthTokenError("state sin sub")
-    return sub
+    app_redirect = bool(data.get("app_redirect", False))
+    return sub, app_redirect
 
 
 # ------------------------------------------------------ token_ref (user token)
