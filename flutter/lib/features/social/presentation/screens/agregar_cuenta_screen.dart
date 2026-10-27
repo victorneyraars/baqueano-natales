@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:baqueano_natales/core/social/deep_link_service.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/utils/safe_browser_launcher.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/social/data/social_providers.dart';
@@ -221,8 +220,6 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
-  static const _platform = MethodChannel('com.baqueano/url_launcher');
 
   Future<void> _abrirNavegador(String url) async {
     await SafeBrowserLauncher.open(url, context: context);
