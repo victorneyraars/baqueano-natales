@@ -354,6 +354,7 @@ class PrestadorPrivadoResponse(BaseModel):
     id: UUID
     usuario_id: UUID
     categoria_id: UUID
+    categoria: CategoriaOficioResponse
     slug: str
     nombre: str
     descripcion: str | None
