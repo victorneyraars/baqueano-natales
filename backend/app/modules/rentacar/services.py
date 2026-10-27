@@ -89,6 +89,16 @@ async def listar_reservas(
 async def crear_reserva(
     db: AsyncSession, data: RentacarReservaCreate
 ) -> RentacarReserva:
+    """Crea una reserva pública. Valida disponibilidad y fechas."""
+    vehiculo = await get_vehiculo(db, data.vehiculo_id)
+    if vehiculo is None:
+        raise ValueError("Vehiculo no encontrado")
+    if not vehiculo.disponible:
+        raise ValueError("Vehiculo no disponible")
+
+    if data.fecha_fin <= data.fecha_inicio:
+        raise ValueError("Fecha de fin debe ser posterior a fecha de inicio")
+
     reserva = RentacarReserva(**data.model_dump())
     db.add(reserva)
     await db.commit()

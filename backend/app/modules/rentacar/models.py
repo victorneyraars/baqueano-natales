@@ -64,9 +64,12 @@ class RentacarReserva(TimestampMixin, Base):
     vehiculo_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("rentacar_vehiculos.id"), index=True
     )
-    cliente_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("usuarios.id"), index=True
+    cliente_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True, index=True
     )
+    nombre_cliente: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    email_cliente: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    telefono_cliente: Mapped[str | None] = mapped_column(String(20), nullable=True)
     fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     fecha_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     metodo_pago: Mapped[str] = mapped_column(String(50))

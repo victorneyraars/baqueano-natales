@@ -15,7 +15,11 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from app.core.db import DbSession
 
 from . import services
-from .schemas import RentacarVehiculoOut
+from .schemas import (
+    RentacarReservaCreate,
+    RentacarReservaOut,
+    RentacarVehiculoOut,
+)
 
 router_publico = APIRouter(
     prefix="/public/rentacar", tags=["rentacar-public"]
@@ -72,3 +76,17 @@ async def vehiculos_por_prestador(
     prestador_id: UUID, db: DbSession,
 ):
     return await services.listar_vehiculos(db, prestador_id)
+
+
+@router_publico.post(
+    "/reservas",
+    response_model=RentacarReservaOut,
+    status_code=201,
+    summary="Crear reserva pública (invitado)",
+)
+async def crear_reserva_publica(data: RentacarReservaCreate, db: DbSession):
+    try:
+        reserva = await services.crear_reserva(db, data)
+        return reserva
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
