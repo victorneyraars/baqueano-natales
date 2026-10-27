@@ -20,7 +20,8 @@ from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.integrations import models as integrations_models  # noqa: F401
 from app.modules.comercios import models as comercios_models  # noqa: F401
 from app.modules.prestadores import models as prestadores_models  # noqa: F401
-from app.modules.social import models as social_models  # noqa: F401
+from app.modules.social import models
+from app.modules.rentacar import models as social_models  # noqa: F401
 from app.modules.oficios import models as oficios_models  # noqa: F401
 from app.modules.ops import models as ops_models  # noqa: F401
 from app.core.notifications import models as notifications_models  # noqa: F401
