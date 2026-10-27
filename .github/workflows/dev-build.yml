@@ -78,7 +78,8 @@ jobs:
           flutter build appbundle --release --flavor clientDev \
             -t lib/main_client.dart \
             --dart-define=GIT_SHA=${{ github.sha }} \
-            --dart-define-from-file=dart_defines/client_dev.json
+            --dart-define-from-file=dart_defines/client_dev.json \
+            --build-number=${{ github.run_number }}
 
       - name: Descargar bundletool (con auth para evitar rate limit)
         run: |
@@ -192,7 +193,8 @@ jobs:
           flutter build appbundle --release --flavor adminDev \
             -t lib/main_admin.dart \
             --dart-define=GIT_SHA=${{ github.sha }} \
-            --dart-define-from-file=dart_defines/admin_dev.json
+            --dart-define-from-file=dart_defines/admin_dev.json \
+            --build-number=${{ github.run_number }}
 
       - name: Descargar bundletool (con auth para evitar rate limit)
         run: |
