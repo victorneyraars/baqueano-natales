@@ -238,6 +238,15 @@ class _Contenido extends StatelessWidget {
               context.push('/mis-prestadores/${prestador.id}/turnos'),
         ),
 
+        // --- Rent a Car (solo si la categoría es arriendo de vehículos) ---
+        if (prestador.categoria.slug == 'arriendo-vehiculos') ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.directions_car_outlined),
+            label: const Text('Mi flota de vehículos'),
+            onPressed: () => context.push('/mis-vehiculos-rentacar'),
+          ),
+        ],
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.share_outlined),

@@ -72,6 +72,10 @@ import 'package:baqueano_natales/features/prestadores/presentation/screens/formu
 import 'package:baqueano_natales/features/prestadores/presentation/screens/configurar_modalidades_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/mis_prestadores_screen.dart';
+import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/mi_flota_rentacar_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_detalle_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_form_screen.dart';
 
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
@@ -588,6 +592,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return MisPublicacionesScreen(prestadorId: id);
+        },
+      ),
+      // =========================================================
+      // Rent a Car (flota del prestador)
+      // =========================================================
+      GoRoute(
+        path: '/mis-vehiculos-rentacar',
+        name: 'mis-vehiculos-rentacar',
+        builder: (context, state) => const MiFlotaRentacarScreen(),
+      ),
+      GoRoute(
+        path: '/mis-vehiculos-rentacar/nuevo',
+        name: 'mis-vehiculos-rentacar-nuevo',
+        builder: (context, state) => const VehiculoFormScreen(),
+      ),
+      GoRoute(
+        path: '/mis-vehiculos-rentacar/:id',
+        name: 'mis-vehiculos-rentacar-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return VehiculoDetalleScreen(vehiculoId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-vehiculos-rentacar/:id/editar',
+        name: 'mis-vehiculos-rentacar-editar',
+        builder: (context, state) {
+          final v = state.extra as Vehiculo?;
+          return VehiculoFormScreen(vehiculo: v);
         },
       ),
     ],

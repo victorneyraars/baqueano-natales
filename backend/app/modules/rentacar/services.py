@@ -104,3 +104,109 @@ async def crear_reserva(
     await db.commit()
     await db.refresh(reserva)
     return reserva
+
+
+# ---------------------------- Endpoints Propietario ----------------------------
+from app.modules.prestadores.models import Prestador
+from app.modules.auth.models import Usuario
+
+
+async def _resolver_prestador_rentacar(
+    db: AsyncSession, usuario: Usuario
+) -> Prestador:
+    """Resuelve el prestador de rentacar del usuario logueado.
+    
+    Reglas:
+    - El usuario debe tener al menos un prestador con categoría
+      'arriendo-vehiculos' y estado verificado.
+    - Si no tiene, lanzar ValueError.
+    """
+    from app.modules.prestadores.models import CategoriaOficio
+    stmt = (
+        select(Prestador)
+        .join(CategoriaOficio, Prestador.categoria_id == CategoriaOficio.id)
+        .where(
+            Prestador.usuario_id == usuario.id,
+            CategoriaOficio.slug == "arriendo-vehiculos",
+        )
+        .limit(1)
+    )
+    prestador = (await db.execute(stmt)).scalar_one_or_none()
+    if prestador is None:
+        raise ValueError(
+            "No tienes un prestador de arriendo de vehículos registrado."
+        )
+    return prestador
+
+
+async def listar_mis_vehiculos(
+    db: AsyncSession, usuario: Usuario
+) -> list[RentacarVehiculo]:
+    """Lista los vehículos del prestador de rentacar del usuario."""
+    prestador = await _resolver_prestador_rentacar(db, usuario)
+    return await listar_vehiculos(db, prestador.id)
+
+
+async def crear_mi_vehiculo(
+    db: AsyncSession, usuario: Usuario, data
+) -> RentacarVehiculo:
+    """Crea un vehículo para el prestador del usuario logueado.
+    
+    Ignora el prestador_id del payload y usa el del usuario.
+    """
+    prestador = await _resolver_prestador_rentacar(db, usuario)
+    # Sobrescribir prestador_id con el del usuario
+    data_dict = data.model_dump()
+    data_dict["prestador_id"] = prestador.id
+    # Verificar que la patente no exista
+    stmt = select(RentacarVehiculo).where(
+        RentacarVehiculo.patente == data.patente
+    )
+    existente = (await db.execute(stmt)).scalar_one_or_none()
+    if existente is not None:
+        raise ValueError(f"Ya existe un vehículo con patente {data.patente}.")
+    vehiculo = RentacarVehiculo(**data_dict)
+    db.add(vehiculo)
+    await db.commit()
+    await db.refresh(vehiculo)
+    return vehiculo
+
+
+async def _obtener_mi_vehiculo(
+    db: AsyncSession, usuario: Usuario, vehiculo_id: UUID
+) -> RentacarVehiculo:
+    """Obtiene un vehículo validando que pertenece al usuario."""
+    prestador = await _resolver_prestador_rentacar(db, usuario)
+    stmt = select(RentacarVehiculo).where(
+        RentacarVehiculo.id == vehiculo_id,
+        RentacarVehiculo.prestador_id == prestador.id,
+    )
+    vehiculo = (await db.execute(stmt)).scalar_one_or_none()
+    if vehiculo is None:
+        raise ValueError("Vehículo no encontrado o no es tuyo.")
+    return vehiculo
+
+
+async def actualizar_mi_vehiculo(
+    db: AsyncSession, usuario: Usuario, vehiculo_id: UUID, data: dict
+) -> RentacarVehiculo:
+    """Actualiza un vehículo validando que es del usuario."""
+    vehiculo = await _obtener_mi_vehiculo(db, usuario, vehiculo_id)
+    for key, value in data.items():
+        if value is not None and key in {
+            "patente", "marca", "modelo", "anio", "categoria",
+            "precio_dia", "disponible", "imagen_url",
+        }:
+            setattr(vehiculo, key, value)
+    await db.commit()
+    await db.refresh(vehiculo)
+    return vehiculo
+
+
+async def eliminar_mi_vehiculo(
+    db: AsyncSession, usuario: Usuario, vehiculo_id: UUID
+) -> None:
+    """Elimina un vehículo validando que es del usuario."""
+    vehiculo = await _obtener_mi_vehiculo(db, usuario, vehiculo_id)
+    await db.delete(vehiculo)
+    await db.commit()
