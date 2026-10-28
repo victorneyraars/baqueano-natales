@@ -85,3 +85,14 @@ Total: 8-14 horas por vertical completa
 
 **Última actualización**: 2026-10-27
 **Responsable**: Equipo Baqueano Natales
+
+## Documentos
+
+| # | Documento | Tema |
+|---|---|---|
+| 01 | [01-backend-pattern.md](01-backend-pattern.md) | Módulos, modelos, migraciones |
+| 02 | [02-frontend-pattern.md](02-frontend-pattern.md) | Next.js + ISR + Tailwind |
+| 03 | [03-deploy-pattern.md](03-deploy-pattern.md) | Docker + Nginx + SSL + DNS |
+| 04 | [04-troubleshooting.md](04-troubleshooting.md) | 17 bugs resueltos |
+| 05 | [05-cicd-pattern.md](05-cicd-pattern.md) | **CI/CD reusable (SHAs pinned, rollback)** |
+| - | [rentacar-vasquez-case-study.md](rentacar-vasquez-case-study.md) | Caso de estudio completo |
