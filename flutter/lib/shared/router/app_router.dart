@@ -76,6 +76,8 @@ import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/mi_flota_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_detalle_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_form_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/mis_reservas_rentacar_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/reserva_detalle_screen.dart';
 
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
@@ -621,6 +623,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final v = state.extra as Vehiculo?;
           return VehiculoFormScreen(vehiculo: v);
+        },
+      ),
+      GoRoute(
+        path: '/mis-vehiculos-rentacar/reservas',
+        name: 'mis-reservas-rentacar',
+        builder: (context, state) => const MisReservasRentacarScreen(),
+      ),
+      GoRoute(
+        path: '/mis-vehiculos-rentacar/reservas/:id',
+        name: 'reserva-rentacar-detalle',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ReservaDetalleScreen(reservaId: id);
         },
       ),
     ],

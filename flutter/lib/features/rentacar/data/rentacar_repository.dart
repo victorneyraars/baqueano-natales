@@ -14,6 +14,9 @@ import 'package:dio/dio.dart';
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
+import 'package:baqueano_natales/features/rentacar/domain/reserva.dart';
+import 'package:baqueano_natales/features/rentacar/domain/stats_rentacar.dart';
+import 'package:baqueano_natales/features/rentacar/domain/config_rentacar.dart';
 
 class RentacarRepository {
   RentacarRepository({Dio? dio}) : _dio = dio ?? DioClient.instance;
@@ -77,6 +80,102 @@ class RentacarRepository {
   Future<void> eliminarVehiculo(String id) async {
     try {
       await _dio.delete('/api/v1/mis-vehiculos-rentacar/$id');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<List<Reserva>> listarReservas({String? estado}) async {
+    try {
+      final url = estado != null
+          ? '/api/v1/mis-vehiculos-rentacar/reservas?estado=$estado'
+          : '/api/v1/mis-vehiculos-rentacar/reservas';
+      final res = await _dio.get(url);
+      final list = res.data as List<dynamic>;
+      return list
+          .map((r) => Reserva.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<Reserva> obtenerReserva(String id) async {
+    try {
+      final res = await _dio.get('/api/v1/mis-vehiculos-rentacar/reservas/$id');
+      return Reserva.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<Reserva> cambiarEstadoReserva(String id, String nuevoEstado) async {
+    try {
+      final res = await _dio.patch(
+        '/api/v1/mis-vehiculos-rentacar/reservas/$id/estado',
+        data: {'estado': nuevoEstado},
+      );
+      return Reserva.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<StatsRentacar> obtenerStats() async {
+    try {
+      final res = await _dio.get('/api/v1/mis-vehiculos-rentacar/stats');
+      return StatsRentacar.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<ConfigRentacar> obtenerConfig() async {
+    try {
+      final res = await _dio.get('/api/v1/mis-vehiculos-rentacar/config');
+      return ConfigRentacar.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<ConfigRentacar> actualizarConfig(Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.patch(
+        '/api/v1/mis-vehiculos-rentacar/config',
+        data: data,
+      );
+      return ConfigRentacar.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
