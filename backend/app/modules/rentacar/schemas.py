@@ -90,3 +90,68 @@ class RentacarVehiculoUpdatePropietario(BaseModel):
     precio_dia: float | None = None
     disponible: bool | None = None
     imagen_url: str | None = None
+
+
+# =========================================================
+# Reservas propietario (detalle con vehiculo + cliente)
+# =========================================================
+class RentacarReservaDetalleOut(RentacarReservaOut):
+    """Reserva con datos del vehiculo para el panel del prestador."""
+    vehiculo_patente: str | None = None
+    vehiculo_marca: str | None = None
+    vehiculo_modelo: str | None = None
+    vehiculo_imagen_url: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class RentacarReservaEstadoUpdate(BaseModel):
+    """Cambio de estado de una reserva."""
+    estado: str
+
+
+class RentacarReservaEstado(str):
+    """Estados validos de una reserva."""
+    PENDIENTE = "pendiente"
+    CONFIRMADA = "confirmada"
+    EN_CURSO = "en_curso"
+    COMPLETADA = "completada"
+    CANCELADA = "cancelada"
+
+
+# =========================================================
+# Config propietario
+# =========================================================
+class RentacarConfigOut(BaseModel):
+    id: UUID
+    prestador_id: UUID
+    metodos_pago: dict
+    deposito: dict
+    conductor_adicional: dict
+    categorias: list
+
+    class Config:
+        from_attributes = True
+
+
+class RentacarConfigUpdate(BaseModel):
+    metodos_pago: dict | None = None
+    deposito: dict | None = None
+    conductor_adicional: dict | None = None
+    categorias: list | None = None
+
+
+# =========================================================
+# Stats dashboard
+# =========================================================
+class RentacarStatsOut(BaseModel):
+    vehiculos_total: int
+    vehiculos_disponibles: int
+    reservas_total: int
+    reservas_pendientes: int
+    reservas_confirmadas: int
+    reservas_en_curso: int
+    reservas_completadas: int
+    ingresos_totales: float
+    ingresos_mes_actual: float

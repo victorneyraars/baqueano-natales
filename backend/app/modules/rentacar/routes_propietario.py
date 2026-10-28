@@ -152,3 +152,139 @@ async def confirmar_mi_imagen(
     await db.commit()
     await db.refresh(vehiculo)
     return vehiculo
+
+
+# =========================================================
+# Reservas propietario
+# =========================================================
+from .schemas import (
+    RentacarReservaDetalleOut,
+    RentacarReservaEstadoUpdate,
+    RentacarStatsOut,
+    RentacarConfigOut,
+    RentacarConfigUpdate,
+)
+from app.modules.rentacar.schemas import RentacarReservaOut
+
+
+@router_propietario.get(
+    "/reservas",
+    response_model=list[RentacarReservaDetalleOut],
+    summary="Listar mis reservas",
+)
+async def listar_mis_reservas(
+    db: DbSession,
+    user: CurrentUser,
+    estado: str | None = None,
+):
+    """Lista reservas del prestador, con filtro opcional por estado."""
+    try:
+        reservas = await services.listar_mis_reservas(db, user, estado)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Enriquecer con datos del vehiculo
+    result = []
+    for r in reservas:
+        vehiculo = await services.get_vehiculo(db, r.vehiculo_id)
+        out = RentacarReservaDetalleOut.model_validate(r)
+        if vehiculo:
+            out.vehiculo_patente = vehiculo.patente
+            out.vehiculo_marca = vehiculo.marca
+            out.vehiculo_modelo = vehiculo.modelo
+            out.vehiculo_imagen_url = vehiculo.imagen_url
+        result.append(out)
+    return result
+
+
+@router_propietario.get(
+    "/reservas/{reserva_id}",
+    response_model=RentacarReservaDetalleOut,
+    summary="Detalle de una reserva",
+)
+async def obtener_mi_reserva(
+    reserva_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        reserva = await services._obtener_mi_reserva(db, user, reserva_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+    out = RentacarReservaDetalleOut.model_validate(reserva)
+    if vehiculo:
+        out.vehiculo_patente = vehiculo.patente
+        out.vehiculo_marca = vehiculo.marca
+        out.vehiculo_modelo = vehiculo.modelo
+        out.vehiculo_imagen_url = vehiculo.imagen_url
+    return out
+
+
+@router_propietario.patch(
+    "/reservas/{reserva_id}/estado",
+    response_model=RentacarReservaOut,
+    summary="Cambiar estado de reserva",
+)
+async def cambiar_estado_mi_reserva(
+    reserva_id: UUID,
+    data: RentacarReservaEstadoUpdate,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        return await services.cambiar_estado_reserva(
+            db, user, reserva_id, data.estado
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================
+# Stats dashboard
+# =========================================================
+@router_propietario.get(
+    "/stats",
+    response_model=RentacarStatsOut,
+    summary="Dashboard de estadisticas",
+)
+async def obtener_mis_stats(db: DbSession, user: CurrentUser):
+    try:
+        stats = await services.obtener_mis_stats(db, user)
+        return RentacarStatsOut(**stats)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+# =========================================================
+# Config propietario
+# =========================================================
+@router_propietario.get(
+    "/config",
+    response_model=RentacarConfigOut,
+    summary="Mi configuracion",
+)
+async def obtener_mi_config(db: DbSession, user: CurrentUser):
+    try:
+        return await services.obtener_mi_config(db, user)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router_propietario.patch(
+    "/config",
+    response_model=RentacarConfigOut,
+    summary="Actualizar mi configuracion",
+)
+async def actualizar_mi_config(
+    data: RentacarConfigUpdate,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        return await services.actualizar_mi_config(
+            db, user, data.model_dump(exclude_unset=True)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
