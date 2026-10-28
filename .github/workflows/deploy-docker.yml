@@ -1,0 +1,98 @@
+# Workflow reusable para desplegar Next.js en Docker self-hosted con rollback.
+# Uso desde un repo:
+#   jobs:
+#     deploy:
+#       uses: victorneyraars/baqueano-natales/.github/workflows/deploy-docker.yml@<SHA>
+#       with:
+#         deploy-path: /home/deploy/mi-app
+#         compose-file: docker-compose.yml
+#         healthcheck-url: https://mi-app.com/
+#       secrets:
+#         SSH_HOST: ${{ secrets.SERVER_HOST }}
+#         SSH_USER: ${{ secrets.SERVER_USER }}
+#         SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+name: Deploy Docker with Rollback
+
+on:
+  workflow_call:
+    inputs:
+      deploy-path:
+        description: 'Path en el servidor donde esta el proyecto'
+        required: true
+        type: string
+      compose-file:
+        description: 'Nombre del docker-compose file'
+        required: true
+        type: string
+      healthcheck-url:
+        description: 'URL publica a verificar despues del deploy'
+        required: true
+        type: string
+      branch:
+        description: 'Branch a deployar'
+        required: false
+        type: string
+        default: 'main'
+    secrets:
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+      SSH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-docker-${{ inputs.deploy-path }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy & Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Deploy with rollback
+        # appleboy/ssh-action@v1.0.3 → SHA pinned (verificado 2026-10-27)
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd ${{ inputs.deploy-path }}
+
+            echo "=== Guardando SHA anterior ==="
+            PREV_SHA=$(git rev-parse HEAD)
+            echo "SHA anterior: $PREV_SHA"
+
+            echo "=== Actualizando codigo ==="
+            git fetch origin ${{ inputs.branch }}
+            git reset --hard origin/${{ inputs.branch }}
+            NEW_SHA=$(git rev-parse HEAD)
+            echo "SHA nuevo: $NEW_SHA"
+
+            echo "=== Rebuild ==="
+            sudo docker compose -f ${{ inputs.compose-file }} build
+
+            echo "=== Deploy ==="
+            sudo docker compose -f ${{ inputs.compose-file }} up -d
+
+            echo "=== Esperando 25s al healthcheck ==="
+            sleep 25
+
+            echo "=== Healthcheck ==="
+            if ! curl -sf --max-time 15 ${{ inputs.healthcheck-url }} > /dev/null; then
+              echo "Healthcheck FALLO. Rollback a $PREV_SHA"
+              git reset --hard $PREV_SHA
+              sudo docker compose -f ${{ inputs.compose-file }} build
+              sudo docker compose -f ${{ inputs.compose-file }} up -d
+              exit 1
+            fi
+
+            echo "Deploy exitoso: $NEW_SHA"
