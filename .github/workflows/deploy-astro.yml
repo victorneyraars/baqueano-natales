@@ -26,6 +26,11 @@ on:
         required: false
         type: string
         default: 'main'
+      build-env:
+        description: 'Variables de entorno para el build (KEY=VALUE por linea)'
+        required: false
+        type: string
+        default: ''
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -71,6 +76,15 @@ jobs:
           else
             echo "Sin script check/analyze, se omite"
           fi
+
+      - name: Escribir .env de build
+        if: inputs.build-env != ''
+        env:
+          BUILD_ENV: ${{ inputs.build-env }}
+        run: |
+          printf '%s\n' "$BUILD_ENV" > .env
+          echo "=== .env de build ==="
+          cat .env
 
       - name: Build
         run: npm run build
