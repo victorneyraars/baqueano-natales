@@ -293,7 +293,7 @@ class _MenuPorCategoria extends StatelessWidget {
               icon: Icons.event_note_outlined,
               title: 'Reservas',
               subtitle: 'Ver y gestionar reservas de clientes',
-              onTap: () => context.push('/mis-vehiculos-rentacar/reservas'),
+              onTap: () => context.push('/mis-reservas-rentacar'),
             ),
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),

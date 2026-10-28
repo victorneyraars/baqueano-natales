@@ -626,12 +626,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/mis-vehiculos-rentacar/reservas',
+        path: '/mis-reservas-rentacar',
         name: 'mis-reservas-rentacar',
         builder: (context, state) => const MisReservasRentacarScreen(),
       ),
       GoRoute(
-        path: '/mis-vehiculos-rentacar/reservas/:id',
+        path: '/mis-reservas-rentacar/:id',
         name: 'reserva-rentacar-detalle',
         builder: (context, state) {
           final id = state.pathParameters['id']!;

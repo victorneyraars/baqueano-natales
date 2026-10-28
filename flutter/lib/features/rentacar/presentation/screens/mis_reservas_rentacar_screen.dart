@@ -163,7 +163,7 @@ class _ReservaCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push(
-          '/mis-vehiculos-rentacar/reservas/${reserva.id}',
+          '/mis-reservas-rentacar/${reserva.id}',
           extra: reserva,
         ),
         child: Padding(
