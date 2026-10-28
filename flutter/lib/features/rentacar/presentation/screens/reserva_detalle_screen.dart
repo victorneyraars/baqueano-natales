@@ -290,6 +290,8 @@ class _ReservaBodyState extends ConsumerState<_ReservaBody> {
       final repo = ref.read(rentacarRepositoryProvider);
       await repo.cambiarEstadoReserva(widget.reserva.id, nuevoEstado);
       widget.onRefresh();
+      // Invalidar TODAS las variantes del provider de lista (family)
+      ref.invalidate(misReservasRentacarProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
