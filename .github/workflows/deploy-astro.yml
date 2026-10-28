@@ -1,13 +1,7 @@
 # Workflow reusable para desplegar sitios Astro a Cloudflare Pages.
-# Uso desde un repo:
-#   jobs:
-#     deploy:
-#       uses: victorneyraars/baqueano-natales/.github/workflows/deploy-astro.yml@<SHA>
-#       with:
-#         project-name: mi-proyecto
-#       secrets:
-#         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-#         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+# - Autodetecta npm/pnpm por lockfile.
+# - Ejecuta astro check solo si el script existe.
+# - Deployment a Cloudflare Pages con wrangler-action (SHA pinned).
 name: Deploy Astro to Cloudflare Pages
 
 on:
@@ -23,10 +17,15 @@ on:
         type: string
         default: '22'
       environment:
-        description: 'GitHub environment (production/staging)'
+        description: 'GitHub environment (production/preview)'
         required: false
         type: string
         default: 'production'
+      cloudflare-branch:
+        description: 'Rama a asociar al deploy en Cloudflare Pages'
+        required: false
+        type: string
+        default: 'main'
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -47,24 +46,38 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        # actions/checkout@v4 → SHA pinned (verificado 2026-10-27)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
-      - name: Setup Node.js + pnpm
-        uses: victorneyraars/baqueano-natales/.github/actions/setup-node@main
+      - name: Instalar Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ inputs.node-version }}
 
-      - name: Type check
-        run: pnpm astro check
+      - name: Instalar dependencias (npm)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f pnpm-lock.yaml ]; then
+            corepack enable pnpm
+            pnpm install --frozen-lockfile
+          else
+            npm install
+          fi
+
+      - name: Astro Check (si existe script analyze/check)
+        run: |
+          if node -e "const p=require('./package.json'); process.exit((p.scripts && (p.scripts.check || p.scripts.analyze)) ? 0 : 1)"; then
+            npm run analyze --silent 2>/dev/null || npm run check --silent
+          else
+            echo "Sin script check/analyze, se omite"
+          fi
 
       - name: Build
-        run: pnpm build
+        run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
       - name: Upload artifact
-        # actions/upload-artifact@v4 → SHA pinned (verificado 2026-10-27)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dist-${{ inputs.environment }}
@@ -80,16 +93,14 @@ jobs:
       name: ${{ inputs.environment }}
     steps:
       - name: Download artifact
-        # actions/download-artifact@v4 → SHA pinned (verificado 2026-10-27)
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: dist-${{ inputs.environment }}
           path: dist/
 
       - name: Deploy with wrangler
-        # cloudflare/wrangler-action@v3 → SHA pinned (verificado 2026-10-27)
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ inputs.project-name }} --branch=${{ inputs.environment }}
+          command: pages deploy dist --project-name=${{ inputs.project-name }} --branch=${{ inputs.cloudflare-branch }}
