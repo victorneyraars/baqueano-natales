@@ -61,7 +61,7 @@ async def crear_mi_vehiculo(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router_propietario.get("/{vehiculo_id}", response_model=RentacarVehiculoOut)
+@router_propietario.get("/{vehiculo_id:uuid}", response_model=RentacarVehiculoOut)
 async def obtener_mi_vehiculo(
     vehiculo_id: UUID, db: DbSession, user: CurrentUser,
 ):
@@ -71,7 +71,7 @@ async def obtener_mi_vehiculo(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router_propietario.put("/{vehiculo_id}", response_model=RentacarVehiculoOut)
+@router_propietario.put("/{vehiculo_id:uuid}", response_model=RentacarVehiculoOut)
 async def actualizar_mi_vehiculo(
     vehiculo_id: UUID,
     data: RentacarVehiculoUpdatePropietario,
@@ -87,7 +87,7 @@ async def actualizar_mi_vehiculo(
 
 
 @router_propietario.delete(
-    "/{vehiculo_id}", status_code=status.HTTP_204_NO_CONTENT,
+    "/{vehiculo_id:uuid}", status_code=status.HTTP_204_NO_CONTENT,
 )
 async def eliminar_mi_vehiculo(
     vehiculo_id: UUID, db: DbSession, user: CurrentUser,
@@ -99,7 +99,7 @@ async def eliminar_mi_vehiculo(
 
 
 @router_propietario.post(
-    "/{vehiculo_id}/imagen/presigned",
+    "/{vehiculo_id:uuid}/imagen/presigned",
     response_model=RentacarImagenPresignedResponse,
 )
 async def presigned_upload_mi_imagen(
@@ -133,7 +133,7 @@ async def presigned_upload_mi_imagen(
 
 
 @router_propietario.post(
-    "/{vehiculo_id}/imagen/confirmar",
+    "/{vehiculo_id:uuid}/imagen/confirmar",
     response_model=RentacarVehiculoOut,
 )
 async def confirmar_mi_imagen(
@@ -178,10 +178,18 @@ async def listar_mis_reservas(
     estado: str | None = None,
 ):
     """Lista reservas del prestador, con filtro opcional por estado."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[listar_mis_reservas] user={user.id} estado={estado}")
     try:
         reservas = await services.listar_mis_reservas(db, user, estado)
+        logger.info(f"[listar_mis_reservas] encontradas {len(reservas)}")
     except ValueError as e:
+        logger.error(f"[listar_mis_reservas] ValueError: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"[listar_mis_reservas] Exception: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
     # Enriquecer con datos del vehiculo
     result = []
@@ -198,7 +206,7 @@ async def listar_mis_reservas(
 
 
 @router_propietario.get(
-    "/reservas/{reserva_id}",
+    "/reservas/{reserva_id:uuid}",
     response_model=RentacarReservaDetalleOut,
     summary="Detalle de una reserva",
 )
@@ -223,7 +231,7 @@ async def obtener_mi_reserva(
 
 
 @router_propietario.patch(
-    "/reservas/{reserva_id}/estado",
+    "/reservas/{reserva_id:uuid}/estado",
     response_model=RentacarReservaOut,
     summary="Cambiar estado de reserva",
 )
