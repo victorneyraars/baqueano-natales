@@ -78,10 +78,10 @@ jobs:
             echo "SHA nuevo: $NEW_SHA"
 
             echo "=== Rebuild ==="
-            sudo docker compose -f ${{ inputs.compose-file }} build
+            docker compose -f ${{ inputs.compose-file }} build
 
             echo "=== Deploy ==="
-            sudo docker compose -f ${{ inputs.compose-file }} up -d
+            docker compose -f ${{ inputs.compose-file }} up -d
 
             echo "=== Esperando 25s al healthcheck ==="
             sleep 25
@@ -90,8 +90,8 @@ jobs:
             if ! curl -sf --max-time 15 ${{ inputs.healthcheck-url }} > /dev/null; then
               echo "Healthcheck FALLO. Rollback a $PREV_SHA"
               git reset --hard $PREV_SHA
-              sudo docker compose -f ${{ inputs.compose-file }} build
-              sudo docker compose -f ${{ inputs.compose-file }} up -d
+              docker compose -f ${{ inputs.compose-file }} build
+              docker compose -f ${{ inputs.compose-file }} up -d
               exit 1
             fi
 
