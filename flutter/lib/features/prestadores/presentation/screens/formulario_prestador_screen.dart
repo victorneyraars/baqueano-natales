@@ -22,7 +22,7 @@ import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfi
 /// Cambios clave respecto a v1:
 /// - Modelo de estado: PrestadorFormState (inmutable)
 /// - 8 secciones del perfil_negocio como widgets separados
-/// - ExpansionTile colapsables con maintainState: false
+/// - ExpansionTile colapsables con maintainState: true
 /// - Submit envía perfil_negocio completo al backend
 class FormularioPrestadorScreen extends ConsumerStatefulWidget {
   const FormularioPrestadorScreen({super.key, this.prestadorId});
@@ -318,22 +318,25 @@ class _FormularioPrestadorScreenState
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            _seccionDatosBasicos(),
-            _seccionContacto(),
-            if (_esEdicion) ...[
-              _seccionDatosFiscales(),
-              _seccionUbicacion(),
-              _seccionHorario(),
-              _seccionAtributos(),
-              _seccionGbp(),
-              _seccionRedes(),
-              _seccionReserva(),
-              _seccionFotos(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _seccionDatosBasicos(),
+              _seccionContacto(),
+              if (_esEdicion) ...[
+                _seccionDatosFiscales(),
+                _seccionUbicacion(),
+                _seccionHorario(),
+                _seccionAtributos(),
+                _seccionGbp(),
+                _seccionRedes(),
+                _seccionReserva(),
+                _seccionFotos(),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: _barraGuardar(),
@@ -343,7 +346,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionDatosBasicos() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_datos_basicos'),
-      maintainState: false,
+      maintainState: true,
       initiallyExpanded: true,
       title: const Text('Información básica'),
       children: [
@@ -416,7 +419,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionContacto() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_contacto'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Contacto'),
       children: [
         Padding(
@@ -465,7 +468,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionDatosFiscales() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_datos_fiscales'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Datos fiscales'),
       children: [
         Padding(
@@ -494,7 +497,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionUbicacion() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_ubicacion'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Ubicación'),
       children: [
         Padding(
@@ -523,7 +526,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionHorario() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_horario'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Horario de atención'),
       children: [
         Padding(
@@ -544,7 +547,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionAtributos() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_atributos'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Atributos del negocio'),
       children: [
         Padding(
@@ -565,7 +568,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionGbp() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_gbp'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Google Business Profile'),
       children: [
         Padding(
@@ -584,7 +587,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionRedes() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_redes'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Redes sociales'),
       children: [
         Padding(
@@ -605,7 +608,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionReserva() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_reserva'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Reservas'),
       children: [
         Padding(
@@ -626,7 +629,7 @@ class _FormularioPrestadorScreenState
   Widget _seccionFotos() {
     return ExpansionTile(
       key: const PageStorageKey('seccion_fotos'),
-      maintainState: false,
+      maintainState: true,
       title: const Text('Fotos'),
       children: [
         Padding(
