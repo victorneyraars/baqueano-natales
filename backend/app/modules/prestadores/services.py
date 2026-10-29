@@ -216,7 +216,7 @@ async def crear_prestador(
     await db.flush()
     await db.refresh(
         prestador,
-        attribute_names=["categoria", "servicios"],
+        attribute_names=["categoria", "servicios", "updated_at", "created_at"],
     )
     return prestador
 
@@ -300,7 +300,7 @@ async def editar_prestador(
     await db.flush()
     await db.refresh(
         prestador,
-        attribute_names=["categoria", "servicios"],
+        attribute_names=["categoria", "servicios", "updated_at", "created_at"],
     )
     # Solo revalidar si el prestador está verificado (público)
     if prestador.estado == EstadoPrestador.VERIFICADO:
