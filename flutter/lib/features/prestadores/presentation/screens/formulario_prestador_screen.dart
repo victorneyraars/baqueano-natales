@@ -347,53 +347,67 @@ class _FormularioPrestadorScreenState
       initiallyExpanded: true,
       title: const Text('Información básica'),
       children: [
-        TextFormField(
-          controller: _nombreCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Nombre del oficio o servicio *',
-          ),
-          validator: (v) =>
-              (v == null || v.trim().length < 3) ? 'Mínimo 3 caracteres' : null,
-        ),
-        const SizedBox(height: 12),
-        _CategoriaDropdown(
-          initialValue: _categoriaId,
-          onChanged: (v) => setState(() => _categoriaId = v),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _descripcionCtrl,
-          maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Descripción'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _aniosCtrl,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'Años de experiencia'),
-        ),
-        const SizedBox(height: 16),
-        Text('Especialidades', style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
-        _chipsEspecialidades(),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _especialidadCtrl,
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _nombreCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Agregar especialidad',
+                  labelText: 'Nombre del oficio o servicio *',
                 ),
-                onSubmitted: (_) => _agregarEspecialidad(),
+                validator: (v) => (v == null || v.trim().length < 3)
+                    ? 'Mínimo 3 caracteres'
+                    : null,
               ),
-            ),
-            IconButton.filled(
-              onPressed: _agregarEspecialidad,
-              icon: const Icon(Icons.add),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _CategoriaDropdown(
+                initialValue: _categoriaId,
+                onChanged: (v) => setState(() => _categoriaId = v),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descripcionCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _aniosCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Años de experiencia',
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Especialidades',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              _chipsEspecialidades(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _especialidadCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Agregar especialidad',
+                      ),
+                      onSubmitted: (_) => _agregarEspecialidad(),
+                    ),
+                  ),
+                  IconButton.filled(
+                    onPressed: _agregarEspecialidad,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -405,36 +419,44 @@ class _FormularioPrestadorScreenState
       maintainState: true,
       title: const Text('Contacto'),
       children: [
-        TextFormField(
-          controller: _telefonoCtrl,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'Teléfono'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _whatsappCtrl,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'WhatsApp'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _whatsappMensajeCtrl,
-          maxLength: 255,
-          decoration: const InputDecoration(
-            labelText: 'Mensaje pre-armado de WhatsApp',
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _telefonoCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Teléfono'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _whatsappCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'WhatsApp'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _whatsappMensajeCtrl,
+                maxLength: 255,
+                decoration: const InputDecoration(
+                  labelText: 'Mensaje pre-armado de WhatsApp',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _sitioWebCtrl,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(labelText: 'Sitio web'),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _emailCtrl,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'Email'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _sitioWebCtrl,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(labelText: 'Sitio web'),
         ),
       ],
     );
