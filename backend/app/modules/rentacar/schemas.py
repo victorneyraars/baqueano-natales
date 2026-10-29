@@ -153,5 +153,6 @@ class RentacarStatsOut(BaseModel):
     reservas_confirmadas: int
     reservas_en_curso: int
     reservas_completadas: int
+    reservas_canceladas: int
     ingresos_totales: float
     ingresos_mes_actual: float

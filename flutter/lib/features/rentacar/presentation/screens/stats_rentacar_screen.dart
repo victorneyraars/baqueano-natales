@@ -68,6 +68,11 @@ class StatsRentacarScreen extends ConsumerWidget {
                   count: stats.reservasCompletadas,
                   color: ext.reservaCompletada,
                 ),
+                _EstadoTile(
+                  label: 'Canceladas',
+                  count: stats.reservasCanceladas,
+                  color: ext.reservaCancelada,
+                ),
               ],
             ),
           );

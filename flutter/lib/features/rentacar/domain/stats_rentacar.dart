@@ -8,6 +8,7 @@ class StatsRentacar {
     required this.reservasConfirmadas,
     required this.reservasEnCurso,
     required this.reservasCompletadas,
+    required this.reservasCanceladas,
     required this.ingresosTotales,
     required this.ingresosMesActual,
   });
@@ -19,6 +20,7 @@ class StatsRentacar {
   final int reservasConfirmadas;
   final int reservasEnCurso;
   final int reservasCompletadas;
+  final int reservasCanceladas;
   final double ingresosTotales;
   final double ingresosMesActual;
 
@@ -31,6 +33,7 @@ class StatsRentacar {
       reservasConfirmadas: (json['reservas_confirmadas'] as num).toInt(),
       reservasEnCurso: (json['reservas_en_curso'] as num).toInt(),
       reservasCompletadas: (json['reservas_completadas'] as num).toInt(),
+      reservasCanceladas: (json['reservas_canceladas'] as num).toInt(),
       ingresosTotales: (json['ingresos_totales'] as num).toDouble(),
       ingresosMesActual: (json['ingresos_mes_actual'] as num).toDouble(),
     );

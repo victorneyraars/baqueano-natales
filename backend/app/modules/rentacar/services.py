@@ -396,6 +396,7 @@ async def obtener_mis_stats(
         "reservas_confirmadas": reservas_por_estado["confirmada"],
         "reservas_en_curso": reservas_por_estado["en_curso"],
         "reservas_completadas": reservas_por_estado["completada"],
+        "reservas_canceladas": reservas_por_estado["cancelada"],
         "ingresos_totales": ingresos_totales,
         "ingresos_mes_actual": ingresos_mes_actual,
     }
