@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/prestadores/domain/perfil_negocio.dart';
 
 /// Estado del prestador en el flujo de verificación.
 enum EstadoPrestador {
@@ -104,6 +105,14 @@ class Prestador {
     // Relaciones
     this.servicios = const [],
     this.fotosTrabajos = const [],
+    // Perfil de negocio (GBP/JSON-LD/WhatsApp)
+    this.razonSocial,
+    this.rutEmpresa,
+    this.gbpPlaceId,
+    this.gbpMapsUrl,
+    this.precioDesde,
+    this.brandKitSlug,
+    this.perfilNegocio,
   });
 
   final String id;
@@ -153,6 +162,14 @@ class Prestador {
 
   final List<PrestadorServicio> servicios;
   final List<FotoTrabajo> fotosTrabajos;
+  // Perfil de negocio (GBP/JSON-LD/WhatsApp)
+  final String? razonSocial;
+  final String? rutEmpresa;
+  final String? gbpPlaceId;
+  final String? gbpMapsUrl;
+  final double? precioDesde;
+  final String? brandKitSlug;
+  final PerfilNegocio? perfilNegocio;
 
   // =========================================================
   // Helpers
@@ -266,6 +283,15 @@ class Prestador {
         updatedAt: _dateOrNull(json['updated_at']),
         servicios: _serviciosFromJson(json['servicios']),
         fotosTrabajos: _fotosFromJson(json['fotos_trabajos']),
+        razonSocial: _strOrNull(json, 'razon_social'),
+        rutEmpresa: _strOrNull(json, 'rut_empresa'),
+        gbpPlaceId: _strOrNull(json, 'gbp_place_id'),
+        gbpMapsUrl: _strOrNull(json, 'gbp_maps_url'),
+        precioDesde: _toDouble(json['precio_desde']),
+        brandKitSlug: _strOrNull(json, 'brand_kit_slug'),
+        perfilNegocio: PerfilNegocio.fromJson(
+          json['perfil_negocio'] as Map<String, dynamic>?,
+        ),
       );
     } catch (e, st) {
       debugPrint('[Prestador.fromJson] ❌ Parse error: $e');
@@ -452,6 +478,13 @@ class Prestador {
       'updated_at': updatedAt?.toIso8601String(),
       'servicios': servicios.map((s) => s.toJson()).toList(),
       'fotos_trabajos': fotosTrabajos.map((f) => f.toJson()).toList(),
+      'razon_social': razonSocial,
+      'rut_empresa': rutEmpresa,
+      'gbp_place_id': gbpPlaceId,
+      'gbp_maps_url': gbpMapsUrl,
+      'precio_desde': precioDesde,
+      'brand_kit_slug': brandKitSlug,
+      'perfil_negocio': perfilNegocio?.toJson(),
     };
   }
 
