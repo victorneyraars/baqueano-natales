@@ -122,16 +122,13 @@ class _SeccionUbicacionState extends State<SeccionUbicacion> {
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
+        TextField(
+          controller: _calle,
+          decoration: const InputDecoration(labelText: 'Calle'),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              flex: 3,
-              child: TextField(
-                controller: _calle,
-                decoration: const InputDecoration(labelText: 'Calle'),
-              ),
-            ),
-            const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _numero,
