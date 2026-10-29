@@ -112,6 +112,25 @@ async def listar_prestadores_publicos(
 
 
 @router_publico.get(
+    "/{slug}/perfil-completo",
+    summary="Perfil publico completo (web, GBP, JSON-LD)",
+    description=(
+        "Devuelve TODO lo que cualquier servicio externo necesita: "
+        "NAP consistente, JSON-LD, GBP, WhatsApp, Open Graph y PWA. "
+        "Fuente unica de verdad de los datos del prestador."
+    ),
+)
+async def obtener_perfil_completo(slug: str, db: DbSession) -> dict:
+    perfil = await services.get_perfil_completo(db, slug)
+    if perfil is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prestador no encontrado: {slug}",
+        )
+    return perfil
+
+
+@router_publico.get(
     "/{slug}",
     response_model=PrestadorDetalleResponse,
     summary="Detalle público de un prestador",

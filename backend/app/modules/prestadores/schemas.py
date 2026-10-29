@@ -296,6 +296,13 @@ class PrestadorUpdate(BaseModel):
     especialidades: list[str] | None = Field(default=None, max_length=30)
     datos_extra: dict | None = None
     redes_sociales: dict | None = None
+    razon_social: str | None = Field(default=None, max_length=200)
+    rut_empresa: str | None = Field(default=None, max_length=20)
+    gbp_place_id: str | None = Field(default=None, max_length=150)
+    gbp_maps_url: str | None = Field(default=None, max_length=500)
+    precio_desde: Decimal | None = Field(default=None, ge=0)
+    brand_kit_slug: str | None = Field(default=None, max_length=50)
+    perfil_negocio: dict | None = None
 
 
 # =========================================================
@@ -344,6 +351,13 @@ class PrestadorDetalleResponse(PrestadorPublicoResponse):
     modalidades: dict | None = None
     servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list = []
+    razon_social: str | None = None
+    rut_empresa: str | None = None
+    gbp_place_id: str | None = None
+    gbp_maps_url: str | None = None
+    precio_desde: Decimal | None = None
+    brand_kit_slug: str | None = None
+    perfil_negocio: dict | None = None
 
 
 class PrestadorPrivadoResponse(BaseModel):
@@ -392,6 +406,13 @@ class PrestadorPrivadoResponse(BaseModel):
     updated_at: datetime
     servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list = []
+    razon_social: str | None = None
+    rut_empresa: str | None = None
+    gbp_place_id: str | None = None
+    gbp_maps_url: str | None = None
+    precio_desde: Decimal | None = None
+    brand_kit_slug: str | None = None
+    perfil_negocio: dict | None = None
 
 
 # =========================================================

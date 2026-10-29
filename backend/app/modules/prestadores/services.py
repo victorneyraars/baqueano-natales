@@ -720,3 +720,120 @@ async def listar_servicios_activos(db, prestador_id):
         )
     ).scalars().all()
     return list(rows)
+
+
+def format_nap(prestador: Prestador) -> dict:
+    """NAP canonico (Name, Address, Phone) del prestador.
+
+    Fuente de verdad UNICA para web, JSON-LD, GBP, WhatsApp y
+    cualquier directorio. Si el NAP cambia aca, se propaga a todos.
+    """
+    perfil = prestador.perfil_negocio or {}
+    direccion = perfil.get("direccion_estructurada", {})
+
+    telefono_e164 = prestador.telefono or ""
+    telefono_display = telefono_e164
+    if telefono_e164.startswith("+56") and len(telefono_e164) == 12:
+        telefono_display = (
+            f"+56 {telefono_e164[3]} "
+            f"{telefono_e164[4:8]} "
+            f"{telefono_e164[8:12]}"
+        )
+
+    calle = direccion.get("calle") or prestador.direccion or ""
+    numero = direccion.get("numero") or ""
+    street_full = f"{calle} {numero}".strip()
+    address_parts = [
+        p for p in [street_full, prestador.comuna, prestador.region, "Chile"]
+        if p
+    ]
+
+    return {
+        "name": prestador.nombre,
+        "phone_e164": telefono_e164,
+        "phone_display": telefono_display,
+        "address_single": ", ".join(address_parts),
+        "address_postal": {
+            "streetAddress": street_full,
+            "addressLocality": prestador.comuna,
+            "addressRegion": prestador.region,
+            "postalCode": direccion.get("codigo_postal", "6160000"),
+            "addressCountry": "CL",
+        },
+    }
+
+
+async def get_perfil_completo(
+    db: AsyncSession, slug: str
+) -> dict | None:
+    """Perfil publico completo para web/GBP/JSON-LD/app."""
+    stmt = (
+        select(Prestador)
+        .where(Prestador.slug == slug, Prestador.activo.is_(True))
+        .options(selectinload(Prestador.categoria))
+    )
+    result = await db.execute(stmt)
+    prestador = result.scalar_one_or_none()
+    if prestador is None:
+        return None
+
+    perfil = prestador.perfil_negocio or {}
+    nap = format_nap(prestador)
+
+    servicios = [
+        {
+            "nombre": s.nombre,
+            "descripcion": s.descripcion,
+            "precio_desde": float(s.precio) if s.precio else None,
+        }
+        for s in (prestador.servicios or [])
+        if s.activo
+    ]
+
+    return {
+        "id": str(prestador.id),
+        "slug": prestador.slug,
+        "nombre": prestador.nombre,
+        "razon_social": prestador.razon_social,
+        "categoria": {
+            "slug": (
+                prestador.categoria.slug if prestador.categoria else None
+            ),
+            "nombre": (
+                prestador.categoria.nombre if prestador.categoria else None
+            ),
+        },
+        "descripcion": prestador.descripcion,
+        "nap": nap,
+        "contacto": {
+            "telefono": prestador.telefono,
+            "whatsapp": prestador.whatsapp,
+            "whatsapp_mensaje": prestador.whatsapp_mensaje,
+            "email": prestador.email,
+            "sitio_web": prestador.sitio_web,
+        },
+        "gbp_place_id": prestador.gbp_place_id,
+        "gbp_maps_url": prestador.gbp_maps_url,
+        "latitud": (
+            float(prestador.latitud) if prestador.latitud else None
+        ),
+        "longitud": (
+            float(prestador.longitud) if prestador.longitud else None
+        ),
+        "precio_desde": (
+            float(prestador.precio_desde)
+            if prestador.precio_desde
+            else None
+        ),
+        "brand_kit_slug": prestador.brand_kit_slug,
+        "perfil_negocio": perfil,
+        "redes_sociales": prestador.redes_sociales or {},
+        "servicios": servicios,
+        "calificacion_promedio": (
+            float(prestador.calificacion_promedio)
+            if prestador.calificacion_promedio
+            else 0.0
+        ),
+        "total_resenas": prestador.total_resenas,
+        "verificado": prestador.verificado,
+    }

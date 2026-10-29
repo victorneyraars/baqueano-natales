@@ -356,6 +356,53 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
     )
 
     # -----------------------------------------------------
+    # Negocio / verificación externa (GBP, WhatsApp, JSON-LD)
+    # -----------------------------------------------------
+    razon_social: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="Razón social (para GBP y Schema.org vatID)",
+    )
+    rut_empresa: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="RUT chileno: 12.345.678-9",
+    )
+    gbp_place_id: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True,
+        comment="Google Place ID para vincular Google Business Profile",
+    )
+    gbp_maps_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="URL pública de Google Maps",
+    )
+    precio_desde: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2),
+        nullable=True,
+        comment="Precio mínimo orientativo (para verticales con precio)",
+    )
+    brand_kit_slug: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Slug del brand kit (vasquez, baqueano, etc.)",
+    )
+    # -----------------------------------------------------
+    # Perfil de negocio extendido (JSONB)
+    # -----------------------------------------------------
+    perfil_negocio: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment=(
+            "Bloque estructurado para GBP/JSON-LD/WhatsApp: "
+            "direccion_estructurada, horario, atributos, "
+            "categorias_gbp, pagos, area_servicio, redes, fotos, "
+            "descripciones, reserva, vertical_atributos"
+        ),
+    )
+
+    # -----------------------------------------------------
     # Stats (denormalizadas, se actualizan con reviews)
     # -----------------------------------------------------
     calificacion_promedio: Mapped[Decimal] = mapped_column(
