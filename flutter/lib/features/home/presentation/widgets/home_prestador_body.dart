@@ -310,7 +310,7 @@ class _MenuPorCategoria extends StatelessWidget {
             HomeCard(
               icon: Icons.palette_outlined,
               title: 'Kit de marca',
-              subtitle: 'Logos, favicons, iconos Android/iOS en ZIP',
+              subtitle: 'Logos, favicons e iconos — individual o ZIP',
               onTap: () => context.push('/mis-brand-kit/vasquez'),
             ),
             const SizedBox(height: 24),
