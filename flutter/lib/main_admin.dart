@@ -84,6 +84,14 @@ class _BaqueanoAdminAppState extends ConsumerState<BaqueanoAdminApp>
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
+      builder: (context, child) {
+        final scaler = MediaQuery.textScalerOf(context);
+        return MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: scaler.clamp(maxScaleFactor: 1.3)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       routerConfig: router,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
@@ -52,6 +53,20 @@ abstract final class AppTheme {
         letterSpacing: -0.5,
         color: onSurface,
       ),
+      displayMedium: base.displayMedium?.copyWith(
+        fontSize: 28,
+        height: 36 / 28,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.3,
+        color: onSurface,
+      ),
+      displaySmall: base.displaySmall?.copyWith(
+        fontSize: 24,
+        height: 32 / 24,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+        color: onSurface,
+      ),
       headlineLarge: base.headlineLarge?.copyWith(
         fontSize: 28,
         height: 36 / 28,
@@ -65,9 +80,27 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
+      headlineSmall: base.headlineSmall?.copyWith(
+        fontSize: 20,
+        height: 26 / 20,
+        fontWeight: FontWeight.w600,
+        color: onSurface,
+      ),
       titleLarge: base.titleLarge?.copyWith(
         fontSize: 18,
         height: 24 / 18,
+        fontWeight: FontWeight.w600,
+        color: onSurface,
+      ),
+      titleMedium: base.titleMedium?.copyWith(
+        fontSize: 16,
+        height: 22 / 16,
+        fontWeight: FontWeight.w600,
+        color: onSurface,
+      ),
+      titleSmall: base.titleSmall?.copyWith(
+        fontSize: 14,
+        height: 20 / 14,
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
@@ -83,11 +116,24 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w400,
         color: onSurface,
       ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontSize: 12,
+        height: 16 / 12,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
       labelSmall: base.labelSmall?.copyWith(
         fontSize: 12,
         height: 16 / 12,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.2,
+        color: onSurface,
+      ),
+      labelMedium: base.labelMedium?.copyWith(
+        fontSize: 14,
+        height: 18 / 14,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.3,
         color: onSurface,
       ),
       labelLarge: base.labelLarge?.copyWith(
@@ -215,6 +261,104 @@ abstract final class AppTheme {
         color: scheme.outlineVariant.withValues(alpha: 0.5),
         thickness: 1,
         space: 1,
+      ),
+
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.onPrimary;
+          }
+          return scheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.primary;
+          }
+          return scheme.surfaceContainerHighest;
+        }),
+      ),
+
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          selectedBackgroundColor: scheme.primaryContainer,
+          selectedForegroundColor: scheme.onPrimaryContainer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusS),
+          ),
+          textStyle: textTheme.labelLarge,
+        ),
+      ),
+
+      tabBarTheme: TabBarThemeData(
+        labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        unselectedLabelStyle: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        labelColor: scheme.primary,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        indicatorColor: scheme.primary,
+        indicatorSize: TabBarIndicatorSize.label,
+      ),
+
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primaryContainer,
+        foregroundColor: scheme.onPrimaryContainer,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusM),
+        ),
+      ),
+
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: spaceL,
+          vertical: spaceXs,
+        ),
+        iconColor: scheme.onSurfaceVariant,
+        titleTextStyle: textTheme.bodyLarge,
+        subtitleTextStyle: textTheme.bodySmall?.copyWith(
+          color: scheme.onSurfaceVariant,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusS),
+        ),
+      ),
+
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.surfaceContainerHighest,
+        circularTrackColor: scheme.surfaceContainerHighest,
+      ),
+
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: scheme.onSurface,
+          highlightColor: scheme.primaryContainer.withValues(alpha: 0.3),
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: scheme.primary,
+          padding: const EdgeInsets.symmetric(
+            horizontal: spaceL,
+            vertical: spaceM,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusS),
+          ),
+          textStyle: textTheme.labelLarge,
+        ),
+      ),
+
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+        },
       ),
 
       snackBarTheme: SnackBarThemeData(
