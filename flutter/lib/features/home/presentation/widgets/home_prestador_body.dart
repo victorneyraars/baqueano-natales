@@ -307,6 +307,12 @@ class _MenuPorCategoria extends StatelessWidget {
               subtitle: 'Métodos de pago, depósito y conductor adicional',
               onTap: () => context.push('/mis-config-rentacar'),
             ),
+            HomeCard(
+              icon: Icons.palette_outlined,
+              title: 'Kit de marca',
+              subtitle: 'Logos, favicons, iconos Android/iOS en ZIP',
+              onTap: () => context.push('/mis-brand-kit/vasquez'),
+            ),
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),
             ...comunes,

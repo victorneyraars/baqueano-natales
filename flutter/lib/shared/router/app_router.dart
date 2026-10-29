@@ -77,6 +77,7 @@ import 'package:baqueano_natales/features/rentacar/presentation/screens/mi_flota
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_detalle_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_form_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/mis_reservas_rentacar_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/brand_kit_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/stats_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/config_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/reserva_detalle_screen.dart';
@@ -625,6 +626,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final v = state.extra as Vehiculo?;
           return VehiculoFormScreen(vehiculo: v);
+        },
+      ),
+      GoRoute(
+        path: '/mis-brand-kit/:slug',
+        name: 'mis-brand-kit',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          return BrandKitScreen(slug: slug);
         },
       ),
       GoRoute(
