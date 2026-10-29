@@ -1,17 +1,3 @@
-/// Formulario de creación/edición de prestador (dueño).
-///
-/// Modo crear: `prestadorId == null`.
-/// Modo editar: carga los datos del prestador y hace PATCH.
-///
-/// Incluye:
-/// - Información básica: nombre, categoría, descripción, años exp.
-/// - Contacto: teléfono, WhatsApp, mensaje pre-armado, email, web.
-/// - Ubicación: dirección.
-/// - Modalidad: domicilio/local/emergencias + horario.
-/// - Especialidades: chips dinámicos.
-/// - Redes sociales: Instagram, Facebook, TikTok, YouTube.
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,11 +5,29 @@ import 'package:go_router/go_router.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
-import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
+import 'package:baqueano_natales/features/prestadores/domain/perfil_negocio.dart';
+import 'package:baqueano_natales/features/prestadores/domain/perfil_negocio_copy.dart';
+import 'package:baqueano_natales/features/prestadores/domain/prestador_form_state.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_atributos.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_datos_fiscales.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_fotos.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_gbp.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_horario.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_redes.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_reserva.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_ubicacion.dart';
 
+/// Form unificado de prestador (crear / editar).
+///
+/// Cambios clave respecto a v1:
+/// - Modelo de estado: PrestadorFormState (inmutable)
+/// - 8 secciones del perfil_negocio como widgets separados
+/// - ExpansionTile colapsables con maintainState: true
+/// - Submit envía perfil_negocio completo al backend
 class FormularioPrestadorScreen extends ConsumerStatefulWidget {
   const FormularioPrestadorScreen({super.key, this.prestadorId});
 
+  /// null = crear nuevo, no-null = editar existente.
   final String? prestadorId;
 
   @override
@@ -35,7 +39,7 @@ class _FormularioPrestadorScreenState
     extends ConsumerState<FormularioPrestadorScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
+  // Controllers de campos planos (los que quedan en el form)
   final _nombreCtrl = TextEditingController();
   final _descripcionCtrl = TextEditingController();
   final _aniosCtrl = TextEditingController();
@@ -44,21 +48,21 @@ class _FormularioPrestadorScreenState
   final _whatsappMensajeCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _sitioWebCtrl = TextEditingController();
-  final _direccionCtrl = TextEditingController();
-  final _horarioCtrl = TextEditingController();
-
-  // Redes sociales
-  final _instagramCtrl = TextEditingController();
-  final _facebookCtrl = TextEditingController();
-  final _tiktokCtrl = TextEditingController();
-  final _youtubeCtrl = TextEditingController();
-
-  // Especialidades
   final _especialidadCtrl = TextEditingController();
-  final List<String> _especialidades = [];
 
-  // Estado
+  // Controllers de campos nuevos (van al Prestador, no al perfil_negocio)
+  final _razonSocialCtrl = TextEditingController();
+  final _rutCtrl = TextEditingController();
+  final _precioDesdeCtrl = TextEditingController();
+
+  // Estado del perfil de negocio (JSONB)
+  PerfilNegocio _perfilNegocio = const PerfilNegocio();
+  String? _gbpPlaceId;
+  String? _gbpMapsUrl;
+
+  // Estado simple
   String? _categoriaId;
+  final List<String> _especialidades = [];
   bool _atiendeDomicilio = false;
   bool _atiendeLocal = true;
   bool _atiendeEmergencias = false;
@@ -86,13 +90,10 @@ class _FormularioPrestadorScreenState
     _whatsappMensajeCtrl.dispose();
     _emailCtrl.dispose();
     _sitioWebCtrl.dispose();
-    _direccionCtrl.dispose();
-    _horarioCtrl.dispose();
-    _instagramCtrl.dispose();
-    _facebookCtrl.dispose();
-    _tiktokCtrl.dispose();
-    _youtubeCtrl.dispose();
     _especialidadCtrl.dispose();
+    _razonSocialCtrl.dispose();
+    _rutCtrl.dispose();
+    _precioDesdeCtrl.dispose();
     super.dispose();
   }
 
@@ -105,34 +106,31 @@ class _FormularioPrestadorScreenState
       final repo = ref.read(prestadorRepositoryProvider);
       final p = await repo.obtenerMiPrestador(widget.prestadorId!);
       if (!mounted) return;
+      final state = PrestadorFormState.fromPrestador(p);
       setState(() {
-        _nombreCtrl.text = p.nombre;
-        _descripcionCtrl.text = p.descripcion ?? '';
-        _aniosCtrl.text = p.aniosExperiencia?.toString() ?? '';
-        _telefonoCtrl.text = p.telefono ?? '';
-        _whatsappCtrl.text = p.whatsapp ?? '';
-        _whatsappMensajeCtrl.text = p.whatsappMensaje ?? '';
-        _emailCtrl.text = p.email ?? '';
-        _sitioWebCtrl.text = p.sitioWeb ?? '';
-        _direccionCtrl.text = p.direccion ?? '';
-        _horarioCtrl.text = p.horarioDescripcion ?? '';
+        _nombreCtrl.text = state.nombre;
+        _descripcionCtrl.text = state.descripcion ?? '';
+        _aniosCtrl.text = state.aniosExperiencia?.toString() ?? '';
+        _telefonoCtrl.text = state.telefono ?? '';
+        _whatsappCtrl.text = state.whatsapp ?? '';
+        _whatsappMensajeCtrl.text = state.whatsappMensaje ?? '';
+        _emailCtrl.text = state.email ?? '';
+        _sitioWebCtrl.text = state.sitioWeb ?? '';
+        _razonSocialCtrl.text = state.razonSocial ?? '';
+        _rutCtrl.text = state.rutEmpresa ?? '';
+        _precioDesdeCtrl.text = state.precioDesde?.toString() ?? '';
+        _gbpPlaceId = state.gbpPlaceId;
+        _gbpMapsUrl = state.gbpMapsUrl;
+        _perfilNegocio = state.perfilNegocio;
         _categoriaId =
-            p.categoriaId ??
+            state.categoriaId ??
             (p.categoria.id.isNotEmpty ? p.categoria.id : null);
         _atiendeDomicilio = p.atiendeDomicilio;
         _atiendeLocal = p.atiendeLocal;
         _atiendeEmergencias = p.atiendeEmergencias;
-        _especialidades.clear();
-        if (p.especialidades != null) {
-          _especialidades.addAll(p.especialidades!);
-        }
-        final redes = p.redesSociales;
-        if (redes != null) {
-          _instagramCtrl.text = (redes['instagram'] as String?) ?? '';
-          _facebookCtrl.text = (redes['facebook'] as String?) ?? '';
-          _tiktokCtrl.text = (redes['tiktok'] as String?) ?? '';
-          _youtubeCtrl.text = (redes['youtube'] as String?) ?? '';
-        }
+        _especialidades
+          ..clear()
+          ..addAll(state.especialidades);
         _cargandoEdicion = false;
       });
     } on ApiException catch (e) {
@@ -140,6 +138,12 @@ class _FormularioPrestadorScreenState
       setState(() {
         _cargandoEdicion = false;
         _errorCarga = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _cargandoEdicion = false;
+        _errorCarga = 'Error al cargar: $e';
       });
     }
   }
@@ -155,48 +159,35 @@ class _FormularioPrestadorScreenState
       );
       return;
     }
-
     FocusScope.of(context).unfocus();
     setState(() => _guardando = true);
-
     try {
       final repo = ref.read(prestadorRepositoryProvider);
-
-      // Redes sociales (solo las que tienen valor)
-      final redes = <String, String>{};
-      if (_instagramCtrl.text.trim().isNotEmpty) {
-        redes['instagram'] = _instagramCtrl.text.trim();
-      }
-      if (_facebookCtrl.text.trim().isNotEmpty) {
-        redes['facebook'] = _facebookCtrl.text.trim();
-      }
-      if (_tiktokCtrl.text.trim().isNotEmpty) {
-        redes['tiktok'] = _tiktokCtrl.text.trim();
-      }
-      if (_youtubeCtrl.text.trim().isNotEmpty) {
-        redes['youtube'] = _youtubeCtrl.text.trim();
-      }
+      final state = PrestadorFormState(
+        nombre: _nombreCtrl.text.trim(),
+        categoriaId: _categoriaId,
+        descripcion: _nullable(_descripcionCtrl.text),
+        aniosExperiencia: _parseIntOrNull(_aniosCtrl.text),
+        telefono: _nullable(_telefonoCtrl.text),
+        whatsapp: _nullable(_whatsappCtrl.text),
+        whatsappMensaje: _nullable(_whatsappMensajeCtrl.text),
+        email: _nullable(_emailCtrl.text),
+        sitioWeb: _nullable(_sitioWebCtrl.text),
+        razonSocial: _nullable(_razonSocialCtrl.text),
+        rutEmpresa: _nullable(_rutCtrl.text),
+        gbpPlaceId: _gbpPlaceId,
+        gbpMapsUrl: _gbpMapsUrl,
+        precioDesde: double.tryParse(_precioDesdeCtrl.text.trim()),
+        brandKitSlug: null,
+        especialidades: List.from(_especialidades),
+        perfilNegocio: _perfilNegocio,
+      );
 
       if (_esEdicion) {
-        final cambios = <String, dynamic>{
-          'nombre': _nombreCtrl.text.trim(),
-          'categoria_id': _categoriaId,
-          'descripcion': _nullable(_descripcionCtrl.text),
-          'anios_experiencia': _parseIntOrNull(_aniosCtrl.text),
-          'telefono': _nullable(_telefonoCtrl.text),
-          'whatsapp': _nullable(_whatsappCtrl.text),
-          'whatsapp_mensaje': _nullable(_whatsappMensajeCtrl.text),
-          'email': _nullable(_emailCtrl.text),
-          'sitio_web': _nullable(_sitioWebCtrl.text),
-          'direccion': _nullable(_direccionCtrl.text),
-          'atiende_domicilio': _atiendeDomicilio,
-          'atiende_local': _atiendeLocal,
-          'atiende_emergencias': _atiendeEmergencias,
-          'horario_descripcion': _nullable(_horarioCtrl.text),
-          'especialidades': _especialidades.isEmpty ? null : _especialidades,
-          'redes_sociales': redes.isEmpty ? null : redes,
-        };
-        await repo.editarPrestador(id: widget.prestadorId!, cambios: cambios);
+        await repo.editarPrestador(
+          id: widget.prestadorId!,
+          cambios: state.toJson(),
+        );
         ref.invalidate(miPrestadorDetalleProvider(widget.prestadorId!));
         ref.invalidate(misPrestadoresProvider);
         if (!mounted) return;
@@ -205,22 +196,24 @@ class _FormularioPrestadorScreenState
         context.pop();
       } else {
         final nuevo = await repo.crearPrestador(
-          nombre: _nombreCtrl.text.trim(),
+          nombre: state.nombre,
           categoriaId: _categoriaId!,
-          descripcion: _nullable(_descripcionCtrl.text),
-          aniosExperiencia: _parseIntOrNull(_aniosCtrl.text),
-          telefono: _nullable(_telefonoCtrl.text),
-          whatsapp: _nullable(_whatsappCtrl.text),
-          whatsappMensaje: _nullable(_whatsappMensajeCtrl.text),
-          email: _nullable(_emailCtrl.text),
-          sitioWeb: _nullable(_sitioWebCtrl.text),
-          direccion: _nullable(_direccionCtrl.text),
+          descripcion: state.descripcion,
+          aniosExperiencia: state.aniosExperiencia,
+          telefono: state.telefono,
+          whatsapp: state.whatsapp,
+          whatsappMensaje: state.whatsappMensaje,
+          email: state.email,
+          sitioWeb: state.sitioWeb,
+          direccion: null,
           atiendeDomicilio: _atiendeDomicilio,
           atiendeLocal: _atiendeLocal,
           atiendeEmergencias: _atiendeEmergencias,
-          horarioDescripcion: _nullable(_horarioCtrl.text),
-          especialidades: _especialidades.isEmpty ? null : _especialidades,
-          redesSociales: redes.isEmpty ? null : redes,
+          horarioDescripcion: null,
+          especialidades: state.especialidades.isEmpty
+              ? null
+              : state.especialidades,
+          redesSociales: null,
         );
         ref.invalidate(misPrestadoresProvider);
         if (!mounted) return;
@@ -294,7 +287,6 @@ class _FormularioPrestadorScreenState
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     if (_errorCarga != null) {
       return Scaffold(
         appBar: AppBar(
@@ -320,7 +312,6 @@ class _FormularioPrestadorScreenState
         ),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_esEdicion ? 'Editar oficio' : 'Nuevo oficio'),
@@ -330,347 +321,340 @@ class _FormularioPrestadorScreenState
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
-            // ====================================================
-            // Información básica
-            // ====================================================
-            const _SeccionTitulo('Información básica'),
-
-            TextFormField(
-              controller: _nombreCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del oficio o servicio *',
-                hintText: 'Ej: Taller Mecánico del Sur',
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return 'Ingresá el nombre';
-                if (t.length < 3) return 'Mínimo 3 caracteres';
-                if (t.length > 150) return 'Máximo 150 caracteres';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            _CategoriaDropdown(
-              categoriaId: _categoriaId,
-              onChanged: (id) => setState(() => _categoriaId = id),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _descripcionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Descripción',
-                hintText: 'Qué hacés, experiencia, especialidades generales',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-              maxLines: 4,
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _aniosCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Años de experiencia',
-                hintText: 'Ej: 15',
-                border: OutlineInputBorder(),
-                suffixText: 'años',
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              textInputAction: TextInputAction.next,
-            ),
-
-            const SizedBox(height: 24),
-
-            // ====================================================
-            // Contacto
-            // ====================================================
-            const _SeccionTitulo('Contacto'),
-
-            TextFormField(
-              controller: _telefonoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono',
-                hintText: '+56912345678',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _whatsappCtrl,
-              decoration: const InputDecoration(
-                labelText: 'WhatsApp',
-                hintText: '+56912345678',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _whatsappMensajeCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Mensaje pre-armado de WhatsApp',
-                hintText: 'Hola, necesito una cotización...',
-                border: OutlineInputBorder(),
-                helperText: 'Este texto se precarga al contactarte',
-              ),
-              maxLength: 255,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-
-            TextFormField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'contacto@taller.cl',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return null;
-                if (!t.contains('@') || !t.contains('.')) {
-                  return 'Email inválido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _sitioWebCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Sitio web',
-                hintText: 'https://taller.cl',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.url,
-            ),
-
-            const SizedBox(height: 24),
-
-            // ====================================================
-            // Ubicación
-            // ====================================================
-            const _SeccionTitulo('Ubicación'),
-
-            TextFormField(
-              controller: _direccionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Dirección',
-                hintText: 'Ej: Av. España 1234',
-                border: OutlineInputBorder(),
-                helperText: 'Solo si atendés en local',
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-
-            const SizedBox(height: 24),
-
-            // ====================================================
-            // Modalidad
-            // ====================================================
-            const _SeccionTitulo('Modalidad de atención'),
-
-            SwitchListTile(
-              title: const Text('Atiendo a domicilio'),
-              subtitle: const Text('Me traslado al cliente'),
-              value: _atiendeDomicilio,
-              onChanged: (v) => setState(() => _atiendeDomicilio = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile(
-              title: const Text('Atiendo en local'),
-              subtitle: const Text('El cliente viene a mi taller/local'),
-              value: _atiendeLocal,
-              onChanged: (v) => setState(() => _atiendeLocal = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile(
-              title: const Text('Atiendo emergencias 24/7'),
-              subtitle: const Text('Urgencias, auxilio en ruta, etc.'),
-              value: _atiendeEmergencias,
-              onChanged: (v) => setState(() => _atiendeEmergencias = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 8),
-
-            TextFormField(
-              controller: _horarioCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Horario de atención',
-                hintText: 'Ej: Lun-Vie 9:00-19:00, Sáb 9:00-14:00',
-                border: OutlineInputBorder(),
-              ),
-              maxLength: 255,
-            ),
-
-            const SizedBox(height: 24),
-
-            // ====================================================
-            // Especialidades
-            // ====================================================
-            const _SeccionTitulo('Especialidades'),
-            Text(
-              'Agregá las especialidades específicas de tu oficio '
-              '(ej: frenos, motor, suspensión).',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _especialidadCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Agregar especialidad',
-                      hintText: 'Ej: frenos',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    onSubmitted: (_) => _agregarEspecialidad(),
-                    textInputAction: TextInputAction.done,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _agregarEspecialidad,
-                  icon: const Icon(Icons.add),
-                  tooltip: 'Agregar',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            if (_especialidades.isEmpty)
-              Text(
-                'Sin especialidades cargadas',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _especialidades
-                    .map(
-                      (e) => Chip(
-                        label: Text(_humanizar(e)),
-                        onDeleted: () => _quitarEspecialidad(e),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    )
-                    .toList(),
-              ),
-
-            const SizedBox(height: 24),
-
-            // ====================================================
-            // Redes sociales
-            // ====================================================
-            const _SeccionTitulo('Redes sociales'),
-            Text(
-              'Opcional. Agregá tus links para que los clientes '
-              'vean tu trabajo.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _instagramCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Instagram',
-                hintText: 'https://instagram.com/tuperfil',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.camera_alt_outlined),
-              ),
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _facebookCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Facebook',
-                hintText: 'https://facebook.com/tupagina',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.facebook),
-              ),
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _tiktokCtrl,
-              decoration: const InputDecoration(
-                labelText: 'TikTok',
-                hintText: 'https://tiktok.com/@tuperfil',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.music_note),
-              ),
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _youtubeCtrl,
-              decoration: const InputDecoration(
-                labelText: 'YouTube',
-                hintText: 'https://youtube.com/@tucanal',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.play_circle_outline),
-              ),
-              keyboardType: TextInputType.url,
-            ),
-
-            const SizedBox(height: 32),
+            _seccionDatosBasicos(),
+            _seccionContacto(),
+            if (_esEdicion) ...[
+              _seccionDatosFiscales(),
+              _seccionUbicacion(),
+              _seccionHorario(),
+              _seccionAtributos(),
+              _seccionGbp(),
+              _seccionRedes(),
+              _seccionReserva(),
+              _seccionFotos(),
+            ],
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
+      bottomNavigationBar: _barraGuardar(),
+    );
+  }
+
+  Widget _seccionDatosBasicos() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_datos_basicos'),
+      maintainState: true,
+      initiallyExpanded: true,
+      title: const Text('Información básica'),
+      children: [
+        TextFormField(
+          controller: _nombreCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Nombre del oficio o servicio *',
+          ),
+          validator: (v) =>
+              (v == null || v.trim().length < 3) ? 'Mínimo 3 caracteres' : null,
+        ),
+        const SizedBox(height: 12),
+        _CategoriaDropdown(
+          initialValue: _categoriaId,
+          onChanged: (v) => setState(() => _categoriaId = v),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _descripcionCtrl,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Descripción'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _aniosCtrl,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(labelText: 'Años de experiencia'),
+        ),
+        const SizedBox(height: 16),
+        Text('Especialidades', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        _chipsEspecialidades(),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _especialidadCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Agregar especialidad',
+                ),
+                onSubmitted: (_) => _agregarEspecialidad(),
+              ),
+            ),
+            IconButton.filled(
+              onPressed: _agregarEspecialidad,
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionContacto() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_contacto'),
+      maintainState: true,
+      title: const Text('Contacto'),
+      children: [
+        TextFormField(
+          controller: _telefonoCtrl,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(labelText: 'Teléfono'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _whatsappCtrl,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(labelText: 'WhatsApp'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _whatsappMensajeCtrl,
+          maxLength: 255,
+          decoration: const InputDecoration(
+            labelText: 'Mensaje pre-armado de WhatsApp',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _emailCtrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: 'Email'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _sitioWebCtrl,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(labelText: 'Sitio web'),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionDatosFiscales() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_datos_fiscales'),
+      maintainState: true,
+      title: const Text('Datos fiscales'),
+      children: [
+        Padding(
           padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            icon: _guardando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Icon(_esEdicion ? Icons.save : Icons.add),
-            label: Text(
-              _guardando
-                  ? 'Guardando...'
-                  : (_esEdicion ? 'Guardar cambios' : 'Crear oficio'),
+          child: SeccionDatosFiscales(
+            initialRazonSocial: _razonSocialCtrl.text.isEmpty
+                ? null
+                : _razonSocialCtrl.text,
+            initialRut: _rutCtrl.text.isEmpty ? null : _rutCtrl.text,
+            initialPrecioDesde: double.tryParse(_precioDesdeCtrl.text.trim()),
+            onRazonSocialChanged: (v) {
+              _razonSocialCtrl.text = v ?? '';
+            },
+            onRutChanged: (v) {
+              _rutCtrl.text = v ?? '';
+            },
+            onPrecioDesdeChanged: (v) {
+              _precioDesdeCtrl.text = v?.toString() ?? '';
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionUbicacion() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_ubicacion'),
+      maintainState: true,
+      title: const Text('Ubicación'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionUbicacion(
+            initialDireccion: _perfilNegocio.direccionEstructurada,
+            initialCoordenadas: _perfilNegocio.coordenadas,
+            onDireccionChanged: (d) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(
+                  direccionEstructurada: d,
+                );
+              });
+            },
+            onCoordenadasChanged: (c) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(coordenadas: c);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionHorario() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_horario'),
+      maintainState: true,
+      title: const Text('Horario de atención'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionHorario(
+            initialValue: _perfilNegocio.horario,
+            onChanged: (h) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(horario: h);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionAtributos() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_atributos'),
+      maintainState: true,
+      title: const Text('Atributos del negocio'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionAtributos(
+            initialValue: _perfilNegocio.atributos,
+            onChanged: (a) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(atributos: a);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionGbp() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_gbp'),
+      maintainState: true,
+      title: const Text('Google Business Profile'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionGbp(
+            initialPlaceId: _gbpPlaceId,
+            initialMapsUrl: _gbpMapsUrl,
+            onPlaceIdChanged: (v) => setState(() => _gbpPlaceId = v),
+            onMapsUrlChanged: (v) => setState(() => _gbpMapsUrl = v),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionRedes() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_redes'),
+      maintainState: true,
+      title: const Text('Redes sociales'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionRedes(
+            initialValue: _perfilNegocio.redes,
+            onChanged: (r) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(redes: r);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionReserva() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_reserva'),
+      maintainState: true,
+      title: const Text('Reservas'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionReserva(
+            initialValue: _perfilNegocio.reserva,
+            onChanged: (r) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(reserva: r);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionFotos() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_fotos'),
+      maintainState: true,
+      title: const Text('Fotos'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionFotos(initialValue: _perfilNegocio.fotos),
+        ),
+      ],
+    );
+  }
+
+  Widget _chipsEspecialidades() {
+    if (_especialidades.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Sin especialidades cargadas',
+          style: TextStyle(fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _especialidades
+          .map(
+            (e) => Chip(
+              label: Text(_humanizar(e)),
+              onDeleted: () => _quitarEspecialidad(e),
             ),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
-            onPressed: _guardando ? null : _guardar,
+          )
+          .toList(),
+    );
+  }
+
+  Widget _barraGuardar() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FilledButton.icon(
+          onPressed: _guardando ? null : _guardar,
+          icon: _guardando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save),
+          label: Text(_guardando ? 'Guardando...' : 'Guardar cambios'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
           ),
         ),
       ),
@@ -678,130 +662,47 @@ class _FormularioPrestadorScreenState
   }
 }
 
-// =========================================================
-// Sub-widgets
-// =========================================================
-class _SeccionTitulo extends StatelessWidget {
-  const _SeccionTitulo(this.titulo);
-
-  final String titulo;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        titulo,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
+/// Dropdown de categorías con carga desde el backend.
+///
+/// Recibe `initialValue` (categoriaId actual) y notifica cambios
+/// via `onChanged` para que el padre actualice su estado.
 class _CategoriaDropdown extends ConsumerWidget {
   const _CategoriaDropdown({
-    required this.categoriaId,
+    required this.initialValue,
     required this.onChanged,
   });
 
-  final String? categoriaId;
-  final ValueChanged<String?> onChanged;
+  final String? initialValue;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncCats = ref.watch(categoriasOficioProvider);
 
     return asyncCats.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (e, _) => Text(
+        'Error al cargar categorías: $e',
+        style: const TextStyle(color: Colors.red),
+      ),
       data: (cats) {
-        final idsValidos = cats.map((c) => c.id).toSet();
-        final valor = (categoriaId != null && idsValidos.contains(categoriaId))
-            ? categoriaId
+        final activas = cats.where((c) => c.activo).toList();
+        final current = activas.any((c) => c.id == initialValue)
+            ? initialValue
             : null;
-
         return DropdownButtonFormField<String>(
-          initialValue: valor,
-          decoration: const InputDecoration(
-            labelText: 'Categoría *',
-            border: OutlineInputBorder(),
-          ),
-          items: [
-            ...cats.map(
-              (CategoriaOficio c) => DropdownMenuItem<String>(
-                value: c.id,
-                child: Row(
-                  children: [
-                    if (c.icono != null) ...[
-                      Icon(_iconoFromName(c.icono!), size: 18),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(c.nombre),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          onChanged: onChanged,
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Seleccioná una categoría';
-            return null;
+          initialValue: current,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Categoría *'),
+          items: activas
+              .map((c) => DropdownMenuItem(value: c.id, child: Text(c.nombre)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onChanged(v);
           },
+          validator: (v) => v == null ? 'Seleccioná una categoría' : null,
         );
       },
-      loading: () => const InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Categoría *',
-          border: OutlineInputBorder(),
-        ),
-        child: SizedBox(
-          height: 20,
-          child: Center(
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-        ),
-      ),
-      error: (_, _) => const InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Categoría *',
-          border: OutlineInputBorder(),
-          errorText: 'Error al cargar categorías',
-        ),
-        child: SizedBox(height: 20, child: Center(child: Text('—'))),
-      ),
     );
-  }
-
-  static IconData _iconoFromName(String name) {
-    switch (name) {
-      case 'build':
-        return Icons.build;
-      case 'electrical_services':
-        return Icons.electrical_services;
-      case 'plumbing':
-        return Icons.plumbing;
-      case 'carpenter':
-        return Icons.carpenter;
-      case 'construction':
-        return Icons.construction;
-      case 'format_paint':
-        return Icons.format_paint;
-      case 'vpn_key':
-        return Icons.vpn_key;
-      case 'yard':
-        return Icons.yard;
-      case 'cleaning_services':
-        return Icons.cleaning_services;
-      case 'local_shipping':
-        return Icons.local_shipping;
-      case 'handyman':
-      default:
-        return Icons.handyman;
-    }
   }
 }
