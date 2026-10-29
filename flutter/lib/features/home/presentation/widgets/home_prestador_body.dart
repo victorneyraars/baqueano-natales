@@ -295,6 +295,18 @@ class _MenuPorCategoria extends StatelessWidget {
               subtitle: 'Ver y gestionar reservas de clientes',
               onTap: () => context.push('/mis-reservas-rentacar'),
             ),
+            HomeCard(
+              icon: Icons.analytics_outlined,
+              title: 'Estadísticas',
+              subtitle: 'Ingresos, reservas y disponibilidad',
+              onTap: () => context.push('/mis-stats-rentacar'),
+            ),
+            HomeCard(
+              icon: Icons.settings_outlined,
+              title: 'Configuración',
+              subtitle: 'Métodos de pago, depósito y conductor adicional',
+              onTap: () => context.push('/mis-config-rentacar'),
+            ),
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),
             ...comunes,
