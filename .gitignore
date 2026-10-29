@@ -114,3 +114,6 @@ deploy/apks/version-client.json
 **/.kotlin/sessions/*.salive
 **/.kotlin/**
 *.bak.*
+
+# Brand outputs (regenerables con brand/generate.py)
+brand/outputs/

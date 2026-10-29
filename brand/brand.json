@@ -1,0 +1,23 @@
+{
+  "name": "Rent a Car Vásquez",
+  "short_name": "Vásquez",
+  "slug": "vasquez",
+  "palette": {
+    "primary": "#B45309",
+    "secondary": "#1E3A5F",
+    "tertiary": "#4A7C59",
+    "surface": "#F8F7F5",
+    "on_surface": "#1A1A1A"
+  },
+  "typography": {
+    "family": "Inter",
+    "fallback": "sans-serif"
+  },
+  "metadata": {
+    "city": "Puerto Natales",
+    "region": "Magallanes",
+    "country": "Chile",
+    "tagline": "Arriendo de vehículos en Puerto Natales",
+    "website": "https://rentacarvasquez.com"
+  }
+}
