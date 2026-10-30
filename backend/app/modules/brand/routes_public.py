@@ -93,3 +93,20 @@ async def get_symbol_public(
             "ETag": f"{slug}-symbol-{size}",
         },
     )
+
+@router_public.get("/{slug}/cover.png")
+async def get_cover_public(slug: str):
+    """Sirve la portada (og-image 1200x630) del brand kit sin auth."""
+    try:
+        target = services.get_asset_path(slug, "web/og-image.png")
+    except FileNotFoundError:
+        raise HTTPException(404, f"Portada no encontrada: {slug}")
+
+    return FileResponse(
+        path=str(target),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=86400, immutable",
+            "ETag": f'"{slug}-cover"',
+        },
+    )
