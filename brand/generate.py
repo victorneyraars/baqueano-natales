@@ -16,8 +16,31 @@ def load_brand():
     with open(ROOT / "brand.json") as f:
         return json.load(f)
 
-def svg_to_png(svg_path, size, output_path, bg=None):
-    png_bytes = cairosvg.svg2png(url=str(svg_path), output_width=size, output_height=size)
+def svg_to_png(svg_path, size, output_path, bg=None, keep_aspect=False):
+    """Renderiza SVG a PNG.
+
+    Args:
+        size: ancho del PNG en px.
+        keep_aspect: si True, lee el viewBox del SVG y calcula
+            la altura proporcional (útil para logos horizontales).
+    """
+    height = size
+    if keep_aspect:
+        import re
+        with open(svg_path) as f:
+            content = f.read()
+        m = re.search(r'viewBox=["\']([^"\']+)["\']', content)
+        if m:
+            parts = m.group(1).split()
+            if len(parts) >= 4:
+                vb_w, vb_h = float(parts[2]), float(parts[3])
+                if vb_w > 0:
+                    height = int(size * vb_h / vb_w)
+    png_bytes = cairosvg.svg2png(
+        url=str(svg_path),
+        output_width=size,
+        output_height=height,
+    )
     img = Image.open(BytesIO(png_bytes)).convert("RGBA")
     if bg:
         background = Image.new("RGBA", img.size, bg)
@@ -169,7 +192,11 @@ def generate_print(brand):
     print("Print assets...")
     pdir = OUTPUTS / "print"
     pdir.mkdir(parents=True, exist_ok=True)
-    svg_to_png(LOGOS / "vasquez-logo.svg", 2048, pdir / "logo-2048.png")
+    # Logo horizontal (respeta aspect ratio 3:1)
+    svg_to_png(LOGOS / "vasquez-logo.svg", 2048, pdir / "logo-2048.png", keep_aspect=True)
+    svg_to_png(LOGOS / "vasquez-logo.svg", 1024, pdir / "logo-1024.png", keep_aspect=True)
+    svg_to_png(LOGOS / "vasquez-logo.svg", 512, pdir / "logo-512.png", keep_aspect=True)
+    # Symbol cuadrado
     svg_to_png(LOGOS / "vasquez-symbol.svg", 1024, pdir / "symbol-1024.png")
     import shutil
     shutil.copy(LOGOS / "vasquez-logo.svg", pdir / "logo.svg")
