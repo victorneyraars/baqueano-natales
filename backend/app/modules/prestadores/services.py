@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.auth.models import Usuario
+from app.modules.prestadores.whatsapp import build_whatsapp_info
 from app.modules.prestadores.models import (
     CategoriaOficio,
     EstadoPrestador,
@@ -836,4 +837,12 @@ async def get_perfil_completo(
         ),
         "total_resenas": prestador.total_resenas,
         "verificado": prestador.verificado,
+        "whatsapp": build_whatsapp_info(
+            prestador,
+            prestador.categoria.slug if prestador.categoria else None,
+        ),
+        "whatsapp_info": build_whatsapp_info(
+            prestador,
+            prestador.categoria.slug if prestador.categoria else None,
+        ),
     }

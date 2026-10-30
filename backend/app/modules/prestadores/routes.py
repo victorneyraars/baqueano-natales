@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.prestadores import services
+from app.modules.prestadores.whatsapp import build_whatsapp_info
 from app.modules.prestadores.deps import PrestadorPropietario
 from app.modules.social import eventos_prestadores as social_eventos
 from app.modules.prestadores.models import EstadoPrestador
@@ -144,7 +145,10 @@ async def obtener_prestador(
     db: DbSession,
 ) -> PrestadorDetalleResponse:
     prestador = await services.obtener_prestador_por_slug(db, slug)
-    return PrestadorDetalleResponse.model_validate(prestador)
+    response = PrestadorDetalleResponse.model_validate(prestador)
+    categoria_slug = prestador.categoria.slug if prestador.categoria else None
+    response.whatsapp_info = build_whatsapp_info(prestador, categoria_slug)
+    return response
 
 
 # =========================================================

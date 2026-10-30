@@ -351,6 +351,7 @@ class PrestadorDetalleResponse(PrestadorPublicoResponse):
     modalidades: dict | None = None
     servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list = []
+    whatsapp_info: dict | None = None
     razon_social: str | None = None
     rut_empresa: str | None = None
     gbp_place_id: str | None = None
