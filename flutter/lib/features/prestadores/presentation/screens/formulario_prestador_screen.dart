@@ -57,6 +57,7 @@ class _FormularioPrestadorScreenState
 
   // Estado del perfil de negocio (JSONB)
   PerfilNegocio _perfilNegocio = const PerfilNegocio();
+  String? _prestadorSlug;
   String? _gbpPlaceId;
   String? _gbpMapsUrl;
 
@@ -122,6 +123,7 @@ class _FormularioPrestadorScreenState
         _gbpPlaceId = state.gbpPlaceId;
         _gbpMapsUrl = state.gbpMapsUrl;
         _perfilNegocio = state.perfilNegocio;
+        _prestadorSlug = p.slug;
         _categoriaId =
             state.categoriaId ??
             (p.categoria.id.isNotEmpty ? p.categoria.id : null);
@@ -634,7 +636,15 @@ class _FormularioPrestadorScreenState
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: SeccionFotos(initialValue: _perfilNegocio.fotos),
+          child: SeccionFotos(
+            initialValue: _perfilNegocio.fotos,
+            slug: _prestadorSlug,
+            onChanged: (fotos) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(fotos: fotos);
+              });
+            },
+          ),
         ),
       ],
     );
