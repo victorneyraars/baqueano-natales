@@ -7,6 +7,9 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/core/network/dio_client.dart';
 import 'package:baqueano_natales/features/rentacar/data/rentacar_providers.dart';
 import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
+import 'package:baqueano_natales/core/domain/whatsapp_info.dart';
+import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
+import 'package:baqueano_natales/shared/widgets/whatsapp_button.dart';
 
 class VehiculoDetalleScreen extends ConsumerWidget {
   const VehiculoDetalleScreen({super.key, required this.vehiculoId});
@@ -160,6 +163,14 @@ class _VehiculoDetalleBodyState extends ConsumerState<_VehiculoDetalleBody> {
   Widget build(BuildContext context) {
     final v = widget.vehiculo;
     final theme = Theme.of(context);
+    final wa =
+        ref
+            .watch(prestadorDetalleProvider('rentacar-vasquez'))
+            .maybeWhen(
+              data: (p) => p.whatsappInfoResuelto,
+              orElse: () => null,
+            ) ??
+        WhatsAppInfo.fallback();
     return Scaffold(
       appBar: AppBar(
         title: Text('${v.marca} ${v.modelo}'),
@@ -212,6 +223,20 @@ class _VehiculoDetalleBodyState extends ConsumerState<_VehiculoDetalleBody> {
           _info(theme, 'Categoria', v.categoria),
           _info(theme, 'Precio por dia', '\$${v.precioDia.toStringAsFixed(0)}'),
           _info(theme, 'Disponible', v.disponible ? 'Si' : 'No'),
+          const SizedBox(height: 24),
+          WhatsAppButton(
+            info: wa,
+            context: 'vehiculo',
+            vars: {
+              'marca': v.marca,
+              'modelo': v.modelo,
+              'patente': v.patente,
+              'sitio': 'rentacarvasquez.com',
+            },
+            variant: WhatsAppButtonVariant.primary,
+            size: WhatsAppButtonSize.lg,
+            label: 'Consultar por WhatsApp',
+          ),
         ],
       ),
     );

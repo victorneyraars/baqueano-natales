@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:baqueano_natales/core/domain/whatsapp_info.dart';
 import 'package:baqueano_natales/features/prestadores/domain/categoria_oficio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/foto_trabajo.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
@@ -113,6 +114,7 @@ class Prestador {
     this.precioDesde,
     this.brandKitSlug,
     this.perfilNegocio,
+    this.whatsappInfo,
   });
 
   final String id;
@@ -170,6 +172,7 @@ class Prestador {
   final double? precioDesde;
   final String? brandKitSlug;
   final PerfilNegocio? perfilNegocio;
+  final WhatsAppInfo? whatsappInfo;
 
   // =========================================================
   // Helpers
@@ -178,6 +181,22 @@ class Prestador {
   String get ratingLegible => calificacionPromedio.toStringAsFixed(1);
 
   bool get esPublico => estado == EstadoPrestador.verificado && activo;
+
+  /// WhatsAppInfo listo para usar en botones.
+  /// Prioriza whatsappInfo del backend; si no, construye desde whatsapp string
+  /// con templates fallback (compat con endpoints que no exponen whatsapp_info).
+  WhatsAppInfo? get whatsappInfoResuelto {
+    if (whatsappInfo?.isConfigured ?? false) return whatsappInfo;
+    if (whatsapp == null || whatsapp!.isEmpty) return null;
+    final digits = whatsapp!.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.isEmpty) return null;
+    final fb = WhatsAppInfo.fallback();
+    return WhatsAppInfo(
+      phoneE164: '+$digits',
+      phoneDigits: digits,
+      templates: fb.templates,
+    );
+  }
 
   /// Modalidades legibles.
   List<String> get modalidades {
@@ -292,6 +311,7 @@ class Prestador {
         perfilNegocio: PerfilNegocio.fromJson(
           json['perfil_negocio'] as Map<String, dynamic>?,
         ),
+        whatsappInfo: _whatsappInfoFromJson(json['whatsapp_info']),
       );
     } catch (e, st) {
       debugPrint('[Prestador.fromJson] ❌ Parse error: $e');
@@ -485,9 +505,19 @@ class Prestador {
       'precio_desde': precioDesde,
       'brand_kit_slug': brandKitSlug,
       'perfil_negocio': perfilNegocio?.toJson(),
+      'whatsapp_info': whatsappInfo?.toJson(),
     };
   }
 
   @override
   String toString() => 'Prestador($slug, estado=$estado)';
+
+  /// Parsea whatsapp_info del backend. Devuelve null si no viene.
+  static WhatsAppInfo? _whatsappInfoFromJson(dynamic raw) {
+    if (raw is Map<String, dynamic>) return WhatsAppInfo.fromJson(raw);
+    if (raw is Map) {
+      return WhatsAppInfo.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return null;
+  }
 }

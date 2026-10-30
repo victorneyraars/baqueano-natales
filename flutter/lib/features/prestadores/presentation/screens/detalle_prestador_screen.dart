@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/shared/widgets/whatsapp_button.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/widgets/review_list.dart';
 
 class DetallePrestadorScreen extends ConsumerWidget {
@@ -446,20 +446,18 @@ class _ContenidoState extends State<_Contenido> {
         ),
         child: Row(
           children: [
-            if (p.whatsapp != null)
+            if (p.whatsappInfoResuelto != null)
               Expanded(
                 flex: 1,
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      launchUrl(Uri.parse('https://wa.me/${p.whatsapp}')),
-                  icon: const Icon(Icons.chat),
-                  label: const Text('WhatsApp'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                  ),
+                child: WhatsAppButton(
+                  info: p.whatsappInfoResuelto!,
+                  context: 'app',
+                  variant: WhatsAppButtonVariant.outline,
+                  size: WhatsAppButtonSize.md,
+                  label: 'WhatsApp',
                 ),
               ),
-            if (p.whatsapp != null) const SizedBox(width: 12),
+            if (p.whatsappInfoResuelto != null) const SizedBox(width: 12),
             Expanded(
               flex: 2,
               child: FilledButton.icon(
