@@ -17,6 +17,7 @@ import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/rentacar/domain/reserva.dart';
 import 'package:baqueano_natales/features/rentacar/domain/stats_rentacar.dart';
 import 'package:baqueano_natales/features/rentacar/domain/config_rentacar.dart';
+import 'package:baqueano_natales/features/rentacar/domain/patente_lookup.dart';
 
 class RentacarRepository {
   RentacarRepository({Dio? dio}) : _dio = dio ?? DioClient.instance;
@@ -176,6 +177,24 @@ class RentacarRepository {
         data: data,
       );
       return ConfigRentacar.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Consulta los datos de una patente en Boostr (via backend).
+  Future<PatenteLookupResult> consultarPatente(String patente) async {
+    try {
+      final res = await _dio.get('/api/v1/integrations/patente/$patente');
+      return PatenteLookupResult.fromJson(
+        patente,
+        res.data as Map<String, dynamic>,
+      );
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
