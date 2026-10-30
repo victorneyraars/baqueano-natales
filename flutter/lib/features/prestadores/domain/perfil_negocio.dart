@@ -7,6 +7,8 @@
 /// Todos los campos son opcionales para permitir edición progresiva.
 library;
 
+import 'transparencia.dart';
+
 /// Dirección postal estructurada (requerida por JSON-LD y GBP).
 class DireccionEstructurada {
   const DireccionEstructurada({
@@ -435,6 +437,7 @@ class PerfilNegocio {
     this.descripciones,
     this.fotos,
     this.reserva,
+    this.transparencia,
     this.verticalAtributos = const {},
   });
 
@@ -450,6 +453,7 @@ class PerfilNegocio {
   final DescripcionesNegocio? descripciones;
   final FotosNegocio? fotos;
   final ReservaConfig? reserva;
+  final Transparencia? transparencia;
   final Map<String, dynamic> verticalAtributos;
 
   factory PerfilNegocio.fromJson(Map<String, dynamic>? json) {
@@ -483,6 +487,9 @@ class PerfilNegocio {
       ),
       fotos: FotosNegocio.fromJson(json['fotos'] as Map<String, dynamic>?),
       reserva: ReservaConfig.fromJson(json['reserva'] as Map<String, dynamic>?),
+      transparencia: Transparencia.fromJson(
+        json['transparencia'] as Map<String, dynamic>?,
+      ),
       verticalAtributos:
           (json['vertical_atributos'] as Map<String, dynamic>?) ?? const {},
     );
@@ -502,6 +509,7 @@ class PerfilNegocio {
     if (descripciones != null) 'descripciones': descripciones!.toJson(),
     if (fotos != null) 'fotos': fotos!.toJson(),
     if (reserva != null) 'reserva': reserva!.toJson(),
+    if (transparencia != null) 'transparencia': transparencia!.toJson(),
     if (verticalAtributos.isNotEmpty) 'vertical_atributos': verticalAtributos,
   };
 
@@ -518,5 +526,6 @@ class PerfilNegocio {
       redes != null ||
       descripciones != null ||
       fotos != null ||
-      reserva != null;
+      reserva != null ||
+      transparencia != null;
 }

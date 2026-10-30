@@ -15,6 +15,7 @@ import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfi
 import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_horario.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_redes.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_reserva.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_transparencia.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/widgets/perfil_negocio/seccion_ubicacion.dart';
 
 /// Form unificado de prestador (crear / editar).
@@ -335,6 +336,7 @@ class _FormularioPrestadorScreenState
                 _seccionGbp(),
                 _seccionRedes(),
                 _seccionReserva(),
+                _seccionTransparencia(),
                 _seccionFotos(),
               ],
             ],
@@ -620,6 +622,28 @@ class _FormularioPrestadorScreenState
             onChanged: (r) {
               setState(() {
                 _perfilNegocio = _perfilNegocio.copyWith(reserva: r);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seccionTransparencia() {
+    return ExpansionTile(
+      key: const PageStorageKey('seccion_transparencia'),
+      maintainState: true,
+      title: const Text('Transparencia para tu web'),
+      subtitle: const Text('Depósito, km, combustible, cancelación'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SeccionTransparencia(
+            initialValue: _perfilNegocio.transparencia,
+            onChanged: (t) {
+              setState(() {
+                _perfilNegocio = _perfilNegocio.copyWith(transparencia: t);
               });
             },
           ),

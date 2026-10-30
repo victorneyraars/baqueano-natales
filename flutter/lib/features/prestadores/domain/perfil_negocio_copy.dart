@@ -1,4 +1,5 @@
 import 'perfil_negocio.dart';
+import 'transparencia.dart';
 
 /// Extensiones copyWith para los modelos de PerfilNegocio.
 ///
@@ -179,6 +180,7 @@ extension PerfilNegocioCopyWith on PerfilNegocio {
     DescripcionesNegocio? descripciones,
     FotosNegocio? fotos,
     ReservaConfig? reserva,
+    Transparencia? transparencia,
     Map<String, dynamic>? verticalAtributos,
   }) => PerfilNegocio(
     direccionEstructurada: direccionEstructurada ?? this.direccionEstructurada,
@@ -193,6 +195,7 @@ extension PerfilNegocioCopyWith on PerfilNegocio {
     descripciones: descripciones ?? this.descripciones,
     fotos: fotos ?? this.fotos,
     reserva: reserva ?? this.reserva,
+    transparencia: transparencia ?? this.transparencia,
     verticalAtributos: verticalAtributos ?? this.verticalAtributos,
   );
 }
