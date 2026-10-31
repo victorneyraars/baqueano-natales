@@ -10,7 +10,10 @@ import hashlib
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Response
+from fastapi.responses import HTMLResponse
+from app.modules.notificaciones.tokens import validar_token_accion
+import jwt
 
 from app.core.db import DbSession
 
@@ -19,6 +22,17 @@ from .schemas import (
     RentacarReservaCreate,
     RentacarReservaOut,
     RentacarVehiculoOut,
+)
+
+from app.modules.notificaciones.reservas import (
+    notificar_nueva_reserva_cliente,
+    notificar_nueva_reserva_prestador,
+)
+from app.modules.prestadores.canales_contacto import (
+    build_canales_contacto,
+)
+from app.modules.prestadores.services import (
+    obtener_prestador_por_slug,
 )
 
 router_publico = APIRouter(
@@ -78,15 +92,148 @@ async def vehiculos_por_prestador(
     return await services.listar_vehiculos(db, prestador_id)
 
 
+
+
+@router_publico.get(
+    "/reservas/{id}/accion",
+    summary="Pagina intermedia de confirmacion (protege contra escaneres de email)",
+)
+async def pagina_accion_reserva(id: UUID, token: str):
+    try:
+        payload = validar_token_accion(token)
+    except jwt.ExpiredSignatureError:
+        return HTMLResponse("<h2>El enlace ha expirado. Contacta al cliente.</h2>", status_code=400)
+    except jwt.InvalidTokenError:
+        return HTMLResponse("<h2>Enlace invalido.</h2>", status_code=400)
+
+    if str(payload["reserva_id"]) != str(id):
+        return HTMLResponse("<h2>Token no corresponde a la reserva.</h2>", status_code=400)
+
+    accion = payload["accion"]
+    color = "#16A34A" if accion == "confirmar" else "#DC2626"
+    texto = "Confirmar Reserva" if accion == "confirmar" else "Cancelar Reserva"
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+        <h2>Estas seguro que deseas {texto.lower()}?</h2>
+        <form method="POST" action="/api/v1/public/rentacar/reservas/{id}/accion?token={token}">
+            <button type="submit" style="background-color: {color}; color: white; padding: 15px 30px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
+                Si, {texto}
+            </button>
+        </form>
+        <p style="margin-top: 20px;"><a href="https://rentacarvasquez.com">Volver al sitio</a></p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(html)
+
+
+@router_publico.post(
+    "/reservas/{id}/accion",
+    summary="Ejecutar accion de confirmacion/cancelacion",
+)
+async def ejecutar_accion_reserva(
+    id: UUID,
+    token: str,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+):
+    try:
+        payload = validar_token_accion(token)
+    except jwt.InvalidTokenError:
+        return HTMLResponse("<h2>Enlace invalido o expirado.</h2>", status_code=400)
+
+    if str(payload["reserva_id"]) != str(id):
+        return HTMLResponse("<h2>Error de validacion.</h2>", status_code=400)
+
+    accion = payload["accion"]
+    try:
+        if accion == "confirmar":
+            reserva = await services.confirmar_reserva(db, id)
+            msg = "Reserva Confirmada"
+            color = "#16A34A"
+        elif accion == "cancelar":
+            reserva = await services.cancelar_reserva(db, id)
+            msg = "Reserva Cancelada"
+            color = "#DC2626"
+        else:
+            return HTMLResponse("<h2>Accion no reconocida.</h2>", status_code=400)
+    except ValueError as e:
+        return HTMLResponse(f"<h2>Error: {e}</h2>", status_code=400)
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+        <h1 style="color: {color};">{msg} con exito</h1>
+        <p>La reserva ha sido actualizada. El cliente sera notificado.</p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(html)
+
+
 @router_publico.post(
     "/reservas",
     response_model=RentacarReservaOut,
     status_code=201,
     summary="Crear reserva pública (invitado)",
 )
-async def crear_reserva_publica(data: RentacarReservaCreate, db: DbSession):
+async def crear_reserva_publica(
+    data: RentacarReservaCreate,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+):
     try:
         reserva = await services.crear_reserva(db, data)
-        return reserva
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Notificaciones (background = no bloquea la respuesta al cliente)
+    try:
+        vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+        prestador = await obtener_prestador_por_slug(db, "rentacar-vasquez")
+        if vehiculo and prestador:
+            canales = build_canales_contacto(prestador)
+            email_prestador = next(
+                (
+                    c["direccion"]
+                    for c in canales.get("email", [])
+                    if c.get("tipo") == "reservas" and c.get("activo", True)
+                ),
+                prestador.email,
+            )
+            vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo}"
+            total = float(getattr(reserva, "precio_total", 0) or 0)
+
+            if email_prestador:
+                background_tasks.add_task(
+                    notificar_nueva_reserva_prestador,
+                    reserva_id=str(reserva.id),
+                    email_prestador=email_prestador,
+                    nombre_cliente=reserva.nombre_cliente or "Sin nombre",
+                    email_cliente=reserva.email_cliente or "",
+                    telefono_cliente=reserva.telefono_cliente or "",
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                    total=total,
+                )
+
+            if reserva.email_cliente:
+                background_tasks.add_task(
+                    notificar_nueva_reserva_cliente,
+                    email_cliente=reserva.email_cliente,
+                    nombre_cliente=reserva.nombre_cliente or "Cliente",
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                    total=total,
+                )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"No se pudo notificar reserva {reserva.id}: {exc}"
+        )
+
+    return reserva

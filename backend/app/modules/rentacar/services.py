@@ -400,3 +400,37 @@ async def obtener_mis_stats(
         "ingresos_totales": ingresos_totales,
         "ingresos_mes_actual": ingresos_mes_actual,
     }
+
+
+async def confirmar_reserva(
+    db: AsyncSession, reserva_id: UUID
+) -> RentacarReserva:
+    """Cambia estado 'pendiente' -> 'confirmada'."""
+    from sqlalchemy import select
+    stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if reserva is None:
+        raise ValueError("Reserva no encontrada")
+    if reserva.estado != "pendiente":
+        raise ValueError(f"Reserva en estado '{reserva.estado}', no se puede confirmar")
+    reserva.estado = "confirmada"
+    await db.commit()
+    await db.refresh(reserva)
+    return reserva
+
+
+async def cancelar_reserva(
+    db: AsyncSession, reserva_id: UUID
+) -> RentacarReserva:
+    """Cambia estado 'pendiente' -> 'cancelada'."""
+    from sqlalchemy import select
+    stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if reserva is None:
+        raise ValueError("Reserva no encontrada")
+    if reserva.estado != "pendiente":
+        raise ValueError(f"Reserva en estado '{reserva.estado}', no se puede cancelar")
+    reserva.estado = "cancelada"
+    await db.commit()
+    await db.refresh(reserva)
+    return reserva
