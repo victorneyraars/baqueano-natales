@@ -113,6 +113,7 @@ class RentacarReservaDetalleOut(RentacarReservaOut):
     vehiculo_marca: str | None = None
     vehiculo_modelo: str | None = None
     vehiculo_imagen_url: str | None = None
+    vehiculo_label: str | None = None
 
     class Config:
         from_attributes = True

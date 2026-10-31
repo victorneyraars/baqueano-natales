@@ -300,9 +300,18 @@ TRANSICIONES_VALIDAS = {
 
 
 async def listar_mis_reservas(
-    db: AsyncSession, usuario: Usuario, estado: str | None = None
+    db: AsyncSession,
+    usuario: Usuario,
+    estado: str | None = None,
+    busqueda: str | None = None,
+    fecha_desde: str | None = None,
+    fecha_hasta: str | None = None,
+    vehiculo_id: UUID | None = None,
 ) -> list[RentacarReserva]:
-    """Lista reservas del prestador del usuario, con filtro opcional por estado."""
+    """Lista reservas del prestador con filtros avanzados."""
+    from datetime import datetime
+    from sqlalchemy import or_, func as sqlfunc
+
     prestador = await _resolver_prestador_rentacar(db, usuario)
     stmt = (
         select(RentacarReserva)
@@ -314,6 +323,31 @@ async def listar_mis_reservas(
         if estado not in ESTADOS_VALIDOS:
             raise ValueError(f"Estado invalido: {estado}")
         stmt = stmt.where(RentacarReserva.estado == estado)
+    if vehiculo_id is not None:
+        stmt = stmt.where(RentacarReserva.vehiculo_id == vehiculo_id)
+    if busqueda:
+        like = f"%{busqueda.lower()}%"
+        stmt = stmt.where(
+            or_(
+                sqlfunc.lower(RentacarReserva.nombre_cliente).like(like),
+                sqlfunc.lower(RentacarReserva.email_cliente).like(like),
+                sqlfunc.lower(RentacarVehiculo.patente).like(like),
+                sqlfunc.lower(RentacarVehiculo.marca).like(like),
+                sqlfunc.lower(RentacarVehiculo.modelo).like(like),
+            )
+        )
+    if fecha_desde:
+        try:
+            fd = datetime.fromisoformat(fecha_desde)
+            stmt = stmt.where(RentacarReserva.fecha_inicio >= fd)
+        except ValueError:
+            pass
+    if fecha_hasta:
+        try:
+            fh = datetime.fromisoformat(fecha_hasta)
+            stmt = stmt.where(RentacarReserva.fecha_fin <= fh)
+        except ValueError:
+            pass
     return list((await db.execute(stmt)).scalars().all())
 
 

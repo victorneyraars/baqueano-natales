@@ -180,13 +180,19 @@ async def listar_mis_reservas(
     db: DbSession,
     user: CurrentUser,
     estado: str | None = None,
+    busqueda: str | None = None,
+    fecha_desde: str | None = None,
+    fecha_hasta: str | None = None,
+    vehiculo_id: UUID | None = None,
 ):
-    """Lista reservas del prestador, con filtro opcional por estado."""
+    """Lista reservas del prestador con filtros avanzados."""
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"[listar_mis_reservas] user={user.id} estado={estado}")
     try:
-        reservas = await services.listar_mis_reservas(db, user, estado)
+        reservas = await services.listar_mis_reservas(
+            db, user, estado, busqueda, fecha_desde, fecha_hasta, vehiculo_id
+        )
         logger.info(f"[listar_mis_reservas] encontradas {len(reservas)}")
     except ValueError as e:
         logger.error(f"[listar_mis_reservas] ValueError: {e}")
@@ -205,6 +211,12 @@ async def listar_mis_reservas(
             out.vehiculo_marca = vehiculo.marca
             out.vehiculo_modelo = vehiculo.modelo
             out.vehiculo_imagen_url = vehiculo.imagen_url
+            try:
+                out.vehiculo_label = (
+                    f"{vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}"
+                )
+            except Exception:
+                pass
         result.append(out)
     return result
 
