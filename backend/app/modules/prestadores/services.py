@@ -23,6 +23,7 @@ from sqlalchemy.orm import selectinload
 from app.modules.auth.models import Usuario
 from app.modules.prestadores.whatsapp import build_whatsapp_info
 from app.modules.prestadores.transparencia import build_transparencia
+from app.modules.prestadores.canales_contacto import build_canales_contacto
 from app.modules.prestadores.models import (
     CategoriaOficio,
     EstadoPrestador,
@@ -847,4 +848,5 @@ async def get_perfil_completo(
             prestador.categoria.slug if prestador.categoria else None,
         ),
         "transparencia": build_transparencia(prestador),
+        "canales_contacto": build_canales_contacto(prestador),
     }
