@@ -83,3 +83,52 @@ async def notificar_nueva_reserva_cliente(
     </div>
     """
     await enviar_email(to=email_cliente, subject=asunto, html=html)
+
+
+async def notificar_reserva_confirmada_cliente(
+    email_cliente: str,
+    nombre_cliente: str,
+    vehiculo: str,
+    inicio: str,
+    fin: str,
+    total: float,
+):
+    asunto = f"Reserva confirmada: {vehiculo}"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16A34A;">Reserva Confirmada</h2>
+        <p>Hola {nombre_cliente}, te confirmamos que tu reserva del <strong>{vehiculo}</strong> ha sido confirmada.</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Retiro:</strong> {_formatear_fecha(inicio)}</p>
+            <p><strong>Devolucion:</strong> {_formatear_fecha(fin)}</p>
+            <p><strong>Total:</strong> {_formatear_clp(total)}</p>
+        </div>
+        <p><strong>Instrucciones de retiro:</strong></p>
+        <ul>
+            <li>Direccion: Miraflores 708, Puerto Natales</li>
+            <li>Telefono: +56941721688</li>
+            <li>Traer licencia de conducir y tarjeta de credito a nombre del titular</li>
+        </ul>
+        <p>Te esperamos!</p>
+    </div>
+    """
+    await enviar_email(to=email_cliente, subject=asunto, html=html)
+
+
+async def notificar_reserva_cancelada_cliente(
+    email_cliente: str,
+    nombre_cliente: str,
+    vehiculo: str,
+    inicio: str,
+    fin: str,
+):
+    asunto = f"Reserva cancelada: {vehiculo}"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #DC2626;">Reserva Cancelada</h2>
+        <p>Hola {nombre_cliente}, tu reserva del <strong>{vehiculo}</strong> del {_formatear_fecha(inicio)} al {_formatear_fecha(fin)} ha sido cancelada.</p>
+        <p>Si tienes consultas, responde a este correo o llamanos al +56941721688.</p>
+        <p>Esperamos atenderte en otra ocasion.</p>
+    </div>
+    """
+    await enviar_email(to=email_cliente, subject=asunto, html=html)

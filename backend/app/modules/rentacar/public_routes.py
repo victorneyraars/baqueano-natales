@@ -27,6 +27,8 @@ from .schemas import (
 from app.modules.notificaciones.reservas import (
     notificar_nueva_reserva_cliente,
     notificar_nueva_reserva_prestador,
+    notificar_reserva_cancelada_cliente,
+    notificar_reserva_confirmada_cliente,
 )
 from app.modules.prestadores.canales_contacto import (
     build_canales_contacto,
@@ -161,6 +163,32 @@ async def ejecutar_accion_reserva(
             return HTMLResponse("<h2>Accion no reconocida.</h2>", status_code=400)
     except ValueError as e:
         return HTMLResponse(f"<h2>Error: {e}</h2>", status_code=400)
+
+    # Notificar al cliente de la transicion (background)
+    if reserva.email_cliente:
+        vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+        vehiculo_label = (
+            f"{vehiculo.marca} {vehiculo.modelo}" if vehiculo else "Vehiculo"
+        )
+        if accion == "confirmar":
+            background_tasks.add_task(
+                notificar_reserva_confirmada_cliente,
+                email_cliente=reserva.email_cliente,
+                nombre_cliente=reserva.nombre_cliente or "Cliente",
+                vehiculo=vehiculo_label,
+                inicio=reserva.fecha_inicio.isoformat(),
+                fin=reserva.fecha_fin.isoformat(),
+                total=float(reserva.precio_total or 0),
+            )
+        elif accion == "cancelar":
+            background_tasks.add_task(
+                notificar_reserva_cancelada_cliente,
+                email_cliente=reserva.email_cliente,
+                nombre_cliente=reserva.nombre_cliente or "Cliente",
+                vehiculo=vehiculo_label,
+                inicio=reserva.fecha_inicio.isoformat(),
+                fin=reserva.fecha_fin.isoformat(),
+            )
 
     html = f"""
     <html>
