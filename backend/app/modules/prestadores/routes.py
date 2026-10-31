@@ -706,6 +706,8 @@ async def cambiar_email_reenvio(
     cc["email_reenvio_personal"] = data.email
     perfil["canales_contacto"] = cc
     prestador.perfil_negocio = perfil
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(prestador, "perfil_negocio")
     await db.commit()
     await db.refresh(prestador)
 
@@ -854,6 +856,8 @@ async def actualizar_canal_email(
     cc["email"] = emails_custom
     perfil["canales_contacto"] = cc
     prestador.perfil_negocio = perfil
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(prestador, "perfil_negocio")
     await db.commit()
     await db.refresh(prestador)
 

@@ -80,6 +80,8 @@ class _BodyState extends ConsumerState<_Body> {
   bool _cambiandoEmail = false;
   bool _verificando = false;
   final Set<String> _procesando = <String>{};
+  final Map<String, bool> _visibleOptimistic = {};
+  final Map<String, bool> _activoOptimistic = {};
 
   Map<String, dynamic> get _canales => widget.canales;
 
@@ -177,7 +179,11 @@ class _BodyState extends ConsumerState<_Body> {
   }
 
   Future<void> _toggleCanal(String tipo, {bool? visible, bool? activo}) async {
-    setState(() => _procesando.add(tipo));
+    setState(() {
+      if (visible != null) _visibleOptimistic[tipo] = visible;
+      if (activo != null) _activoOptimistic[tipo] = activo;
+      _procesando.add(tipo);
+    });
     try {
       final repo = ref.read(prestadorRepositoryProvider);
       await repo.actualizarCanalEmail(
@@ -189,6 +195,10 @@ class _BodyState extends ConsumerState<_Body> {
       ref.invalidate(canalesContactoProvider(widget.prestadorId));
     } on ApiException catch (e) {
       if (!mounted) return;
+      setState(() {
+        if (visible != null) _visibleOptimistic.remove(tipo);
+        if (activo != null) _activoOptimistic.remove(tipo);
+      });
       _snack(e.message, isError: true);
     } finally {
       if (mounted) setState(() => _procesando.remove(tipo));
@@ -347,8 +357,9 @@ class _BodyState extends ConsumerState<_Body> {
     final tipo = (e['tipo'] as String?) ?? '';
     final direccion = (e['direccion'] as String?) ?? '';
     final descripcion = (e['descripcion'] as String?) ?? '';
-    final visible = (e['visible_publico'] as bool?) ?? false;
-    final activo = (e['activo'] as bool?) ?? true;
+    final visible =
+        _visibleOptimistic[tipo] ?? (e['visible_publico'] as bool?) ?? false;
+    final activo = _activoOptimistic[tipo] ?? (e['activo'] as bool?) ?? true;
     final override = e['override_destino'] as String?;
     final procesando = _procesando.contains(tipo);
     final theme = Theme.of(context);
