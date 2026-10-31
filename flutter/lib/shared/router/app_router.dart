@@ -72,6 +72,7 @@ import 'package:baqueano_natales/features/prestadores/presentation/screens/formu
 import 'package:baqueano_natales/features/prestadores/presentation/screens/configurar_modalidades_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/mis_prestadores_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/correos_contacto_screen.dart';
 import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/mi_flota_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_detalle_screen.dart';
@@ -589,6 +590,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return EditorServiciosScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/correos',
+        name: 'mi-prestador-correos',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CorreosContactoScreen(prestadorId: id);
         },
       ),
       GoRoute(

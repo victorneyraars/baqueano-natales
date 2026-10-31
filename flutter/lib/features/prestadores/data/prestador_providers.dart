@@ -263,3 +263,21 @@ final onboardingModeProvider = FutureProvider<String>((ref) async {
   final repo = ref.watch(prestadorRepositoryProvider);
   return repo.getOnboardingMode();
 });
+
+/// Provider de canales de contacto del prestador (emails, whatsapp, redes).
+///
+/// Devuelve `Map<String, dynamic>` con la estructura:
+/// - email: List<Map> (8 correos con descripcion + visible_publico + activo)
+/// - email_reenvio_personal: String
+/// - email_reenvio_verificado: bool
+/// - whatsapp: List<Map>
+/// - redes_sociales: List<Map>
+/// - google: Map
+final canalesContactoProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((
+      ref,
+      prestadorId,
+    ) async {
+      final repo = ref.watch(prestadorRepositoryProvider);
+      return await repo.obtenerCanales(prestadorId);
+    });

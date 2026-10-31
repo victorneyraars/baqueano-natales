@@ -763,4 +763,91 @@ class PrestadorRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  // =========================================================
+  // Canales de contacto (emails, whatsapp, redes, google)
+  // =========================================================
+
+  /// Obtiene los canales de contacto del prestador.
+  Future<Map<String, dynamic>> obtenerCanales(String prestadorId) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/canales',
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Cambia el email personal de reenvio (recibe TODO por defecto).
+  Future<Map<String, dynamic>> cambiarEmailReenvio({
+    required String prestadorId,
+    required String email,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/canales/email-reenvio',
+        data: {'email': email},
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Confirma la verificacion del email de reenvio en Cloudflare.
+  Future<Map<String, dynamic>> confirmarEmailReenvio(String prestadorId) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/canales/email-reenvio/confirmar',
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Actualiza configuracion de un canal email (visible/activo/override).
+  Future<Map<String, dynamic>> actualizarCanalEmail({
+    required String prestadorId,
+    required String tipo,
+    bool? visiblePublico,
+    bool? activo,
+    String? overrideDestino,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (visiblePublico != null) data['visible_publico'] = visiblePublico;
+      if (activo != null) data['activo'] = activo;
+      if (overrideDestino != null) data['override_destino'] = overrideDestino;
+      final res = await _dio.patch(
+        '/api/v1/mis-prestadores/$prestadorId/canales/email/$tipo',
+        data: data,
+      );
+      return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

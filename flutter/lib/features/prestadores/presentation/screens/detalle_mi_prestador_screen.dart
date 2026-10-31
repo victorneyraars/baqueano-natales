@@ -212,6 +212,13 @@ class _Contenido extends StatelessWidget {
               context.push('/mis-prestadores/${prestador.id}/servicios'),
         ),
 
+        OutlinedButton.icon(
+          icon: const Icon(Icons.email_outlined),
+          label: const Text('Correos y contacto'),
+          onPressed: () =>
+              context.push('/mis-prestadores/${prestador.id}/correos'),
+        ),
+
         const SizedBox(height: 8),
 
         OutlinedButton.icon(
