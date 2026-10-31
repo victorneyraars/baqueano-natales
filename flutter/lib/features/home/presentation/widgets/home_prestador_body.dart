@@ -313,6 +313,14 @@ class _MenuPorCategoria extends StatelessWidget {
               subtitle: 'Logos, favicons e iconos — individual o ZIP',
               onTap: () => context.push('/mis-brand-kit/vasquez'),
             ),
+
+            HomeCard(
+              icon: Icons.email_outlined,
+              title: 'Correos y contacto',
+              subtitle: 'Emails del dominio y verificacion',
+              onTap: () =>
+                  context.push('/mis-prestadores/$prestadorId/correos'),
+            ),
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),
             ...comunes,
