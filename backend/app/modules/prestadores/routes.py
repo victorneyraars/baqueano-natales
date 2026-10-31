@@ -13,6 +13,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, EmailStr
 
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
@@ -635,3 +636,230 @@ async def actualizar_modalidades_endpoint(
     prestador = await services.actualizar_modalidades(db, prestador, data.modalidades)
     config = await services.obtener_modalidades(db, prestador)
     return ModalidadesResponse(modalidades=config)
+
+
+# =========================================================
+# Canales de contacto (emails, whatsapp, redes, google)
+# =========================================================
+class CanalesEmailReenvioUpdate(BaseModel):
+    email: EmailStr
+
+
+class CanalEmailUpdate(BaseModel):
+    visible_publico: bool | None = None
+    activo: bool | None = None
+    override_destino: str | None = None
+
+
+@router_propietario.get(
+    "/{prestador_id}/canales",
+    summary="Listar canales de contacto del prestador",
+    description=(
+        "Devuelve todos los correos con sus descripciones, "
+        "email de reenvio personal, estado de verificacion "
+        "y redes sociales. Usado por la app Flutter."
+    ),
+)
+async def listar_canales_contacto(
+    prestador: PrestadorPropietario,
+    db: DbSession,
+) -> dict:
+    from app.modules.prestadores.canales_contacto import build_canales_contacto
+    from app.modules.prestadores.cloudflare_email import verificar_destination
+
+    canales = build_canales_contacto(prestador)
+    email_reenvio = canales.get("email_reenvio_personal", "")
+    canales["email_reenvio_verificado"] = (
+        verificar_destination(email_reenvio) if email_reenvio else False
+    )
+    return canales
+
+
+@router_propietario.post(
+    "/{prestador_id}/canales/email-reenvio",
+    summary="Cambiar email de reenvio personal",
+    description=(
+        "Guarda el nuevo email en JSONB + lo agrega como destination "
+        "en Cloudflare. Cloudflare envia un correo de verificacion al "
+        "nuevo email. Despues el usuario debe usar /confirmar."
+    ),
+)
+async def cambiar_email_reenvio(
+    prestador: PrestadorPropietario,
+    data: CanalesEmailReenvioUpdate,
+    db: DbSession,
+) -> dict:
+    from app.modules.prestadores.cloudflare_email import (
+        actualizar_catch_all, agregar_destination,
+    )
+
+    resultado = agregar_destination(data.email)
+    if not resultado["ok"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cloudflare: {resultado['error']}",
+        )
+
+    # Guardar en JSONB
+    perfil = dict(prestador.perfil_negocio or {})
+    cc = dict(perfil.get("canales_contacto") or {})
+    cc["email_reenvio_personal"] = data.email
+    perfil["canales_contacto"] = cc
+    prestador.perfil_negocio = perfil
+    await db.commit()
+    await db.refresh(prestador)
+
+    if resultado["verified"]:
+        # Ya estaba verificado: actualizar catch-all inmediatamente
+        upd = actualizar_catch_all(data.email)
+        return {
+            "ok": True,
+            "verificado": True,
+            "mensaje": f"Email verificado. Todos los correos llegan a {data.email}.",
+            "catch_all": upd,
+        }
+
+    return {
+        "ok": True,
+        "verificado": False,
+        "mensaje": (
+            f"Revisa {data.email} y hace click en el link de verificacion de "
+            "Cloudflare. Despues volve a la app y presiona 'Ya verifique'."
+        ),
+    }
+
+
+@router_propietario.post(
+    "/{prestador_id}/canales/email-reenvio/confirmar",
+    summary="Confirmar verificacion del email de reenvio",
+    description=(
+        "Consulta Cloudflare. Si el email esta verificado, "
+        "actualiza la regla catch-all para forwardear a ese email."
+    ),
+)
+async def confirmar_email_reenvio(
+    prestador: PrestadorPropietario,
+    db: DbSession,
+) -> dict:
+    from app.modules.prestadores.canales_contacto import build_canales_contacto
+    from app.modules.prestadores.cloudflare_email import (
+        actualizar_catch_all, verificar_destination,
+    )
+
+    canales = build_canales_contacto(prestador)
+    email = canales.get("email_reenvio_personal", "")
+    if not email:
+        raise HTTPException(400, "No hay email de reenvio configurado")
+
+    if not verificar_destination(email):
+        raise HTTPException(
+            400,
+            f"{email} todavia no esta verificado. Revisa tu correo y hace click en el link de Cloudflare.",
+        )
+
+    resultado = actualizar_catch_all(email)
+    if not resultado["ok"]:
+        raise HTTPException(
+            500, f"Cloudflare: {resultado['error']}"
+        )
+
+    return {
+        "ok": True,
+        "mensaje": f"Verificado. Todos los correos llegan a {email}.",
+    }
+
+
+@router_propietario.patch(
+    "/{prestador_id}/canales/email/{tipo}",
+    summary="Actualizar configuracion de un canal email",
+    description=(
+        "Toggle visible_publico/activo + override_destino por canal. "
+        "Si override_destino es un email, crea regla especifica en CF "
+        "(requiere verificacion previa). Si es string vacio, elimina la regla."
+    ),
+)
+async def actualizar_canal_email(
+    prestador: PrestadorPropietario,
+    tipo: str,
+    data: CanalEmailUpdate,
+    db: DbSession,
+) -> dict:
+    from app.modules.prestadores.cloudflare_email import (
+        agregar_destination, crear_regla_override,
+        eliminar_regla_override,
+    )
+
+    perfil = dict(prestador.perfil_negocio or {})
+    cc = dict(perfil.get("canales_contacto") or {})
+    emails_custom = list(cc.get("email") or [])
+
+    # Buscar o crear entrada para este tipo
+    target = None
+    for item in emails_custom:
+        if item.get("tipo") == tipo:
+            target = item
+            break
+    if target is None:
+        target = {"tipo": tipo}
+        emails_custom.append(target)
+
+    if data.visible_publico is not None:
+        target["visible_publico"] = data.visible_publico
+    if data.activo is not None:
+        target["activo"] = data.activo
+
+    cloudflare_result = None
+
+    # Override: agregar / quitar regla especifica en CF
+    if data.override_destino is not None:
+        old_rule_id = target.get("override_rule_id")
+
+        if data.override_destino == "":
+            # Eliminar override
+            if old_rule_id:
+                eliminado = eliminar_regla_override(old_rule_id)
+                cloudflare_result = {"ok": eliminado, "accion": "eliminar"}
+            target.pop("override_destino", None)
+            target.pop("override_rule_id", None)
+        else:
+            # Crear override
+            add = agregar_destination(data.override_destino)
+            if not add["ok"]:
+                raise HTTPException(
+                    400, f"Cloudflare: {add['error']}"
+                )
+            if not add["verified"]:
+                raise HTTPException(
+                    400,
+                    f"{data.override_destino} no verificado. "
+                    "Revisa su correo y clickea el link de Cloudflare.",
+                )
+            # Eliminar regla vieja si existia
+            if old_rule_id:
+                eliminar_regla_override(old_rule_id)
+            # Crear regla nueva
+            rule = crear_regla_override(tipo, data.override_destino)
+            if not rule.get("ok"):
+                raise HTTPException(
+                    500, f"Cloudflare: {rule.get('error')}"
+                )
+            target["override_destino"] = data.override_destino
+            target["override_rule_id"] = rule.get("rule_id")
+            cloudflare_result = {
+                "ok": True,
+                "accion": "crear",
+                "rule_id": rule.get("rule_id"),
+            }
+
+    cc["email"] = emails_custom
+    perfil["canales_contacto"] = cc
+    prestador.perfil_negocio = perfil
+    await db.commit()
+    await db.refresh(prestador)
+
+    return {
+        "ok": True,
+        "tipo": tipo,
+        "canal": target,
+        "cloudflare": cloudflare_result,
+    }
