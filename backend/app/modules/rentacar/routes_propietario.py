@@ -8,7 +8,7 @@ Resuelve el prestador del usuario logueado automáticamente.
 """
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 
 from app.core.db import DbSession
 from app.modules.social.deps import CurrentUser
@@ -19,6 +19,10 @@ from app.core.storage import (
 )
 
 from . import services
+from app.modules.notificaciones.reservas import (
+    notificar_reserva_cancelada_cliente,
+    notificar_reserva_confirmada_cliente,
+)
 from .schemas import (
     RentacarImagenPresignedRequest,
     RentacarImagenPresignedResponse,
@@ -240,13 +244,48 @@ async def cambiar_estado_mi_reserva(
     data: RentacarReservaEstadoUpdate,
     db: DbSession,
     user: CurrentUser,
+    background_tasks: BackgroundTasks,
 ):
     try:
-        return await services.cambiar_estado_reserva(
+        reserva = await services.cambiar_estado_reserva(
             db, user, reserva_id, data.estado
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Notificar al cliente del cambio de estado (background, no bloquea respuesta)
+    if reserva.email_cliente and data.estado in ("confirmada", "cancelada"):
+        try:
+            vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+            vehiculo_label = (
+                f"{vehiculo.marca} {vehiculo.modelo}" if vehiculo else "Vehiculo"
+            )
+            if data.estado == "confirmada":
+                background_tasks.add_task(
+                    notificar_reserva_confirmada_cliente,
+                    email_cliente=reserva.email_cliente,
+                    nombre_cliente=reserva.nombre_cliente or "Cliente",
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                    total=float(reserva.precio_total or 0),
+                )
+            elif data.estado == "cancelada":
+                background_tasks.add_task(
+                    notificar_reserva_cancelada_cliente,
+                    email_cliente=reserva.email_cliente,
+                    nombre_cliente=reserva.nombre_cliente or "Cliente",
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Fallo notificando reserva {reserva.id}: {exc}"
+            )
+
+    return reserva
 
 
 # =========================================================
