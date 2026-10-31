@@ -1,4 +1,6 @@
 """Lógica de negocio para Rent a Car Vásquez."""
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -99,8 +101,79 @@ async def crear_reserva(
     if data.fecha_fin <= data.fecha_inicio:
         raise ValueError("Fecha de fin debe ser posterior a fecha de inicio")
 
-    reserva = RentacarReserva(**data.model_dump())
+    # Generar OTP de 6 digitos (expira en 15 min)
+    otp = f"{secrets.randbelow(1000000):06d}"
+    reserva = RentacarReserva(
+        **data.model_dump(),
+        otp_code=otp,
+        otp_expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+        otp_intentos=0,
+        email_verificado=False,
+    )
     db.add(reserva)
+    await db.commit()
+    await db.refresh(reserva)
+    return reserva
+
+
+async def verificar_email_reserva(
+    db: AsyncSession, reserva_id: UUID, codigo: str
+) -> RentacarReserva:
+    """Valida el OTP y marca la reserva como email_verificado=True."""
+    stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if reserva is None:
+        raise ValueError("Reserva no encontrada")
+
+    if reserva.email_verificado:
+        raise ValueError("Esta reserva ya esta verificada")
+
+    if reserva.otp_intentos >= 5:
+        raise ValueError("Demasiados intentos. Pedi un nuevo codigo.")
+
+    if reserva.otp_code is None or reserva.otp_expires_at is None:
+        raise ValueError("No hay codigo pendiente. Pedi uno nuevo.")
+
+    if datetime.now(timezone.utc) > reserva.otp_expires_at:
+        raise ValueError("El codigo expiro. Pedi uno nuevo.")
+
+    if codigo.strip() != reserva.otp_code:
+        reserva.otp_intentos += 1
+        await db.commit()
+        remaining = 5 - reserva.otp_intentos
+        raise ValueError(f"Codigo incorrecto. Intentos restantes: {remaining}")
+
+    reserva.email_verificado = True
+    reserva.email_verificado_at = datetime.now(timezone.utc)
+    reserva.otp_code = None
+    reserva.otp_expires_at = None
+    await db.commit()
+    await db.refresh(reserva)
+    return reserva
+
+
+async def reenviar_otp(db: AsyncSession, reserva_id: UUID) -> RentacarReserva:
+    """Regenera el OTP (invalida el anterior)."""
+    stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if reserva is None:
+        raise ValueError("Reserva no encontrada")
+
+    if reserva.email_verificado:
+        raise ValueError("Esta reserva ya esta verificada")
+
+    # Rate limit: ultimo envio hace menos de 60s
+    if reserva.otp_expires_at is not None:
+        elapsed = datetime.now(timezone.utc) - (
+            reserva.otp_expires_at - timedelta(minutes=15)
+        )
+        if elapsed.total_seconds() < 60:
+            wait = 60 - int(elapsed.total_seconds())
+            raise ValueError(f"Espera {wait}s antes de pedir otro codigo")
+
+    reserva.otp_code = f"{secrets.randbelow(1000000):06d}"
+    reserva.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+    reserva.otp_intentos = 0
     await db.commit()
     await db.refresh(reserva)
     return reserva

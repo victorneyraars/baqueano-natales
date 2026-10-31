@@ -76,3 +76,17 @@ class RentacarReserva(TimestampMixin, Base):
     metodo_pago: Mapped[str] = mapped_column(String(50))
     precio_total: Mapped[float] = mapped_column(Numeric(10, 2))
     estado: Mapped[str] = mapped_column(String(20), default="pendiente", nullable=False)
+    # Verificacion OTP de email (Guest-First)
+    email_verificado: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    email_verificado_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    otp_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    otp_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    otp_intentos: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )

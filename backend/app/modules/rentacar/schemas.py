@@ -40,7 +40,18 @@ class RentacarReservaCreate(RentacarReservaBase):
     """Reserva pública: incluye datos de contacto del cliente invitado."""
     nombre_cliente: str
     email_cliente: str
-    telefono_cliente: str
+    telefono_cliente: str | None = None  # Opcional (Guest-First)
+
+
+class VerificarEmailRequest(BaseModel):
+    codigo: str
+
+
+class VerificarEmailResponse(BaseModel):
+    ok: bool
+    mensaje: str
+    reserva_id: UUID
+    email_verificado: bool
 
 
 class RentacarReservaOut(RentacarReservaBase):
@@ -49,6 +60,7 @@ class RentacarReservaOut(RentacarReservaBase):
     nombre_cliente: str | None = None
     email_cliente: str | None = None
     telefono_cliente: str | None = None
+    email_verificado: bool = False
 
     class Config:
         from_attributes = True

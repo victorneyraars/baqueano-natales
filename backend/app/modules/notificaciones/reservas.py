@@ -132,3 +132,37 @@ async def notificar_reserva_cancelada_cliente(
     </div>
     """
     await enviar_email(to=email_cliente, subject=asunto, html=html)
+
+
+async def notificar_otp_cliente(
+    email_cliente: str,
+    nombre_cliente: str,
+    codigo: str,
+    vehiculo: str,
+    inicio: str,
+    fin: str,
+):
+    """Email con el codigo OTP de 6 digitos para verificar la reserva."""
+    asunto = f"Tu codigo de verificacion: {codigo}"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2E7D32;">Verifica tu reserva</h2>
+        <p>Hola {nombre_cliente},</p>
+        <p>Recibimos tu solicitud de reserva del <strong>{vehiculo}</strong>
+           del {_formatear_fecha(inicio)} al {_formatear_fecha(fin)}.</p>
+        <p>Ingresa este codigo en la web para confirmar que tu email es real:</p>
+        <div style="background-color: #f5f5f5; padding: 30px; border-radius: 8px;
+                    margin: 20px 0; text-align: center;">
+            <div style="font-size: 42px; font-weight: bold;
+                        letter-spacing: 8px; color: #2E7D32; font-family: monospace;">
+                {codigo}
+            </div>
+        </div>
+        <p style="color: #666; font-size: 13px;">
+            Este codigo expira en 15 minutos. Si no solicitaste esta reserva,
+            ignora este email.
+        </p>
+        <p>Gracias,<br>Rent a Car Vasquez</p>
+    </div>
+    """
+    await enviar_email(to=email_cliente, subject=asunto, html=html)

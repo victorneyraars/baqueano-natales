@@ -22,11 +22,14 @@ from .schemas import (
     RentacarReservaCreate,
     RentacarReservaOut,
     RentacarVehiculoOut,
+    VerificarEmailRequest,
+    VerificarEmailResponse,
 )
 
 from app.modules.notificaciones.reservas import (
     notificar_nueva_reserva_cliente,
     notificar_nueva_reserva_prestador,
+    notificar_otp_cliente,
     notificar_reserva_cancelada_cliente,
     notificar_reserva_confirmada_cliente,
 )
@@ -248,6 +251,18 @@ async def crear_reserva_publica(
                     total=total,
                 )
 
+            # Enviar OTP al cliente (verifica que el email es real)
+            if reserva.email_cliente and reserva.otp_code:
+                background_tasks.add_task(
+                    notificar_otp_cliente,
+                    email_cliente=reserva.email_cliente,
+                    nombre_cliente=reserva.nombre_cliente or "Cliente",
+                    codigo=reserva.otp_code,
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                )
+
             if reserva.email_cliente:
                 background_tasks.add_task(
                     notificar_nueva_reserva_cliente,
@@ -265,3 +280,69 @@ async def crear_reserva_publica(
         )
 
     return reserva
+
+
+@router_publico.post(
+    "/reservas/{reserva_id}/verificar-email",
+    response_model=VerificarEmailResponse,
+    summary="Verificar email de reserva via OTP",
+    description=(
+        "Valida el codigo de 6 digitos enviado al email del cliente. "
+        "Si es correcto, marca la reserva como email_verificado=True."
+    ),
+)
+async def verificar_email_reserva(
+    reserva_id: UUID,
+    data: VerificarEmailRequest,
+    db: DbSession,
+) -> VerificarEmailResponse:
+    try:
+        reserva = await services.verificar_email_reserva(
+            db, reserva_id, data.codigo
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return VerificarEmailResponse(
+        ok=True,
+        mensaje="Email verificado. Tu reserva quedo confirmada como valida.",
+        reserva_id=reserva.id,
+        email_verificado=reserva.email_verificado,
+    )
+
+
+@router_publico.post(
+    "/reservas/{reserva_id}/reenviar-otp",
+    summary="Reenviar codigo OTP al email del cliente",
+    description=(
+        "Regenera el codigo OTP (invalida el anterior). "
+        "Rate limit: 1 reenvio cada 60 segundos."
+    ),
+)
+async def reenviar_otp_reserva(
+    reserva_id: UUID,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+):
+    try:
+        reserva = await services.reenviar_otp(db, reserva_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+    vehiculo_label = (
+        f"{vehiculo.marca} {vehiculo.modelo}" if vehiculo else "Vehiculo"
+    )
+
+    if reserva.email_cliente and reserva.otp_code:
+        background_tasks.add_task(
+            notificar_otp_cliente,
+            email_cliente=reserva.email_cliente,
+            nombre_cliente=reserva.nombre_cliente or "Cliente",
+            codigo=reserva.otp_code,
+            vehiculo=vehiculo_label,
+            inicio=reserva.fecha_inicio.isoformat(),
+            fin=reserva.fecha_fin.isoformat(),
+        )
+
+    return {"ok": True, "mensaje": "Nuevo codigo enviado a tu email"}
