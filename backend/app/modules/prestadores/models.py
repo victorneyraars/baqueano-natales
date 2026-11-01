@@ -31,6 +31,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -403,6 +405,20 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
     )
 
     # -----------------------------------------------------
+    # Colaboradores (JSONB array)
+    # -----------------------------------------------------
+    colaboradores: Mapped[list] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+        comment=(
+            "Array de colaboradores con acceso al prestador. Cada item: "
+            "{email, nombre, invitado_por, invitado_at, activado_at, rol}"
+        ),
+    )
+
+    # -----------------------------------------------------
     # Stats (denormalizadas, se actualizan con reviews)
     # -----------------------------------------------------
     calificacion_promedio: Mapped[Decimal] = mapped_column(
@@ -439,6 +455,59 @@ class Prestador(TimestampMixin, SoftDeleteMixin, Base):
         return (
             f"<Prestador(id={self.id}, slug={self.slug}, "
             f"estado={self.estado.value}, activo={self.activo})>"
+        )
+
+
+# =========================================================
+# Audit log del prestador (append-only)
+# =========================================================
+class PrestadorAuditLog(Base):
+    """Registro append-only de acciones del prestador.
+
+    Solo INSERT. Nunca UPDATE ni DELETE (excepto retención).
+    Distinto de OpsAuditLog (que es para el Ops Dashboard interno).
+
+    Retención: 12 meses mínimo (compliance SII Chile).
+    """
+
+    __tablename__ = "prestadores_audit_log"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid4,
+    )
+    prestador_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prestadores.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    accion: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    entidad: Mapped[str] = mapped_column(String(50), nullable=False)
+    entidad_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<PrestadorAuditLog(id={self.id}, accion={self.accion}, "
+            f"user_email={self.user_email})>"
         )
 
 

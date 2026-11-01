@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.modules.prestadores.models import EstadoPrestador
 
@@ -513,3 +513,49 @@ class ModalidadesResponse(BaseModel):
 
 class ModalidadesUpdateRequest(BaseModel):
     modalidades: ModalidadesConfig
+
+# =========================================================
+# Colaboradores del prestador (JSONB)
+# =========================================================
+class ColaboradorInviteRequest(BaseModel):
+    """Payload para invitar a un colaborador."""
+
+    email: EmailStr
+    nombre: str = Field(min_length=2, max_length=150)
+
+
+class ColaboradorResponse(BaseModel):
+    """Datos públicos de un colaborador."""
+
+    email: str
+    nombre: str
+    invitado_por: str
+    invitado_at: datetime
+    activado_at: datetime | None = None
+    rol: str = "colaborador"
+
+
+# =========================================================
+# Audit log del prestador (append-only)
+# =========================================================
+class AuditLogEntry(BaseModel):
+    """Una entrada del audit log."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    user_email: str
+    accion: str
+    entidad: str
+    entidad_id: str | None = None
+    metadata: dict = {}
+    created_at: datetime
+
+
+class AuditLogPage(BaseModel):
+    """Página paginada de audit log."""
+
+    data: list[AuditLogEntry]
+    total: int
+    page: int
+    page_size: int

@@ -12,17 +12,33 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr
 
 from app.core.db import DbSession
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.prestadores import services
 from app.modules.prestadores.whatsapp import build_whatsapp_info
-from app.modules.prestadores.deps import PrestadorPropietario
+from app.modules.prestadores.deps import PrestadorOwner, PrestadorPropietario
 from app.modules.social import eventos_prestadores as social_eventos
-from app.modules.prestadores.models import EstadoPrestador
+from app.modules.prestadores.models import EstadoPrestador, PrestadorAuditLog
+from app.modules.prestadores.audit_service import log_audit
+from app.modules.notificaciones.colaboradores import (
+    notificar_invitacion_colaborador,
+)
+from app.modules.notificaciones.tokens import (
+    generar_token_invitacion,
+    validar_token_invitacion,
+)
+from datetime import datetime, timezone
+from sqlalchemy import func, select
+from sqlalchemy.orm.attributes import flag_modified
+import jwt
 from app.modules.prestadores.schemas import (
+    AuditLogEntry,
+    AuditLogPage,
+    ColaboradorInviteRequest,
+    ColaboradorResponse,
     CategoriaOficioCreate,
     CategoriaOficioResponse,
     CategoriaOficioUpdate,
@@ -397,6 +413,237 @@ async def eliminar_servicio_mi_prestador(
 # ---------------------------------------------------------
 # Fotos de trabajos (dueño)
 # ---------------------------------------------------------
+
+# =========================================================
+# Colaboradores del prestador (JSONB)
+# =========================================================
+@router_propietario.get(
+    "/{prestador_id:uuid}/colaboradores",
+    response_model=list[ColaboradorResponse],
+    summary="Listar colaboradores del prestador",
+)
+async def listar_colaboradores(
+    prestador_id: UUID,
+    prestador: PrestadorOwner,
+):
+    colaboradores = prestador.colaboradores or []
+    return [
+        ColaboradorResponse(
+            email=c.get("email", ""),
+            nombre=c.get("nombre", ""),
+            invitado_por=c.get("invitado_por", ""),
+            invitado_at=datetime.fromisoformat(c["invitado_at"])
+                if c.get("invitado_at") else datetime.now(timezone.utc),
+            activado_at=datetime.fromisoformat(c["activado_at"])
+                if c.get("activado_at") else None,
+            rol=c.get("rol", "colaborador"),
+        )
+        for c in colaboradores
+        if isinstance(c, dict)
+    ]
+
+
+@router_propietario.post(
+    "/{prestador_id:uuid}/colaboradores/invitar",
+    response_model=ColaboradorResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Invitar a un colaborador",
+)
+async def invitar_colaborador(
+    prestador_id: UUID,
+    data: ColaboradorInviteRequest,
+    prestador: PrestadorOwner,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> ColaboradorResponse:
+    email = data.email.lower().strip()
+    if user.email and user.email.lower() == email:
+        raise HTTPException(400, "No podes invitarte a vos mismo")
+    colaboradores = list(prestador.colaboradores or [])
+    if any(
+        isinstance(c, dict) and (c.get("email") or "").lower() == email
+        for c in colaboradores
+    ):
+        raise HTTPException(400, "Este email ya esta invitado")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    nuevo = {
+        "email": email,
+        "nombre": data.nombre.strip(),
+        "invitado_por": user.email or "",
+        "invitado_at": now_iso,
+        "activado_at": None,
+        "rol": "colaborador",
+    }
+    colaboradores.append(nuevo)
+    prestador.colaboradores = colaboradores
+    flag_modified(prestador, "colaboradores")
+    await log_audit(
+        db=db,
+        prestador_id=prestador.id,
+        user=user,
+        accion="colaborador_invitado",
+        entidad="colaborador",
+        entidad_id=email,
+        metadata={"email": email, "nombre": data.nombre},
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    await db.commit()
+    await db.refresh(prestador)
+    token = generar_token_invitacion(str(prestador.id), email)
+    background_tasks.add_task(
+        notificar_invitacion_colaborador,
+        email_invitado=email,
+        nombre_invitado=data.nombre,
+        nombre_prestador=prestador.nombre,
+        nombre_invitador=user.nombre or user.email or "el administrador",
+        token=token,
+    )
+    return ColaboradorResponse(
+        email=email,
+        nombre=data.nombre,
+        invitado_por=user.email or "",
+        invitado_at=datetime.fromisoformat(now_iso),
+        activado_at=None,
+        rol="colaborador",
+    )
+
+
+@router_propietario.post(
+    "/{prestador_id:uuid}/colaboradores/aceptar",
+    summary="Aceptar invitacion como colaborador",
+)
+async def aceptar_invitacion(
+    prestador_id: UUID,
+    data: dict,
+    user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    token = data.get("token", "")
+    if not token:
+        raise HTTPException(400, "Token requerido")
+    try:
+        payload = validar_token_invitacion(token)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(400, "El enlace expiro. Pedile al owner que te reenvie la invitacion")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(400, f"Token invalido: {e}")
+    if payload.get("prestador_id") != str(prestador_id):
+        raise HTTPException(400, "Token no corresponde a este prestador")
+    email_token = (payload.get("email") or "").lower()
+    email_user = (user.email or "").lower()
+    if email_token != email_user:
+        raise HTTPException(403, "El email de tu cuenta no coincide con el de la invitacion")
+    stmt = select(Prestador).where(
+        Prestador.id == prestador_id, Prestador.activo.is_(True)
+    )
+    prestador = (await db.execute(stmt)).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(404, "Prestador no encontrado")
+    colaboradores = list(prestador.colaboradores or [])
+    found = False
+    for c in colaboradores:
+        if isinstance(c, dict) and (c.get("email") or "").lower() == email_token:
+            c["activado_at"] = datetime.now(timezone.utc).isoformat()
+            found = True
+            break
+    if not found:
+        raise HTTPException(404, "Invitacion no encontrada o eliminada")
+    prestador.colaboradores = colaboradores
+    flag_modified(prestador, "colaboradores")
+    await log_audit(
+        db=db,
+        prestador_id=prestador.id,
+        user=user,
+        accion="colaborador_activado",
+        entidad="colaborador",
+        entidad_id=email_user,
+        metadata={"email": email_user},
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    await db.commit()
+    return {"ok": True, "mensaje": "Invitacion aceptada. Ya podes operar."}
+
+
+@router_propietario.delete(
+    "/{prestador_id:uuid}/colaboradores/{email}",
+    summary="Eliminar colaborador",
+)
+async def eliminar_colaborador(
+    prestador_id: UUID,
+    email: str,
+    prestador: PrestadorOwner,
+    user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    email_norm = email.lower().strip()
+    colaboradores = list(prestador.colaboradores or [])
+    original_len = len(colaboradores)
+    colaboradores = [
+        c for c in colaboradores
+        if not (isinstance(c, dict) and (c.get("email") or "").lower() == email_norm)
+    ]
+    if len(colaboradores) == original_len:
+        raise HTTPException(404, "Colaborador no encontrado")
+    prestador.colaboradores = colaboradores
+    flag_modified(prestador, "colaboradores")
+    await log_audit(
+        db=db,
+        prestador_id=prestador.id,
+        user=user,
+        accion="colaborador_eliminado",
+        entidad="colaborador",
+        entidad_id=email_norm,
+        metadata={"email": email_norm},
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    await db.commit()
+    return {"ok": True, "mensaje": f"Colaborador {email_norm} eliminado"}
+
+
+@router_propietario.get(
+    "/{prestador_id:uuid}/audit-log",
+    response_model=AuditLogPage,
+    summary="Audit log paginado",
+)
+async def listar_audit_log(
+    prestador_id: UUID,
+    prestador: PrestadorOwner,
+    db: DbSession,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    accion: str | None = Query(None),
+    entidad: str | None = Query(None),
+) -> AuditLogPage:
+    offset = (page - 1) * page_size
+    filters = [PrestadorAuditLog.prestador_id == prestador.id]
+    if accion:
+        filters.append(PrestadorAuditLog.accion == accion)
+    if entidad:
+        filters.append(PrestadorAuditLog.entidad == entidad)
+    total = await db.scalar(
+        select(func.count(PrestadorAuditLog.id)).where(*filters)
+    ) or 0
+    stmt = (
+        select(PrestadorAuditLog)
+        .where(*filters)
+        .order_by(PrestadorAuditLog.created_at.desc())
+        .limit(page_size)
+        .offset(offset)
+    )
+    entries = list((await db.execute(stmt)).scalars().all())
+    return AuditLogPage(
+        data=[AuditLogEntry.model_validate(e) for e in entries],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 # =========================================================
 # Admin — Categorías
