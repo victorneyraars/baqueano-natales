@@ -1,5 +1,7 @@
 """Plantillas y logica de notificaciones para reservas."""
 
+import os
+
 from datetime import datetime
 from html import escape as _esc
 from app.modules.notificaciones.email import enviar_email
@@ -89,7 +91,10 @@ async def notificar_nueva_reserva_prestador(
         duracion_dias = 1
 
     # ── URLs con tokens ──
-    base_url = "https://api-dev.baqueanonatales.com/api/v1/public/rentacar/reservas"
+    base_url = (
+        os.environ.get("API_BASE_URL", "https://api.baqueanonatales.com")
+        + "/api/v1/public/rentacar/reservas"
+    )
     token_ok = generar_token_accion(reserva_id, "confirmar")
     token_cancel = generar_token_accion(reserva_id, "cancelar")
     url_ok = f"{base_url}/{reserva_id}/accion?token={token_ok}"
