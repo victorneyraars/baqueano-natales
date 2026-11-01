@@ -237,11 +237,24 @@ async def crear_reserva_publica(
             vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo}"
             total = float(getattr(reserva, "precio_total", 0) or 0)
 
+            # Recolectar TODOS los destinatarios: dueño + colaboradores activos
+            destinatarios: set[str] = set()
             if email_prestador:
+                destinatarios.add(email_prestador.strip().lower())
+
+            for colab in (prestador.colaboradores or []):
+                if isinstance(colab, dict):
+                    email_c = (colab.get("email") or "").strip().lower()
+                    activado = colab.get("activado_at")
+                    if email_c and activado:
+                        destinatarios.add(email_c)
+
+            # Enviar a cada destinatario
+            for email_dest in destinatarios:
                 background_tasks.add_task(
                     notificar_nueva_reserva_prestador,
                     reserva_id=str(reserva.id),
-                    email_prestador=email_prestador,
+                    email_prestador=email_dest,
                     nombre_cliente=reserva.nombre_cliente or "Sin nombre",
                     email_cliente=reserva.email_cliente or "",
                     telefono_cliente=reserva.telefono_cliente or "",
