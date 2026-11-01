@@ -117,3 +117,8 @@ deploy/apks/version-client.json
 
 # Brand outputs (regenerables con brand/generate.py)
 brand/outputs/
+
+# Brand kit: iteraciones y backups (no commitear)
+brand/logos.backup.*/
+brand/logos/vasquez-logo-v[0-9]*.svg
+!brand/logos/vasquez-logo-v13.svg
