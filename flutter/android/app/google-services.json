@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1072830106109-83kuf3cejmtmofm7pc82sfdei4fqnjss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales",
+            "certificate_hash": "89a1e99db0e7a8ba26dd88ea7adb88ae715b1704"
+          }
+        },
+        {
           "client_id": "1072830106109-eh5i191lkg7d6185fr45c1difjvsqj66.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -83,6 +91,14 @@
           }
         },
         {
+          "client_id": "1072830106109-mhvlibbjirm3sabbtr593mprvkfj2upu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.admin",
+            "certificate_hash": "89a1e99db0e7a8ba26dd88ea7adb88ae715b1704"
+          }
+        },
+        {
           "client_id": "1072830106109-nv8q2jjt7kateq7cmqesg383entpu2sb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -120,6 +136,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1072830106109-fpv6eprrmoqhpm5lrp0q42ehb81ndj50.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.admin.dev",
+            "certificate_hash": "89a1e99db0e7a8ba26dd88ea7adb88ae715b1704"
+          }
+        },
+        {
           "client_id": "1072830106109-hg8mfr9h8mfp8r7dphbb1jmlec8po8er.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -156,6 +180,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "1072830106109-1jd2u75jrigl8dfhb7rgkqb5m3kp3cqe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.baqueanonatales.dev",
+            "certificate_hash": "89a1e99db0e7a8ba26dd88ea7adb88ae715b1704"
+          }
+        },
         {
           "client_id": "1072830106109-pjgbstl4ppf2vp0likskpl35uq7intno.apps.googleusercontent.com",
           "client_type": 1,

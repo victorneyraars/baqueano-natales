@@ -122,3 +122,7 @@ brand/outputs/
 brand/logos.backup.*/
 brand/logos/vasquez-logo-v[0-9]*.svg
 !brand/logos/vasquez-logo-v13.svg
+
+# Variantes nuevas con sufijo -prod / -dev
+deploy/apks/version-*-prod.json
+deploy/apks/version-*-dev.json
