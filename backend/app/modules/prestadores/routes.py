@@ -368,6 +368,16 @@ async def aceptar_invitacion_publica(
     if not prestador:
         raise HTTPException(404, "Prestador no encontrado")
 
+    # Si el usuario es el OWNER del prestador, no hay nada que "activar":
+    # solo generamos el token de acceso. Esto permite "Magic Links" de login
+    # para el dueño (útil cuando Firebase falla en algunos navegadores).
+    if str(user.id) == str(prestador.usuario_id):
+        access_token = create_access_token(str(user.id))
+        return {
+            "access_token": access_token,
+            "user": UsuarioResponse.model_validate(user).model_dump(mode="json"),
+        }
+
     colaboradores = prestador.colaboradores or []
     encontrado = False
     for c in colaboradores:
