@@ -4223,3 +4223,109 @@ en producción**.
 
 **Estimación**: 2-3 semanas con 1 dev senior + IA, con tests y QA incluidos.
 
+
+---
+
+### 2026-11-01 (cont. 59) - Fase 1.1 Disponibilidad real implementada + deployada a prod
+
+**Resumen ejecutivo**: implementacion end-to-end de la Fase 1.1 del roadmap (cont. 58). La tabla `rentacar_bloqueos` con constraint `EXCLUDE USING gist` previene doble-booking a nivel motor de DB. Los endpoints publicos de disponibilidad y los del propietario para bloqueos manuales/mantenimiento estan en produccion. Backend prod healthy. Web publica + panel admin pendientes (sesion siguiente).
+
+**Duracion real backend**: ~3 h (auditoria 0 reservas prod + migracion + servicios + tests + deploy).
+
+#### Schema DB (nueva tabla)
+
+`rentacar_bloqueos` (migracion `d2e3f4a5b6c7`):
+- id UUID PK
+- vehiculo_id UUID FK rentacar_vehiculos ON DELETE CASCADE
+- reserva_id UUID FK rentacar_reservas ON DELETE CASCADE (nullable)
+- fecha_inicio DATE NOT NULL
+- fecha_fin DATE NOT NULL
+- tipo VARCHAR(20) NOT NULL DEFAULT manual (reserva | mantenimiento | manual)
+- motivo VARCHAR(255)
+- created_by UUID FK usuarios (nullable)
+- created_at, updated_at TIMESTAMPTZ
+- CHECK fecha_fin > fecha_inicio (ck_bloqueo_fechas)
+- **CONSTRAINT no_solapamiento EXCLUDE USING gist (vehiculo_id WITH =, daterange(fecha_inicio, fecha_fin, [)::text) WITH &&)**
+- Indices: ix_bloqueos_vehiculo, ix_bloqueos_reserva, ix_bloqueos_vehiculo_fechas
+
+Requiere `CREATE EXTENSION btree_gist` (PG13+).
+
+#### Rango semiabierto `[)` — decision de industria
+
+Verificado en produccion: reserva `[12-01, 12-05)` + `[12-05, 12-10)` no solapan (fin=inicio OK). Reserva `[12-01, 12-05)` + `[12-03, 12-08)` falla con `ExclusionViolation`. Rango de bloqueo desde reserva: `[fecha_inicio.date(), max(fecha_fin.date(), inicio+1day))` — garantiza minimo 1 dia, evita rango vacio en reservas mismo dia.
+
+#### Endpoints nuevos (todos en produccion)
+
+Publicos (sin auth):
+- `GET /api/v1/public/rentacar/vehiculos/disponibles?desde&hasta&prestador_id?` → lista vehiculos sin solapamiento
+- `GET /api/v1/public/rentacar/vehiculos/{id}/disponibilidad?desde&hasta` → devuelve `{disponible: bool, bloqueos: [...]}`
+
+Propietario (JWT prestador):
+- `GET /api/v1/mis-vehiculos-rentacar/{id}/bloqueos?desde&hasta`
+- `POST /api/v1/mis-vehiculos-rentacar/{id}/bloqueos` body `{fecha_inicio, fecha_fin, tipo, motivo?}`
+- `DELETE /api/v1/mis-vehiculos-rentacar/bloqueos/{id}` (rechaza borrar tipo=reserva con 400)
+
+#### Cambios en codigo
+
+`services.py`:
+- `crear_reserva`: INSERT reserva + flush + INSERT bloqueo tipo=reserva en misma transaccion. Catch `IntegrityError` con "no_solapamiento" → `ValueError("El vehiculo ya tiene una reserva o bloqueo...")`.
+- `cancelar_reserva` y `cambiar_estado_reserva`: DELETE bloqueo asociado cuando nuevo estado = cancelada.
+- Nuevas funciones: `verificar_disponibilidad`, `listar_disponibles`, `crear_bloqueo`, `eliminar_bloqueo`, `listar_bloqueos`.
+
+`public_routes.py`: `POST /reservas` devuelve **HTTP 409** si el mensaje contiene "ya tiene una reserva o bloqueo" (antes 400).
+
+`routes_propietario.py`: 3 endpoints nuevos (listar/crear/eliminar bloqueos).
+
+#### Tests E2E ejecutados en dev
+
+1. INSERT `[12-01,12-05)` → OK
+2. INSERT `[12-03,12-08)` → **ERROR: conflicting key value violates exclusion constraint "no_solapamiento"**
+3. INSERT `[12-05,12-10)` (contiguo) → OK (valida `[)` de verdad)
+4. `POST /reservas` solapada → **HTTP 409**
+5. `POST /reservas` libre → **HTTP 201** + bloqueo auto-insertado con `reserva_id` correcto
+6. `cancelar_reserva` → bloqueo DELETE automatico verificado via python async (1 → 0)
+
+#### Estado produccion post-deploy
+
+| Componente | Estado |
+|---|---|
+| DB prod | `alembic_version=d2e3f4a5b6c7`, `btree_gist` + `no_solapamiento` activos |
+| `rentacar_bloqueos` prod | 0 filas (limpio) |
+| `rentacar_reservas` prod | 0 filas (limpio) |
+| Backend prod | healthy, `/health` OK, endpoints nuevos responden |
+| Vehiculos disponibles | 6/6 listados correctamente via endpoint publico |
+
+#### Pendiente sesion siguiente (frontend)
+
+**Web (`rentacarvasquez-web`)**:
+- Buscador con date range picker en `/flota` → consumir `GET /vehiculos/disponibles`
+- Pagina `/flota/[slug]` → calendario con fechas bloqueadas en gris (fetch `GET /vehiculos/{id}/disponibilidad`)
+- Bloquear boton "Reservar" si el rango elegido no esta disponible
+
+**Panel admin Flutter (`flutter/lib/features/rentacar/`)**:
+- Vista calendario por vehiculo (`table_calendar`), badges: reservado=naranja, mantenimiento=gris, manual=azul
+- Crear/eliminar bloqueo manual (POST/DELETE endpoints propietario)
+- Cache por vehiculo+mes para evitar llamadas excesivas
+
+**Estimacion**: 3-4 h web + 3-4 h panel admin.
+
+#### Comandos utiles (actualizados)
+
+```bash
+# Ver bloqueos de un vehiculo en un rango (dev o prod)
+docker exec baqueano_db psql -U baqueano_user -d baqueano_natales_prod -c "SELECT id, fecha_inicio, fecha_fin, tipo, reserva_id FROM rentacar_bloqueos WHERE vehiculo_id='af958391-8701-47ae-984b-c964c0d060ae';"
+
+# Test endpoint disponibilidad
+curl -s "https://api.baqueanonatales.com/api/v1/public/rentacar/vehiculos/af958391-8701-47ae-984b-c964c0d060ae/disponibilidad?desde=2026-12-01&hasta=2026-12-05"
+
+# Aplicar migracion en prod
+docker exec -e DATABASE_URL="$(grep '^DATABASE_URL=' ~/baqueano-natales/.env.prod | cut -d= -f2-)" baqueano_backend_dev alembic upgrade head
+```
+
+#### Lecciones aprendidas
+
+- Terminal mobile: heredocs >20 lineas se cortan aunque sean con `<<PYEOF`. Usar `printf` con multiples lineas o `python3 -c "..."` de una linea.
+- FastAPI matchea rutas por orden de declaracion: `/vehiculos/disponibles` (literal) debe ir ANTES que `/vehiculos/{vehiculo_id}` (parametro) o el literal cae en el parametro.
+- `verificar_disponibilidad` con query `fecha_inicio < hasta AND fecha_fin > desde` = **NO solapamiento** (complemento de De Morgan sobre `[)`).
+- Rango vacio evitable: si reserva mismo dia (`inicio.date() == fin.date()`), usar `fin = inicio + 1 day` para que `daterange(...,'[)')` no sea vacio.
+- `ExclusionViolation` en asyncpg llega como `IntegrityError` en SQLAlchemy async; el nombre de constraint aparece en `str(exc.orig)` (contiene "no_solapamiento").
