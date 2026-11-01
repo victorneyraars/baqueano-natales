@@ -882,11 +882,16 @@ class PrestadorRepository {
     required String prestadorId,
     required String email,
     required String nombre,
+    String? whatsapp,
   }) async {
     try {
       final res = await _dio.post(
         '/api/v1/mis-prestadores/$prestadorId/colaboradores/invitar',
-        data: {'email': email, 'nombre': nombre},
+        data: {
+          'email': email,
+          'nombre': nombre,
+          if (whatsapp != null && whatsapp.isNotEmpty) 'whatsapp': whatsapp,
+        },
       );
       return Colaborador.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {

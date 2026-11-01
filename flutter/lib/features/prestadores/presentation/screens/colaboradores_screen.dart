@@ -126,6 +126,19 @@ class ColaboradoresScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(c.email, style: TextStyle(color: Colors.grey.shade600)),
+            if (c.whatsapp != null && c.whatsapp!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(Icons.phone, size: 12, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Text(
+                    c.whatsapp!,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 4),
             Chip(
               label: Text(activo ? 'Activo' : 'Pendiente'),
@@ -153,6 +166,7 @@ class ColaboradoresScreen extends ConsumerWidget {
   Future<void> _abrirInvitar(BuildContext context, WidgetRef ref) async {
     final emailCtrl = TextEditingController();
     final nombreCtrl = TextEditingController();
+    final whatsappCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     final ok = await showDialog<bool>(
@@ -191,6 +205,17 @@ class ColaboradoresScreen extends ConsumerWidget {
                   return null;
                 },
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: whatsappCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'WhatsApp (opcional)',
+                  hintText: '+56912345678',
+                  helperText: 'Para notificaciones de reservas por WhatsApp',
+                  border: OutlineInputBorder(),
+                ),
+              ),
             ],
           ),
         ),
@@ -212,10 +237,12 @@ class ColaboradoresScreen extends ConsumerWidget {
     if (ok == true && context.mounted) {
       try {
         final repo = ref.read(prestadorRepositoryProvider);
+        final whatsappText = whatsappCtrl.text.trim();
         await repo.invitarColaborador(
           prestadorId: prestadorId,
           email: emailCtrl.text.trim().toLowerCase(),
           nombre: nombreCtrl.text.trim(),
+          whatsapp: whatsappText.isEmpty ? null : whatsappText,
         );
         ref.invalidate(colaboradoresProvider(prestadorId));
         if (context.mounted) {

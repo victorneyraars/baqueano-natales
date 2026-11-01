@@ -8,6 +8,7 @@ library;
 class Colaborador {
   final String email;
   final String nombre;
+  final String? whatsapp;
   final String invitadoPor;
   final DateTime invitadoAt;
   final DateTime? activadoAt;
@@ -16,6 +17,7 @@ class Colaborador {
   const Colaborador({
     required this.email,
     required this.nombre,
+    this.whatsapp,
     required this.invitadoPor,
     required this.invitadoAt,
     this.activadoAt,
@@ -29,6 +31,7 @@ class Colaborador {
     return Colaborador(
       email: json['email'] as String? ?? '',
       nombre: json['nombre'] as String? ?? '',
+      whatsapp: json['whatsapp'] as String?,
       invitadoPor: json['invitado_por'] as String? ?? '',
       invitadoAt: DateTime.parse(json['invitado_at'] as String),
       activadoAt: json['activado_at'] != null
