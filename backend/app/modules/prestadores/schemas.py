@@ -405,6 +405,7 @@ class PrestadorPrivadoResponse(BaseModel):
     activo: bool
     created_at: datetime
     updated_at: datetime
+    es_owner: bool = False
     servicios: list[PrestadorServicioResponse] = []
     fotos_trabajos: list = []
     razon_social: str | None = None

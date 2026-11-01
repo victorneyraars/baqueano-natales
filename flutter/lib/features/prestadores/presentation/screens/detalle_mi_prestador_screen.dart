@@ -15,7 +15,6 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
-import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 
 class DetalleMiPrestadorScreen extends ConsumerWidget {
   const DetalleMiPrestadorScreen({super.key, required this.id});
@@ -25,8 +24,6 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncPrestador = ref.watch(miPrestadorDetalleProvider(id));
-    final authState = ref.watch(authNotifierProvider);
-    final currentUserId = authState.user?.id;
 
     return Scaffold(
       appBar: AppBar(
@@ -56,8 +53,7 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
       ),
       body: asyncPrestador.when(
         data: (prestador) {
-          final esOwner =
-              currentUserId != null && currentUserId == prestador.usuarioId;
+          final esOwner = prestador.esOwner;
           return _Contenido(prestador: prestador, ref: ref, esOwner: esOwner);
         },
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -86,6 +86,7 @@ class Prestador {
     this.fotoPortadaUrl,
     // Estado (solo en privado/admin)
     this.usuarioId,
+    this.esOwner = false,
     this.estado,
     this.motivoRechazo,
     this.destacado = false,
@@ -144,6 +145,7 @@ class Prestador {
   final String? fotoPortadaUrl;
 
   final String? usuarioId;
+  final bool esOwner;
   final EstadoPrestador? estado;
   final String? motivoRechazo;
   final bool destacado;
@@ -284,6 +286,7 @@ class Prestador {
         fotoUrl: _strOrNull(json, 'foto_url'),
         fotoPortadaUrl: _strOrNull(json, 'foto_portada_url'),
         usuarioId: _strOrNull(json, 'usuario_id'),
+        esOwner: (json['es_owner'] as bool?) ?? false,
         estado: json['estado'] != null
             ? EstadoPrestador.fromString(json['estado'].toString())
             : null,
@@ -482,6 +485,7 @@ class Prestador {
       'foto_url': fotoUrl,
       'foto_portada_url': fotoPortadaUrl,
       'usuario_id': usuarioId,
+      'es_owner': esOwner,
       'estado': estado?.name,
       'motivo_rechazo': motivoRechazo,
       'destacado': destacado,

@@ -254,8 +254,11 @@ async def listar_mis_prestadores(
 )
 async def obtener_mi_prestador(
     prestador: PrestadorPropietario,
+    user: CurrentUser,
 ) -> PrestadorPrivadoResponse:
-    return PrestadorPrivadoResponse.model_validate(prestador)
+    resp = PrestadorPrivadoResponse.model_validate(prestador)
+    resp.es_owner = str(user.id) == str(prestador.usuario_id)
+    return resp
 
 
 @router_propietario.patch(
