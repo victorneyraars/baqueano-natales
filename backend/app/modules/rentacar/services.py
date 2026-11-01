@@ -1,12 +1,13 @@
 """Lógica de negocio para Rent a Car Vásquez."""
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import RentacarConfig, RentacarReserva, RentacarVehiculo
+from .models import RentacarBloqueo, RentacarConfig, RentacarReserva, RentacarVehiculo
 from .schemas import RentacarReservaCreate, RentacarVehiculoCreate
 
 
@@ -91,7 +92,13 @@ async def listar_reservas(
 async def crear_reserva(
     db: AsyncSession, data: RentacarReservaCreate
 ) -> RentacarReserva:
-    """Crea una reserva pública. Valida disponibilidad y fechas."""
+    """Crea una reserva publica en una sola transaccion.
+
+    1. INSERT reserva (con OTP).
+    2. INSERT bloqueo tipo=reserva con daterange [inicio, fin).
+    La constraint EXCLUDE USING gist en rentacar_bloqueos impide
+    doble-booking a nivel motor. Si falla, todo revierte -> 409.
+    """
     vehiculo = await get_vehiculo(db, data.vehiculo_id)
     if vehiculo is None:
         raise ValueError("Vehiculo no encontrado")
@@ -101,7 +108,6 @@ async def crear_reserva(
     if data.fecha_fin <= data.fecha_inicio:
         raise ValueError("Fecha de fin debe ser posterior a fecha de inicio")
 
-    # Generar OTP de 6 digitos (expira en 15 min)
     otp = f"{secrets.randbelow(1000000):06d}"
     reserva = RentacarReserva(
         **data.model_dump(),
@@ -111,7 +117,30 @@ async def crear_reserva(
         email_verificado=False,
     )
     db.add(reserva)
-    await db.commit()
+    await db.flush()  # obtener reserva.id sin commit
+
+    # Rango del bloqueo: al menos 1 dia, fin inclusivo -> [inicio, max(fin, inicio+1))
+    fin_date = data.fecha_fin.date()
+    ini_date = data.fecha_inicio.date()
+    if fin_date <= ini_date:
+        fin_date = ini_date + timedelta(days=1)
+    bloqueo = RentacarBloqueo(
+        vehiculo_id=vehiculo.id,
+        reserva_id=reserva.id,
+        fecha_inicio=ini_date,
+        fecha_fin=fin_date,
+        tipo="reserva",
+    )
+    db.add(bloqueo)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "no_solapamiento" in str(getattr(exc, "orig", exc)):
+            raise ValueError(
+                "El vehiculo ya tiene una reserva o bloqueo en ese rango de fechas"
+            )
+        raise
     await db.refresh(reserva)
     return reserva
 
@@ -383,7 +412,10 @@ async def _obtener_mi_reserva(
 async def cambiar_estado_reserva(
     db: AsyncSession, usuario: Usuario, reserva_id: UUID, nuevo_estado: str
 ) -> RentacarReserva:
-    """Cambia el estado de una reserva validando transiciones."""
+    """Cambia el estado de una reserva validando transiciones.
+
+    Si el nuevo estado es 'cancelada', libera el bloqueo asociado.
+    """
     if nuevo_estado not in ESTADOS_VALIDOS:
         raise ValueError(f"Estado invalido: {nuevo_estado}")
 
@@ -397,6 +429,10 @@ async def cambiar_estado_reserva(
         )
 
     reserva.estado = nuevo_estado
+    if nuevo_estado == "cancelada":
+        await db.execute(
+            delete(RentacarBloqueo).where(RentacarBloqueo.reserva_id == reserva_id)
+        )
     await db.commit()
     await db.refresh(reserva)
     return reserva
@@ -539,8 +575,8 @@ async def confirmar_reserva(
 async def cancelar_reserva(
     db: AsyncSession, reserva_id: UUID
 ) -> RentacarReserva:
-    """Cambia estado 'pendiente' -> 'cancelada'."""
-    from sqlalchemy import select
+    """Cambia estado 'pendiente' -> 'cancelada' y libera el bloqueo."""
+    from sqlalchemy import select, delete
     stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
     reserva = (await db.execute(stmt)).scalar_one_or_none()
     if reserva is None:
@@ -548,6 +584,120 @@ async def cancelar_reserva(
     if reserva.estado != "pendiente":
         raise ValueError(f"Reserva en estado '{reserva.estado}', no se puede cancelar")
     reserva.estado = "cancelada"
+    # Liberar bloqueo asociado
+    await db.execute(
+        delete(RentacarBloqueo).where(RentacarBloqueo.reserva_id == reserva_id)
+    )
     await db.commit()
     await db.refresh(reserva)
     return reserva
+
+
+# =========================================================
+# Disponibilidad y bloqueos
+# =========================================================
+async def verificar_disponibilidad(
+    db: AsyncSession, vehiculo_id: UUID, desde: date, hasta: date
+) -> bool:
+    """True si el vehiculo NO tiene ningun bloqueo que solape [desde, hasta)."""
+    if hasta <= desde:
+        raise ValueError("Fecha hasta debe ser posterior a desde")
+    stmt = (
+        select(RentacarBloqueo.id)
+        .where(
+            RentacarBloqueo.vehiculo_id == vehiculo_id,
+            RentacarBloqueo.fecha_inicio < hasta,
+            RentacarBloqueo.fecha_fin > desde,
+        )
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none() is None
+
+
+async def listar_disponibles(
+    db: AsyncSession, desde: date, hasta: date, prestador_id: UUID | None = None
+) -> list[RentacarVehiculo]:
+    """Vehiculos disponibles en [desde, hasta). Excluye los que tienen solapamiento."""
+    if hasta <= desde:
+        raise ValueError("Fecha hasta debe ser posterior a desde")
+    stmt = (
+        select(RentacarVehiculo)
+        .where(RentacarVehiculo.disponible.is_(True))
+        .where(
+            ~RentacarVehiculo.id.in_(
+                select(RentacarBloqueo.vehiculo_id).where(
+                    RentacarBloqueo.fecha_inicio < hasta,
+                    RentacarBloqueo.fecha_fin > desde,
+                )
+            )
+        )
+        .order_by(RentacarVehiculo.created_at.desc())
+    )
+    if prestador_id is not None:
+        stmt = stmt.where(RentacarVehiculo.prestador_id == prestador_id)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def crear_bloqueo(
+    db: AsyncSession,
+    vehiculo_id: UUID,
+    fecha_inicio: date,
+    fecha_fin: date,
+    tipo: str = "manual",
+    motivo: str | None = None,
+    created_by: UUID | None = None,
+    reserva_id: UUID | None = None,
+) -> RentacarBloqueo:
+    """Crea un bloqueo (mantenimiento o manual). Falla con ValueError si solapa."""
+    if tipo not in ("manual", "mantenimiento", "reserva"):
+        raise ValueError(f"Tipo invalido: {tipo}")
+    if fecha_fin <= fecha_inicio:
+        raise ValueError("fecha_fin debe ser posterior a fecha_inicio")
+    bloqueo = RentacarBloqueo(
+        vehiculo_id=vehiculo_id,
+        reserva_id=reserva_id,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        tipo=tipo,
+        motivo=motivo,
+        created_by=created_by,
+    )
+    db.add(bloqueo)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "no_solapamiento" in str(getattr(exc, "orig", exc)):
+            raise ValueError(
+                "El vehiculo ya tiene una reserva o bloqueo en ese rango de fechas"
+            )
+        raise
+    await db.refresh(bloqueo)
+    return bloqueo
+
+
+async def eliminar_bloqueo(db: AsyncSession, bloqueo_id: UUID) -> None:
+    """Elimina un bloqueo. No permite borrar bloqueos tipo=reserva."""
+    bloqueo = await db.get(RentacarBloqueo, bloqueo_id)
+    if bloqueo is None:
+        raise ValueError("Bloqueo no encontrado")
+    if bloqueo.tipo == "reserva":
+        raise ValueError("No se puede borrar un bloqueo de reserva (cancelar la reserva)")
+    await db.delete(bloqueo)
+    await db.commit()
+
+
+async def listar_bloqueos(
+    db: AsyncSession, vehiculo_id: UUID, desde: date, hasta: date
+) -> list[RentacarBloqueo]:
+    """Lista bloqueos del vehiculo en el rango (para calendario admin)."""
+    stmt = (
+        select(RentacarBloqueo)
+        .where(
+            RentacarBloqueo.vehiculo_id == vehiculo_id,
+            RentacarBloqueo.fecha_inicio < hasta,
+            RentacarBloqueo.fecha_fin > desde,
+        )
+        .order_by(RentacarBloqueo.fecha_inicio)
+    )
+    return list((await db.execute(stmt)).scalars().all())

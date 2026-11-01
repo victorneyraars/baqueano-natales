@@ -74,6 +74,33 @@ async def listar_vehiculos_publico(
     return vehiculos
 
 
+# =========================================================
+# Disponibilidad publica
+# =========================================================
+from datetime import date as _date
+from .schemas import (
+    RentacarBloqueoOut as _BloqueoOut,
+    RentacarDisponibilidadOut as _DispoOut,
+)
+
+
+@router_publico.get(
+    "/vehiculos/disponibles",
+    response_model=list[RentacarVehiculoOut],
+    summary="Vehiculos disponibles en un rango de fechas",
+)
+async def listar_vehiculos_disponibles(
+    desde: _date,
+    hasta: _date,
+    db: DbSession,
+    prestador_id: UUID | None = None,
+):
+    try:
+        return await services.listar_disponibles(db, desde, hasta, prestador_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router_publico.get(
     "/vehiculos/{vehiculo_id}",
     response_model=RentacarVehiculoOut,
@@ -221,7 +248,9 @@ async def crear_reserva_publica(
     try:
         reserva = await services.crear_reserva(db, data)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        msg = str(e)
+        code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
+        raise HTTPException(status_code=code, detail=msg)
 
     # Notificaciones (background = no bloquea la respuesta al cliente)
     try:
@@ -370,3 +399,35 @@ async def reenviar_otp_reserva(
         )
 
     return {"ok": True, "mensaje": "Nuevo codigo enviado a tu email"}
+
+
+
+
+@router_publico.get(
+    "/vehiculos/{vehiculo_id:uuid}/disponibilidad",
+    response_model=_DispoOut,
+    summary="Disponibilidad de un vehiculo en un rango",
+)
+async def disponibilidad_vehiculo(
+    vehiculo_id: UUID,
+    desde: _date,
+    hasta: _date,
+    db: DbSession,
+):
+    vehiculo = await services.get_vehiculo(db, vehiculo_id)
+    if vehiculo is None:
+        raise HTTPException(status_code=404, detail="Vehiculo no encontrado")
+    try:
+        disponible = await services.verificar_disponibilidad(
+            db, vehiculo_id, desde, hasta
+        )
+        bloqueos = await services.listar_bloqueos(db, vehiculo_id, desde, hasta)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _DispoOut(
+        vehiculo_id=vehiculo_id,
+        desde=desde,
+        hasta=hasta,
+        disponible=disponible,
+        bloqueos=[_BloqueoOut.model_validate(b) for b in bloqueos],
+    )

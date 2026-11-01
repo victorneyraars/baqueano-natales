@@ -350,3 +350,91 @@ async def actualizar_mi_config(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================
+# Bloqueos de disponibilidad (propietario)
+# =========================================================
+from datetime import date as _date
+from .schemas import (
+    RentacarBloqueoCreate as _BloqCreate,
+    RentacarBloqueoOut as _BloqOut,
+)
+
+
+@router_propietario.get(
+    "/{vehiculo_id:uuid}/bloqueos",
+    response_model=list[_BloqOut],
+    summary="Listar bloqueos de un vehiculo en un rango",
+)
+async def listar_mis_bloqueos(
+    vehiculo_id: UUID,
+    desde: _date,
+    hasta: _date,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        await services._obtener_mi_vehiculo(db, user, vehiculo_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    try:
+        return await services.listar_bloqueos(db, vehiculo_id, desde, hasta)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router_propietario.post(
+    "/{vehiculo_id:uuid}/bloqueos",
+    response_model=_BloqOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear bloqueo manual o de mantenimiento",
+)
+async def crear_mi_bloqueo(
+    vehiculo_id: UUID,
+    data: _BloqCreate,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        await services._obtener_mi_vehiculo(db, user, vehiculo_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    try:
+        return await services.crear_bloqueo(
+            db,
+            vehiculo_id=vehiculo_id,
+            fecha_inicio=data.fecha_inicio,
+            fecha_fin=data.fecha_fin,
+            tipo=data.tipo,
+            motivo=data.motivo,
+            created_by=user.id,
+        )
+    except ValueError as e:
+        msg = str(e)
+        code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
+        raise HTTPException(status_code=code, detail=msg)
+
+
+@router_propietario.delete(
+    "/bloqueos/{bloqueo_id:uuid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar un bloqueo manual/mantenimiento (no reservas)",
+)
+async def eliminar_mi_bloqueo(
+    bloqueo_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+):
+    from .models import RentacarBloqueo as _B
+    bloqueo = await db.get(_B, bloqueo_id)
+    if bloqueo is None:
+        raise HTTPException(status_code=404, detail="Bloqueo no encontrado")
+    try:
+        await services._obtener_mi_vehiculo(db, user, bloqueo.vehiculo_id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    try:
+        await services.eliminar_bloqueo(db, bloqueo_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

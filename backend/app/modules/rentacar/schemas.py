@@ -1,5 +1,5 @@
 """Esquemas Pydantic para Rent a Car Vásquez."""
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -169,3 +169,36 @@ class RentacarStatsOut(BaseModel):
     reservas_canceladas: int
     ingresos_totales: float
     ingresos_mes_actual: float
+
+
+# =========================================================
+# Disponibilidad y bloqueos
+# =========================================================
+class RentacarBloqueoCreate(BaseModel):
+    """Crear bloqueo manual o de mantenimiento (propietario)."""
+    fecha_inicio: date
+    fecha_fin: date
+    tipo: str = "manual"
+    motivo: str | None = None
+
+
+class RentacarBloqueoOut(BaseModel):
+    id: UUID
+    vehiculo_id: UUID
+    reserva_id: UUID | None
+    fecha_inicio: date
+    fecha_fin: date
+    tipo: str
+    motivo: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RentacarDisponibilidadOut(BaseModel):
+    vehiculo_id: UUID
+    desde: date
+    hasta: date
+    disponible: bool
+    bloqueos: list[RentacarBloqueoOut] = []

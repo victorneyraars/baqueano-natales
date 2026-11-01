@@ -8,11 +8,12 @@
 Nota: NO confundir con oficios.Vehiculo (que es el vehículo de trabajo del
 prestador de oficios). Aquí el vehículo es el PRODUCTO que se alquila.
 """
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -89,4 +90,39 @@ class RentacarReserva(TimestampMixin, Base):
     )
     otp_intentos: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
+    )
+
+
+class RentacarBloqueo(TimestampMixin, Base):
+    """Bloqueo de disponibilidad de un vehiculo.
+
+    Tipos:
+    - reserva: vinculado a una reserva (reserva_id NOT NULL)
+    - mantenimiento: bloqueo de taller (reserva_id NULL)
+    - manual: bloqueo del dueno (reserva_id NULL)
+
+    La constraint EXCLUDE USING gist se crea en la migracion alembic.
+    """
+    __tablename__ = "rentacar_bloqueos"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    vehiculo_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("rentacar_vehiculos.id", ondelete="CASCADE"),
+        index=True,
+    )
+    reserva_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("rentacar_reservas.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_fin: Mapped[date] = mapped_column(Date, nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
+    motivo: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
