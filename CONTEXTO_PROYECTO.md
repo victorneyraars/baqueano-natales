@@ -3915,3 +3915,62 @@ en producción**.
 - Deploy Vercel + DNS cutover (`sealquilamarido.com` → Vercel).
 - SEO local (JSON-LD `LocalBusiness` + cross-link con Baqueano).
 
+---
+
+### 2026-11-01 (cont. 56) - Lanzamiento Rent a Car Vásquez a producción + Runbook APK prod
+
+**Contexto**: Deploy completo a prod de Fase 6/7. Purge de data de prueba, migraciones, Vásquez como único prestador con 6 vehículos, fix `API_BASE_URL` para emails, app Android APK prod publicada. Bug crítico diagnosticado y resuelto: SHA-1 del keystore release faltaba en Firebase.
+
+#### Bug del login Google (diagnóstico y runbook)
+
+**Síntomas**:
+- Google Sign-In en la app prod falla **silenciosamente** (vuelve a pantalla de login, sin error visible).
+- **Cero requests** a `/api/v1/auth/google` en `nginx` y `backend logs`.
+- La app arranca OK, Google Auth en el celular "completa" pero no llega al backend.
+
+**Causa raíz**: el **SHA-1 del keystore release** (`baqueano-release.jks` en GitHub Secrets) **NO estaba registrado en Firebase Console**. Los 3 SHA-1 que había eran de otros keystores (debug y builds viejos). Google Sign-In rechaza con `ApiException: 10` (DEVELOPER_ERROR) sin loguear nada.
+
+**Diagnóstico rápido**:
+
+1. Extraer SHA-1 del APK: `apksigner verify --print-certs app-client.apk | grep SHA-1`
+2. Verificar que el service account puede hablar con Firebase (token OK).
+3. Verificar nginx: `docker logs baqueano_nginx --since 5m | grep -E "auth/google|Dart"`. Si no aparece nada durante el intento → confirma que falla antes del backend.
+
+**Fix resumido**:
+1. Registrar SHA-1 del APK en Firebase vía Management API (POST a `/androidApps/{APP_ID}/sha` con `{"shaHash":"<SHA1>","certType":"SHA_1"}`). Repetir para clientProd y adminProd.
+2. Descargar `google-services.json` regenerado vía `GET /androidApps/{APP_ID}/config` (base64 en `configFileContents`).
+3. Reemplazar `flutter/android/app/google-services.json`, commit, merge, `gh workflow run prod-build.yml`.
+4. Post-build: regenerar `app-client.apk.sha256` + actualizar `version-client-prod.json`.
+5. Reinstalar APK en el celular.
+
+**Verificación**:
+
+`docker logs baqueano_nginx --since 10m | grep "auth/google"` → debe aparecer `POST /api/v1/auth/google 200` con User-Agent Dart.
+
+#### Fix `build_number` (aplicado)
+
+**Problema**: `prod-build.yml` usaba `github.run_number` (arranca en 1). El canal dev ya iba por 190+.
+
+**Fix**: offset `+1000` en las 4 ocurrencias de `prod-build.yml`.
+- Run prod #1 → build_number 1001
+- Run prod #2 → build_number 1002
+
+#### Estado final de producción (2026-11-01)
+
+| Componente | Estado |
+|---|---|
+| Backend | Healthy, `API_BASE_URL` prod |
+| DB | Migraciones `c1d2e3f4a5b6`, purge completo |
+| Web | Funcional |
+| App APK | Login Google funcional (SHA-1 registrado) |
+| Data | Víctor admin + Vásquez + 6 vehículos + config + posts + auditoría |
+
+#### TODOs post-lanzamiento
+
+- **Alta**: Rotar `R2_SECRET_ACCESS_KEY` / `R2_ACCESS_KEY_ID`
+- **Media**: Migración formal `publicaciones_sociales.prioridad`
+- **Media**: Verificar Cloudflare `NEXT_PUBLIC_API_URL`
+- **Baja**: Limpiar `fotos_trabajo` legacy
+- **Baja**: Limpiar `.bak_20261019_*`
+- **Baja**: `api-dev` en `ops_release_screen.dart`
+- **Baja**: Renombrar steps en `prod-build.yml`
