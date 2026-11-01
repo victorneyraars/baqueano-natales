@@ -15,6 +15,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
 
 class DetalleMiPrestadorScreen extends ConsumerWidget {
   const DetalleMiPrestadorScreen({super.key, required this.id});
@@ -24,6 +25,8 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncPrestador = ref.watch(miPrestadorDetalleProvider(id));
+    final authState = ref.watch(authNotifierProvider);
+    final currentUserId = authState.user?.id;
 
     return Scaffold(
       appBar: AppBar(
@@ -52,7 +55,11 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
         ],
       ),
       body: asyncPrestador.when(
-        data: (prestador) => _Contenido(prestador: prestador, ref: ref),
+        data: (prestador) {
+          final esOwner =
+              currentUserId != null && currentUserId == prestador.usuarioId;
+          return _Contenido(prestador: prestador, ref: ref, esOwner: esOwner);
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorState(
           error: e.toString(),
@@ -64,9 +71,14 @@ class DetalleMiPrestadorScreen extends ConsumerWidget {
 }
 
 class _Contenido extends StatelessWidget {
-  const _Contenido({required this.prestador, required this.ref});
+  const _Contenido({
+    required this.prestador,
+    required this.ref,
+    required this.esOwner,
+  });
 
   final Prestador prestador;
+  final bool esOwner;
   final WidgetRef ref;
 
   @override
@@ -220,6 +232,23 @@ class _Contenido extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
+
+        if (esOwner) ...[
+          OutlinedButton.icon(
+            icon: const Icon(Icons.people_outline),
+            label: const Text('Colaboradores'),
+            onPressed: () =>
+                context.push('/mis-prestadores/${prestador.id}/colaboradores'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.history),
+            label: const Text('Auditoría'),
+            onPressed: () =>
+                context.push('/mis-prestadores/${prestador.id}/auditoria'),
+          ),
+          const SizedBox(height: 8),
+        ],
 
         OutlinedButton.icon(
           icon: const Icon(Icons.tune_outlined),

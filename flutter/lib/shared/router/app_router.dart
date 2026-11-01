@@ -73,6 +73,8 @@ import 'package:baqueano_natales/features/prestadores/presentation/screens/confi
 import 'package:baqueano_natales/features/prestadores/presentation/screens/lista_prestadores_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/mis_prestadores_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/correos_contacto_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/colaboradores_screen.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/auditoria_screen.dart';
 import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/mi_flota_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/vehiculo_detalle_screen.dart';
@@ -598,6 +600,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return CorreosContactoScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/colaboradores',
+        name: 'mi-prestador-colaboradores',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ColaboradoresScreen(prestadorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/mis-prestadores/:id/auditoria',
+        name: 'mi-prestador-auditoria',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AuditoriaScreen(prestadorId: id);
         },
       ),
       GoRoute(

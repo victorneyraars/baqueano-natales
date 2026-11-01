@@ -11,6 +11,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:baqueano_natales/features/prestadores/domain/colaborador.dart';
+import 'package:baqueano_natales/features/prestadores/domain/audit_log_entry.dart';
 
 import 'package:baqueano_natales/features/comercios/data/comercio_repository.dart'
     show Paginated;
@@ -281,3 +283,61 @@ final canalesContactoProvider =
       final repo = ref.watch(prestadorRepositoryProvider);
       return await repo.obtenerCanales(prestadorId);
     });
+
+// =========================================================
+// Colaboradores + audit log del prestador
+// =========================================================
+
+/// Parámetros para el provider del audit log (paginado + filtros).
+class AuditLogParams {
+  final String prestadorId;
+  final int page;
+  final int pageSize;
+  final String? accion;
+  final String? entidad;
+
+  const AuditLogParams({
+    required this.prestadorId,
+    this.page = 1,
+    this.pageSize = 50,
+    this.accion,
+    this.entidad,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AuditLogParams &&
+          prestadorId == other.prestadorId &&
+          page == other.page &&
+          pageSize == other.pageSize &&
+          accion == other.accion &&
+          entidad == other.entidad;
+
+  @override
+  int get hashCode => Object.hash(prestadorId, page, pageSize, accion, entidad);
+}
+
+/// Lista de colaboradores del prestador (owner + colaboradores invitados).
+final colaboradoresProvider = FutureProvider.family<List<Colaborador>, String>((
+  ref,
+  prestadorId,
+) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return await repo.listarColaboradores(prestadorId);
+});
+
+/// Audit log paginado del prestador (solo owner real).
+final auditLogProvider = FutureProvider.family<AuditLogPage, AuditLogParams>((
+  ref,
+  params,
+) async {
+  final repo = ref.watch(prestadorRepositoryProvider);
+  return await repo.obtenerAuditLog(
+    prestadorId: params.prestadorId,
+    page: params.page,
+    pageSize: params.pageSize,
+    accion: params.accion,
+    entidad: params.entidad,
+  );
+});

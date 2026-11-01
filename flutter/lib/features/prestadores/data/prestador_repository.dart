@@ -17,6 +17,8 @@ import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
 import 'package:baqueano_natales/features/prestadores/domain/review.dart';
 import 'package:baqueano_natales/features/prestadores/domain/modalidades.dart';
+import 'package:baqueano_natales/features/prestadores/domain/colaborador.dart';
+import 'package:baqueano_natales/features/prestadores/domain/audit_log_entry.dart';
 
 /// Filtros para el listado público de prestadores.
 class PrestadoresFiltros {
@@ -841,6 +843,119 @@ class PrestadorRepository {
         data: data,
       );
       return res.data as Map<String, dynamic>;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // Colaboradores del prestador
+  // =========================================================
+
+  /// Lista los colaboradores activos e invitados del prestador.
+  Future<List<Colaborador>> listarColaboradores(String prestadorId) async {
+    try {
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores',
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((e) => Colaborador.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Invita a un colaborador (solo owner). Envía email con token firmado.
+  Future<Colaborador> invitarColaborador({
+    required String prestadorId,
+    required String email,
+    required String nombre,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/invitar',
+        data: {'email': email, 'nombre': nombre},
+      );
+      return Colaborador.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Acepta una invitación usando el token recibido por email.
+  Future<void> aceptarInvitacion({
+    required String prestadorId,
+    required String token,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/aceptar',
+        data: {'token': token},
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina un colaborador (solo owner).
+  Future<void> eliminarColaborador({
+    required String prestadorId,
+    required String email,
+  }) async {
+    try {
+      await _dio.delete(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/$email',
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Obtiene una página del audit log del prestador (solo owner).
+  Future<AuditLogPage> obtenerAuditLog({
+    required String prestadorId,
+    int page = 1,
+    int pageSize = 50,
+    String? accion,
+    String? entidad,
+  }) async {
+    try {
+      final params = <String, dynamic>{'page': page, 'page_size': pageSize};
+      if (accion != null) params['accion'] = accion;
+      if (entidad != null) params['entidad'] = entidad;
+
+      final res = await _dio.get(
+        '/api/v1/mis-prestadores/$prestadorId/audit-log',
+        queryParameters: params,
+      );
+      return AuditLogPage.fromJson(res.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
