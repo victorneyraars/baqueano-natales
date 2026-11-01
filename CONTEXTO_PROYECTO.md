@@ -3974,3 +3974,114 @@ en producción**.
 - **Baja**: Limpiar `.bak_20261019_*`
 - **Baja**: `api-dev` en `ops_release_screen.dart`
 - **Baja**: Renombrar steps en `prod-build.yml`
+---
+
+### 2026-11-01 (cont. 57) - Deploy completo Fase 7 a producción (Rent a Car Vásquez)
+
+**Resumen ejecutivo**: Deploy end-to-end de Rent a Car Vásquez desde dev a prod. Incluye purge de data de prueba, 7 migraciones alembic, import de Vásquez + 6 vehículos con UUIDs preservados (URLs R2 intactas), fix `API_BASE_URL` en emails, deploy backend, publicación de APK prod, registro de SHA-1 en Firebase y fix del `build_number`. Producción quedó operativa con solo data real.
+
+**Alcance**:
+- Backend: 8 commits de Fase 6 desplegados + fix `API_BASE_URL` + fix SHA-1 Firebase.
+- DB: purge de 96 clientes + 3 prestadores de prueba + toda su data relacionada. Mantenidos: Víctor admin, cuenta social Baqueano (1 + 6 posts), auditoría, configs, catálogos.
+- Data nueva: Vásquez (prestador) + `rentacar-vasquez` + 6 vehículos + rentacar_config + categoría "Arriendo de Vehículos".
+- App Android: `app-client.apk` publicado en `/deploy/apks/` + `version-client-prod.json` con URL prod y sha256 correcto.
+
+#### Cambios en DB
+
+**Purge de data de prueba** (con `BEGIN/COMMIT` + verificación pre-decisión):
+- 96 clientes (`rol='cliente'`)
+- 3 prestadores de Víctor (`casa`, `servicio-de-prueba`, `se-alquila-marido`)
+- Toda su data relacionada: `prestador_servicios`, `objetos_servicio`, `vehiculos`, `comercios`, `horarios_comercio`, `ordenes_trabajo`, `orden_items`, `orden_fotos`, `orden_historial`, `garantias`, `recordatorios`, `reviews`, `notification_logs`, `preferencias_notificacion`, `fcm_tokens`.
+
+**Preservado**: Víctor (admin), cuenta social Baqueano (1 + 6 posts), `ops_audit_log`, `configuraciones`, catálogos, `prestadores_audit_log`.
+
+**Migraciones alembic** (7/7 desde `96ba32d7100d` hasta `c1d2e3f4a5b6`):
+- `f7e8d9c0b1a2` → `api_usage_events`
+- `manual_rentacar_001` → `rentacar_config`, `rentacar_vehiculos`, `rentacar_reservas`
+- `manual_rentacar_002` → `cliente_id` nullable + contacto invitado
+- `manual_rentacar_003` → `imagen_url` en vehiculos
+- `prestador_perfil_negocio_001` → 8 columnas en `prestadores`
+- `b1c2d3e4f5a6` → OTP fields en `rentacar_reservas`
+- `c1d2e3f4a5b6` → `colaboradores` JSONB + `prestadores_audit_log`
+
+**Data nueva en prod**:
+- Usuario: `rentacarvasquezcl@gmail.com` (rol `prestador`, firebase_uid `4oqiprO1kqOXbbpkLamW1eR7MwJ2`)
+- Prestador: `rentacar-vasquez` (id `c9aa7037-a4de-4217-b6dc-fa5893062657`, usuario_id `048cfa35-...`, estado `verificado`)
+- 6 vehículos con UUIDs de dev preservados (URLs R2 intactas):
+  - `af958391` Ssangyong Rexton LRGG61
+  - `ca922544` Subaru XV VFKD20
+  - `70846c36` Fiat Euromobil 2.8 JDXX55
+  - `061fdf82` Haval Jolion SLXD67
+  - `909bdcd7` Mazda 5 JRJR61
+  - `262e0e61` Nissan Juke DZGH55
+- `rentacar_config` (métodos pago, depósito 20%, conductor adicional $5k/día, categorías SUV/Sedan/Pickup/Furgoneta)
+- Categoría `arriendo-vehiculos` (id `db5f037a-...`) creada en `categorias_oficio`
+- `perfil_negocio.fotos` con URLs cambiadas de `api-dev.` a `api.baqueanonatales.com`
+- `colaboradores = []` (vacío, Vásquez invita en prod)
+
+**No traído** (data de prueba): 2 reservas de Valentina + 6 reservas test de Víctor + 6 entradas de `prestadores_audit_log`.
+
+#### Cambios en código
+
+**Commits clave** (en `main`, ya deployados):
+- `6448062` fix(notif): API_BASE_URL env var para links de reservas
+- `2b45b07` fix(app): update service usa AppConfig.apiBaseUrl según flavor + workflow prod-build
+- `1ac886a` fix(app): SHA-1 keystore release agregado en Firebase + google-services.json regenerado
+- `feb1cf8` docs+ci: runbook APK prod + fix build_number offset +1000
+
+**Backend**:
+- Emails de reservas usan `os.environ.get("API_BASE_URL", "https://api.baqueanonatales.com")`.
+- Migraciones alembic aplicadas.
+- `.env.prod` con `API_BASE_URL=https://api.baqueanonatales.com`.
+
+**Flutter** (`app_update_service.dart`):
+- `_manifestFile` dinámico: `version-{client|admin}-{prod|dev}.json` según `AppConfig.environment`.
+- `_apkFile` dinámico: `app-client.apk` / `app-clientdev.apk` / `app-admin.apk` / `app-admindev.apk`.
+- `versionUrl` y `apkDownloadUrl` usan `AppConfig.apiBaseUrl` en vez de URLs hardcoded.
+
+#### Cambios en infra / CI
+
+**Workflows**:
+- `.github/workflows/prod-build.yml` **nuevo** (análogo a `dev-build.yml`, flavors `clientProd`/`adminProd`, defines `client_prod.json`/`admin_prod.json`).
+- `.github/workflows/dev-build.yml`: manifests renombrados a `version-client-dev.json` / `version-admin-dev.json`.
+
+**Fix `build_number`**: offset `+1000` en las 4 ocurrencias de `prod-build.yml`. Próximo build prod → `build_number = 1001` (siempre > dev ~190).
+
+**APKs publicados en `/home/deploy/baqueano-natales/deploy/apks/`**:
+- `app-client.apk` (69 MB, SHA-1 `89a1e99db0e7a8ba26dd88ea7adb88ae715b1704`)
+- `app-admin.apk` (68 MB, mismo SHA-1)
+- `version-client-prod.json` + `version-admin-prod.json` (URLs `api.`, sha256 correcto, `build_number=2`)
+
+**Firebase**:
+- SHA-1 `89a1e99db0e7a8ba26dd88ea7adb88ae715b1704` registrado en `cl.baqueanonatales` + `cl.baqueanonatales.admin` vía Management API.
+- `google-services.json` regenerado (commit `1ac886a`) → ahora incluye el SHA-1 del keystore release.
+
+#### Estado final de producción
+
+| Componente | Estado |
+|---|---|
+| Backend `api.baqueanonatales.com` | Healthy, `ENVIRONMENT=production`, `API_BASE_URL` prod |
+| DB `baqueano_natales_prod` | `alembic_version=c1d2e3f4a5b6`, solo data real (Víctor + Vásquez + 6 vehículos + config + posts + auditoría) |
+| Web `rentacarvasquez.com` | Funcional (Cloudflare Pages con `NEXT_PUBLIC_API_URL` a prod) |
+| App Android `app-client.apk` | Login Google funcional (verificado 2026-11-01 20:43, `POST /auth/google 200` desde el celular de Vásquez) |
+| Panel owner | 6 vehículos + config + colaboradores + auditoría visibles en app y web |
+
+#### Cómo retomar
+
+- Branch activa: `dev` (último commit `feb1cf8`).
+- Server prod: `deploy@baqueano-natales-prod`.
+- Repos: `~/baqueano-natales` (monorepo) + `~/rentacarvasquez-web` (web).
+- Deploy backend: `bash scripts/deploy-prod.sh` (pull --rebase main + rebuild + up -d + healthcheck).
+- Deploy APK: `gh workflow run prod-build.yml --ref main -f flavor=clientProd` + `gh run watch`.
+- Regenerar sha256 del APK post-build: `sha256sum app-client.apk | awk '{print $1}' > app-client.apk.sha256` + actualizar `version-client-prod.json`.
+
+#### TODOs post-lanzamiento
+
+- **Alta**: Rotar `R2_SECRET_ACCESS_KEY` / `R2_ACCESS_KEY_ID` (se filtraron en chat).
+- **Media**: Migración formal `publicaciones_sociales.prioridad`.
+- **Media**: Verificar Cloudflare `NEXT_PUBLIC_API_URL` en UI.
+- **Baja**: Limpiar `fotos_trabajo` legacy.
+- **Baja**: Limpiar `.bak_20261019_*` en `flutter/lib/core/services/`.
+- **Baja**: `api-dev` en `ops_release_screen.dart` y `ops_repository.dart`.
+- **Baja**: Renombrar steps `(clientDev)`/`(adminDev)` en `prod-build.yml`.
+
