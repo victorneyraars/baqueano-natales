@@ -4085,3 +4085,141 @@ en producción**.
 - **Baja**: `api-dev` en `ops_release_screen.dart` y `ops_repository.dart`.
 - **Baja**: Renombrar steps `(clientDev)`/`(adminDev)` en `prod-build.yml`.
 
+---
+
+### 2026-11-01 (cont. 58) - Roadmap de producto post-lanzamiento
+
+**Contexto**: MVP funcional vendible a rent a cars chicos (1-5 vehículos). Para competir con SaaS de gama media (Rentall, Rentle, TSD) y vender a medianos (6-30), faltan 3 features bloqueantes (Fase 1).
+
+**Posicionamiento**: mejor que 80% de chicos en Chile, 55-60% de Rentall/Rentle/TSD en features core, 30% de Avis/Hertz (enterprise).
+
+**Nicho target**: chicos (1-5 veh, ~300-500 en Chile, $80-150K CLP/mes). Post-Fase 1: medianos (6-30, ~80-150, $150-300K CLP/mes).
+
+#### Fase 1: Bloqueantes (4-6 semanas)
+
+| # | Feature | Complejidad | Tiempo | Dependencias |
+|---|---|---|---|---|
+| 1 | Disponibilidad real | Media | 2 sem | Ninguna |
+| 2 | Contrato digital | Media | 1-2 sem | Ninguna (PDF) o FirmaVirtual |
+| 3 | Pago online MercadoPago | Baja-media | 2-3 sem | Cuenta MP + 3.5% transacción |
+| 3b | Pago online Webpay | Media | 2-3 sem | Contrato Transbank (1-2 meses) |
+
+**Orden**: 1 → 2 → 3. Webpay después.
+
+#### Fase 1.1: Disponibilidad real (prioridad máxima)
+
+**Problema actual**: reserva se crea sin verificar disponibilidad. Riesgo doble-booking.
+
+**Schema DB** (nueva tabla `rentacar_bloqueos`):
+- id UUID PK
+- vehiculo_id UUID FK rentacar_vehiculos ON DELETE CASCADE
+- reserva_id UUID FK rentacar_reservas NULL (null=bloqueo manual)
+- fecha_inicio DATE NOT NULL
+- fecha_fin DATE NOT NULL
+- tipo VARCHAR(20) NOT NULL (reserva/mantenimiento/manual)
+- motivo VARCHAR(255)
+- created_by UUID FK usuarios
+- created_at, updated_at TIMESTAMPTZ
+- CHECK (fecha_fin > fecha_inicio)
+- INDEX idx_bloqueos_vehiculo_fechas (vehiculo_id, fecha_inicio, fecha_fin)
+- EXCLUDE USING gist (vehiculo_id WITH =, daterange(fecha_inicio, fecha_fin) WITH &&)
+
+**Lógica**:
+- Al crear reserva: INSERT con tipo=reserva. La constraint EXCLUDE impide doble-booking a nivel DB.
+- Al cancelar reserva: DELETE FROM rentacar_bloqueos WHERE reserva_id=X.
+- Vehículo mantenimiento: INSERT con tipo=mantenimiento (sin reserva_id).
+- Bloqueo manual: INSERT con tipo=manual.
+
+**Endpoints backend**:
+- GET /api/v1/rentacar/vehiculos/{id}/disponibilidad?desde=&hasta=
+- GET /api/v1/rentacar/vehiculos/disponibles?desde=&hasta= (lista libres)
+- POST /api/v1/rentacar/vehiculos/{id}/bloqueos (owner)
+- DELETE /api/v1/rentacar/bloqueos/{id} (owner)
+- Modificar POST /api/v1/rentacar/reservas: crear reserva + bloqueo en transacción; si EXCLUDE falla → 409
+
+**Frontend web**: filtro en buscador + página vehículo con fechas bloqueadas en gris + sugerir rango libre más cercano.
+
+**Panel admin**: vista calendario por vehículo (react-day-picker web, table_calendar Flutter). Bloqueadas gris, reservadas naranja, libres verde.
+
+**Archivos**: backend/app/modules/rentacar/{models,services,routes,routes_propietario}.py, migración alembic, rentacarvasquez-web/src/app/(public)/flota/, flutter/lib/features/rentacar/.
+
+#### Fase 1.2: Contrato digital (1-2 semanas)
+
+**MVP**:
+- Generar PDF al confirmar reserva (WeasyPrint): datos cliente, vehículo, fechas, precio, depósito, condiciones, política cancelación.
+- Guardar PDF en R2 con URL firmada.
+- Cliente acepta con checkbox + timestamp + IP + UA.
+- Enviar PDF por email al cliente.
+
+**Firma electrónica legal** (2 semanas más): FirmaVirtual o Acepta ($30-50K CLP/mes), OTP SMS + certificado digital.
+
+**Schema**: tabla `rentacar_contratos` (reserva_id, pdf_url, firmado_at, ip_firma, user_agent, estado).
+
+#### Fase 1.3: Pago online MercadoPago (2-3 semanas)
+
+**Flujo**:
+1. Cliente confirma reserva → reserva pendiente + preferencia de pago generada.
+2. Redirect a MercadoPago → cliente paga.
+3. Webhook POST /api/v1/webhooks/mercadopago → valida HMAC → reserva pagada + email confirmación.
+
+**Schema**: tabla `rentacar_pagos` (id, reserva_id, proveedor, external_id, monto_clp, estado, metadata JSONB, created_at).
+
+**Seguridad**:
+- Validar HMAC del webhook con MERCADOPAGO_WEBHOOK_SECRET.
+- Idempotencia con external_id como clave única.
+- Reembolso automático si reserva se cancela post-pago.
+
+**Costo**: 3.5% por transacción.
+
+#### Fase 2: Profesionalización (5-8 semanas)
+
+| # | Feature | Complejidad | Tiempo | Valor |
+|---|---|---|---|---|
+| 2.1 | Check-in/out con fotos + km + combustible | Baja-media | 2 sem | Alto |
+| 2.2 | Multi-idioma (es/en, next-intl) | Baja | 1 sem | Alto (turismo extranjero) |
+| 2.3 | Gestión documental (SOAP, revisión, seguros + alertas) | Media | 2 sem | Alto (ahorra multas) |
+| 2.4 | Reporting avanzado (RevPAR, ticket promedio) | Media | 2 sem | Medio |
+| 2.5 | Reviews + cupones/fidelización | Baja | 1 sem | Bajo-medio |
+
+#### Fase 3: Escala (8-12 semanas + trámites)
+
+| # | Feature | Complejidad | Tiempo | Condiciones |
+|---|---|---|---|---|
+| 3.1 | Boleta electrónica SII | Media | 3-4 sem | OpenFactura $30-80K/mes |
+| 3.2 | Channel manager (SiteMinder/Cloudbeds) | Media-alta | 6-8 sem | Partnership |
+| 3.3 | App cliente con pago in-app | Media | 3-4 sem | Ninguna |
+| 3.4 | Analytics predictivo (precios dinámicos) | Media | 3-4 sem | Ninguna |
+| 3.5 | iOS App Store | Baja | 1 sem | $99 USD/año |
+| 3.6 | Integración directa OTAs | Alta | 3-6 meses | Partnership enterprise (usar SiteMinder) |
+
+#### Decisiones técnicas clave
+
+**Disponibilidad**: EXCLUDE gist requiere btree_gist (PG13+). Bloqueos tipo=reserva automáticos. Vehículo no disponible se excluye del buscador público.
+
+**Pago**: MercadoPago primero (4x más rápido que Webpay). Validación HMAC del webhook es crítica. Idempotencia con external_id.
+
+**Contrato**: checkbox + timestamp + IP es legal en Chile (Ley 19.799 firma simple). PDFs en R2 con retención 5 años (SII).
+
+**SII/boleta**: integrar OpenFactura o LibreDTE. No construir in-house. Requiere certificado SII.
+
+#### Advertencias
+
+1. Cada feature toca múltiples capas (backend + DB + web + Flutter + emails + panel). Presupuestar 3x lo que parece.
+
+2. Los trámites externos son el verdadero bloqueante: Transbank (1-2 meses), SII (2-4 sem), Firma electrónica (2-4 sem), OTA partnership (3-6 meses). Empezar trámites en paralelo al desarrollo.
+
+3. Costos operativos mensuales: MercadoPago 3.5%, Webpay 2.5-3.5% + $15-30K/mes, OpenFactura $30-80K/mes, FirmaVirtual $30-50K/mes, SiteMinder $50-100K/mes.
+
+4. Sin equipo, soporte post-lanzamiento complicado: 5-10 tickets/mes por cliente con pago online.
+
+#### Próximo paso (Fase 1.1 — Disponibilidad real)
+
+1. Migración alembic rentacar_bloqueos con constraint EXCLUDE.
+2. Backend: GET /vehiculos/{id}/disponibilidad, GET /vehiculos/disponibles, modificar POST /reservas.
+3. Frontend web: filtro buscador + página vehículo con fechas bloqueadas.
+4. Panel admin: vista calendario por vehículo.
+5. QA: crear 2 reservas solapadas → debe fallar con 409.
+6. Deploy dev → probar → merge main → deploy prod.
+
+**Estimación**: 2-3 semanas con 1 dev senior + IA, con tests y QA incluidos.
+
