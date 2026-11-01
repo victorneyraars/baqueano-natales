@@ -185,6 +185,7 @@ class _HomePrestadorBodyState extends ConsumerState<HomePrestadorBody> {
                 prestadorId: prestadorId,
                 categoriaSlug: categoriaSlug,
                 theme: theme,
+                esOwner: selected.esOwner,
               ),
             ],
           ),
@@ -213,11 +214,13 @@ class _MenuPorCategoria extends StatelessWidget {
     required this.prestadorId,
     required this.categoriaSlug,
     required this.theme,
+    required this.esOwner,
   });
 
   final String prestadorId;
   final String categoriaSlug;
   final ThemeData theme;
+  final bool esOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +324,24 @@ class _MenuPorCategoria extends StatelessWidget {
               onTap: () =>
                   context.push('/mis-prestadores/$prestadorId/correos'),
             ),
+            if (esOwner) ...[
+              const SizedBox(height: 24),
+              _tituloSeccion('Administración'),
+              HomeCard(
+                icon: Icons.people_outline,
+                title: 'Colaboradores',
+                subtitle: 'Gestiona quién tiene acceso al negocio',
+                onTap: () =>
+                    context.push('/mis-prestadores/$prestadorId/colaboradores'),
+              ),
+              HomeCard(
+                icon: Icons.history,
+                title: 'Auditoría',
+                subtitle: 'Historial de acciones y cambios',
+                onTap: () =>
+                    context.push('/mis-prestadores/$prestadorId/auditoria'),
+              ),
+            ],
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),
             ...comunes,

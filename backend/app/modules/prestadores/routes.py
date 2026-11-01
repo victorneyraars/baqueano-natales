@@ -236,8 +236,13 @@ async def listar_mis_prestadores(
     db: DbSession,
 ) -> PrestadorPrivadoListResponse:
     items = await services.listar_prestadores_mios(db, user)
+    items_serialized = []
+    for p in items:
+        resp = PrestadorPrivadoResponse.model_validate(p)
+        resp.es_owner = str(user.id) == str(p.usuario_id)
+        items_serialized.append(resp)
     return PrestadorPrivadoListResponse(
-        items=[PrestadorPrivadoResponse.model_validate(p) for p in items],
+        items=items_serialized,
         meta=PaginacionMeta(
             total=len(items),
             page=1,
@@ -258,6 +263,8 @@ async def obtener_mi_prestador(
 ) -> PrestadorPrivadoResponse:
     resp = PrestadorPrivadoResponse.model_validate(prestador)
     resp.es_owner = str(user.id) == str(prestador.usuario_id)
+    import logging
+    logging.warning(f'DEBUG_ES_OWNER: user.id={user.id} prestador.usuario_id={prestador.usuario_id} es_owner={resp.es_owner}')
     return resp
 
 
