@@ -558,6 +558,7 @@ async def invitar_colaborador(
     nuevo = {
         "email": email,
         "nombre": data.nombre.strip(),
+        "whatsapp": (data.whatsapp or "").strip() or None,
         "invitado_por": user.email or "",
         "invitado_at": now_iso,
         "activado_at": None,
@@ -573,7 +574,11 @@ async def invitar_colaborador(
         accion="colaborador_invitado",
         entidad="colaborador",
         entidad_id=email,
-        metadata={"email": email, "nombre": data.nombre},
+        metadata={
+            "email": email,
+            "nombre": data.nombre,
+            "whatsapp": data.whatsapp,
+        },
         ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
@@ -587,10 +592,12 @@ async def invitar_colaborador(
         nombre_prestador=prestador.nombre,
         nombre_invitador=user.nombre or user.email or "el administrador",
         token=token,
+        whatsapp_invitado=data.whatsapp,
     )
     return ColaboradorResponse(
         email=email,
         nombre=data.nombre,
+        whatsapp=data.whatsapp,
         invitado_por=user.email or "",
         invitado_at=datetime.fromisoformat(now_iso),
         activado_at=None,

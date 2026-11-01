@@ -8,10 +8,16 @@ async def notificar_invitacion_colaborador(
     nombre_prestador: str,
     nombre_invitador: str,
     token: str,
+    whatsapp_invitado: str | None = None,
 ) -> bool:
     """Envia email de invitacion con link firmado al nuevo colaborador."""
     link = f"https://rentacarvasquez.com/admin?invite={token}"
     asunto = f"Invitacion para colaborar en {nombre_prestador}"
+    whatsapp_html = (
+        f"<p style=\"color: #666; font-size: 13px;\">"
+        f"Tu WhatsApp registrado para notificaciones: <strong>{whatsapp_invitado}</strong>"
+        f"</p>"
+    ) if whatsapp_invitado else ""
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #2E7D32;">Invitacion para colaborar</h2>
@@ -22,6 +28,7 @@ async def notificar_invitacion_colaborador(
         </p>
         <p>Como colaborador vas a poder gestionar reservas y vehiculos,
            pero no tendras acceso a la configuracion completa.</p>
+        {whatsapp_html}
         <p style="margin: 30px 0; text-align: center;">
             <a href="{link}"
                style="background-color: #2E7D32; color: white;

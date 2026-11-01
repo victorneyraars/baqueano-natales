@@ -523,6 +523,11 @@ class ColaboradorInviteRequest(BaseModel):
 
     email: EmailStr
     nombre: str = Field(min_length=2, max_length=150)
+    whatsapp: str | None = Field(
+        default=None,
+        max_length=30,
+        description="Número WhatsApp opcional (E.164: +56912345678)",
+    )
 
 
 class ColaboradorResponse(BaseModel):
@@ -530,6 +535,7 @@ class ColaboradorResponse(BaseModel):
 
     email: str
     nombre: str
+    whatsapp: str | None = None
     invitado_por: str
     invitado_at: datetime
     activado_at: datetime | None = None
