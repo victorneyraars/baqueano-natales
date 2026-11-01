@@ -281,6 +281,9 @@ async def cambiar_estado_mi_reserva(
                     inicio=reserva.fecha_inicio.isoformat(),
                     fin=reserva.fecha_fin.isoformat(),
                     total=float(reserva.precio_total or 0),
+                    patente=vehiculo.patente if vehiculo else None,
+                    imagen_url=vehiculo.imagen_url if vehiculo else None,
+                    metodo_pago=reserva.metodo_pago,
                 )
             elif data.estado == "cancelada":
                 background_tasks.add_task(

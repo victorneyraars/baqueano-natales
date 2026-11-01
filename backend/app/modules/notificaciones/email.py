@@ -12,12 +12,25 @@ FROM_NAME = "Rent a Car Vasquez"
 
 
 async def enviar_email(
-    to: str,
+    to: str | list[str],
     subject: str,
     html: str,
     from_email: str = FROM_EMAIL,
+    from_name: str = FROM_NAME,
+    reply_to: str | None = None,
+    text: str | None = None,
 ) -> bool:
-    """Envia un email via Resend. Devuelve True si fue exitoso."""
+    """Envia un email via Resend. Devuelve True si fue exitoso.
+
+    Args:
+        to: Destinatario (o lista de destinatarios).
+        subject: Asunto del email.
+        html: Cuerpo HTML.
+        from_email: Remitente (dominio verificado en Resend).
+        from_name: Nombre visible del remitente.
+        reply_to: Email de respuesta (default: from_email).
+        text: Version texto plano (fallback para clientes sin HTML).
+    """
     api_key = os.environ.get("RESEND_API_KEY")
     if not api_key or api_key == "re_tu_key_real_aqui":
         logger.warning("RESEND_API_KEY no configurada. Emails deshabilitados.")
@@ -26,15 +39,22 @@ async def enviar_email(
     resend.api_key = api_key
 
     try:
-        params = {
-            "from": f"{FROM_NAME} <{from_email}>",
-            "to": [to],
+        recipients = [to] if isinstance(to, str) else to
+        params: dict = {
+            "from": f"{from_name} <{from_email}>",
+            "to": recipients,
             "subject": subject,
             "html": html,
         }
-        # Usamos el SDK. En algunas versiones, .send() devuelve un dict.
+        if reply_to:
+            params["reply_to"] = reply_to
+        if text:
+            params["text"] = text
+
         response = resend.Emails.send(params)
-        logger.info(f"Email enviado a {to} (id={response.get('id', 'unknown')})")
+        logger.info(
+            f"Email enviado a {', '.join(recipients)} (id={response.get('id', 'unknown')})"
+        )
         return True
     except Exception as e:
         logger.error(f"Error enviando email a {to}: {e}")

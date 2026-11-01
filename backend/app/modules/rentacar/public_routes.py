@@ -182,6 +182,9 @@ async def ejecutar_accion_reserva(
                 inicio=reserva.fecha_inicio.isoformat(),
                 fin=reserva.fecha_fin.isoformat(),
                 total=float(reserva.precio_total or 0),
+                patente=vehiculo.patente if vehiculo else None,
+                imagen_url=vehiculo.imagen_url if vehiculo else None,
+                metodo_pago=reserva.metodo_pago,
             )
         elif accion == "cancelar":
             background_tasks.add_task(
@@ -249,7 +252,7 @@ async def crear_reserva_publica(
                     if email_c and activado:
                         destinatarios.add(email_c)
 
-            # Enviar a cada destinatario
+            # Enviar a cada destinatario (template premium)
             for email_dest in destinatarios:
                 background_tasks.add_task(
                     notificar_nueva_reserva_prestador,
@@ -262,6 +265,11 @@ async def crear_reserva_publica(
                     inicio=reserva.fecha_inicio.isoformat(),
                     fin=reserva.fecha_fin.isoformat(),
                     total=total,
+                    patente=vehiculo.patente,
+                    imagen_url=vehiculo.imagen_url,
+                    metodo_pago=reserva.metodo_pago,
+                    email_verificado=bool(reserva.email_verificado),
+                    categoria=vehiculo.categoria,
                 )
 
             # Enviar OTP al cliente (verifica que el email es real)
@@ -285,6 +293,9 @@ async def crear_reserva_publica(
                     inicio=reserva.fecha_inicio.isoformat(),
                     fin=reserva.fecha_fin.isoformat(),
                     total=total,
+                    patente=vehiculo.patente,
+                    imagen_url=vehiculo.imagen_url,
+                    metodo_pago=reserva.metodo_pago,
                 )
     except Exception as exc:
         import logging
