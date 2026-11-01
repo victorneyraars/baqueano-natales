@@ -146,7 +146,7 @@ jobs:
             
             SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
             CLIENT_BUILD_NUMBER=${{ github.run_number }}
-            cat > version-client.json <<EOF
+            cat > version-client-dev.json <<EOF
             {
               "latest_version": "$VERSION",
               "build_number": "$CLIENT_BUILD_NUMBER",
@@ -263,7 +263,7 @@ jobs:
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             SHA=$(cat app-admindev.apk.sha256 | awk '{print $1}')
             BUILD_NUMBER=${{ github.run_number }}
-            cat > version-admin.json <<EOF
+            cat > version-admin-dev.json <<EOF
             {
               "latest_version": "$VERSION",
               "build_number": "$BUILD_NUMBER",

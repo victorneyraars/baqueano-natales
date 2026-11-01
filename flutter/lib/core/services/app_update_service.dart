@@ -13,22 +13,20 @@ import 'package:baqueano_natales/core/config/app_config.dart';
 class AppUpdateService {
   // Detectar flavor en runtime para elegir el manifest correcto.
   static String get _manifestFile {
-    return AppConfig.appType == AppType.admin
-        ? 'version-admin.json'
-        : 'version-client.json';
+    final tipo = AppConfig.appType == AppType.admin ? 'admin' : 'client';
+    final env = AppConfig.environment == Environment.prod ? 'prod' : 'dev';
+    return 'version-$tipo-$env.json';
   }
 
   static String get _apkFile {
-    return AppConfig.appType == AppType.admin
-        ? 'app-admindev.apk'
-        : 'app-clientdev.apk';
+    final tipo = AppConfig.appType == AppType.admin ? 'admin' : 'client';
+    final env = AppConfig.environment == Environment.prod ? '' : 'dev';
+    return 'app-$tipo$env.apk';
   }
 
-  static String get versionUrl =>
-      'https://api-dev.baqueanonatales.com/apks/$_manifestFile';
+  static String get versionUrl => '${AppConfig.apiBaseUrl}/apks/$_manifestFile';
 
-  static String get apkDownloadUrl =>
-      'https://api-dev.baqueanonatales.com/apks/$_apkFile';
+  static String get apkDownloadUrl => '${AppConfig.apiBaseUrl}/apks/$_apkFile';
 
   static Future<void> checkForUpdates(
     GoRouter router,
