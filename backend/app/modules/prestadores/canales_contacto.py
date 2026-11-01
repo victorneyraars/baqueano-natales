@@ -115,7 +115,12 @@ DEFAULT_GOOGLE = {
 }
 
 # Email principal que recibe TODO por defecto (catch-all de Cloudflare)
-DEFAULT_EMAIL_REENVIO = "victorneyraars@gmail.com"
+import os
+
+DEFAULT_EMAIL_REENVIO = os.environ.get(
+    "DEFAULT_EMAIL_REENVIO",
+    "rentacarvasquezcl@gmail.com",
+)
 
 
 def _merge_list(defaults, custom):
