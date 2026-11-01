@@ -549,7 +549,7 @@ class AuditLogEntry(BaseModel):
     accion: str
     entidad: str
     entidad_id: str | None = None
-    metadata: dict = {}
+    metadata: dict = Field(default_factory=dict, validation_alias='metadata_')
     created_at: datetime
 
 
