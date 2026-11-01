@@ -195,11 +195,21 @@ async def _resolver_prestador_rentacar(
     - Si no tiene, lanzar ValueError.
     """
     from app.modules.prestadores.models import CategoriaOficio
+    from sqlalchemy import text as sql_text, or_
     stmt = (
         select(Prestador)
         .join(CategoriaOficio, Prestador.categoria_id == CategoriaOficio.id)
         .where(
-            Prestador.usuario_id == usuario.id,
+            or_(
+                Prestador.usuario_id == usuario.id,
+                sql_text(
+                    "EXISTS ("
+                    "  SELECT 1 FROM jsonb_array_elements(COALESCE(prestadores.colaboradores, '[]'::jsonb)) AS c "
+                    "  WHERE c->>'email' = :email "
+                    "  AND c->>'activado_at' IS NOT NULL"
+                    ")"
+                ).bindparams(email=usuario.email or ""),
+            ),
             CategoriaOficio.slug == "arriendo-vehiculos",
         )
         .limit(1)

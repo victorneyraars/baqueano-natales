@@ -265,11 +265,22 @@ async def listar_prestadores_mios(
     db: AsyncSession,
     propietario: Usuario,
 ) -> list[Prestador]:
-    """Lista todos los prestadores del usuario (cualquier estado)."""
+    """Lista prestadores donde el user es dueño O colaborador activo."""
+    from sqlalchemy import text as sql_text, or_
+
     stmt = (
         _prestador_select_full()
         .where(
-            Prestador.usuario_id == propietario.id,
+            or_(
+                Prestador.usuario_id == propietario.id,
+                sql_text(
+                    "EXISTS ("
+                    "  SELECT 1 FROM jsonb_array_elements(COALESCE(prestadores.colaboradores, '[]'::jsonb)) AS c "
+                    "  WHERE c->>'email' = :email "
+                    "  AND c->>'activado_at' IS NOT NULL"
+                    ")"
+                ).bindparams(email=propietario.email or ""),
+            ),
             Prestador.activo.is_(True),
         )
         .order_by(Prestador.created_at.desc())

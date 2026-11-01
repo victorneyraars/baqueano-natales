@@ -327,6 +327,83 @@ async def setear_servicios_mi_prestador(
     return [PrestadorServicioResponse.model_validate(s) for s in nuevos]
 
 
+
+
+@router_publico.post(
+    "/invitaciones/aceptar",
+    summary="Aceptar invitación a colaborar (Magic Link)",
+)
+async def aceptar_invitacion_publica(
+    data: dict,
+    db: DbSession,
+):
+    from app.modules.auth.models import Usuario
+    from app.modules.auth.schemas import UsuarioResponse
+    from app.core.security import create_access_token
+    from app.modules.notificaciones.tokens import validar_token_invitacion
+
+    token = data.get("token")
+    if not token:
+        raise HTTPException(400, "Token requerido")
+
+    try:
+        payload = validar_token_invitacion(token)
+    except Exception as e:
+        raise HTTPException(400, f"Token inválido o expirado: {e}")
+
+    email = payload.get("email")
+    prestador_id = payload.get("prestador_id")
+    if not email or not prestador_id:
+        raise HTTPException(400, "Token incompleto")
+
+    res = await db.execute(select(Usuario).where(Usuario.email == email))
+    user = res.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            404,
+            "No tenés cuenta de Baqueano con ese email. Registrate primero en la app.",
+        )
+
+    prestador = await services.obtener_prestador_por_id(db, UUID(prestador_id))
+    if not prestador:
+        raise HTTPException(404, "Prestador no encontrado")
+
+    colaboradores = prestador.colaboradores or []
+    encontrado = False
+    for c in colaboradores:
+        if c.get("email") == email:
+            if not c.get("activado_at"):
+                c["activado_at"] = datetime.now(timezone.utc).isoformat()
+            encontrado = True
+            break
+    if not encontrado:
+        raise HTTPException(404, "No existe una invitación pendiente para ese email")
+    prestador.colaboradores = colaboradores
+    flag_modified(prestador, "colaboradores")
+
+    await log_audit(
+        db=db,
+        prestador_id=prestador.id,
+        user=user,
+        accion="colaborador_activado",
+        entidad="colaborador",
+        entidad_id=email,
+        metadata={"email": email},
+        ip=None,
+        user_agent=None,
+    )
+
+    await db.commit()
+
+    access_token = create_access_token(str(user.id))
+
+    return {
+        "access_token": access_token,
+        "user": UsuarioResponse.model_validate(user).model_dump(mode="json"),
+    }
+
+
+
 @router_propietario.get(
     "/{prestador_id}/publicaciones",
     summary="Publicaciones en redes del prestador",
