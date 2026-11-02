@@ -203,6 +203,14 @@ class _ReservaBodyState extends ConsumerState<_ReservaBody> {
             _fila(theme, 'Fin', _formatFecha(r.fechaFin)),
             _fila(theme, 'Dias', '${r.diasTotales}'),
             _fila(theme, 'Total', '\$${r.precioTotal.toStringAsFixed(0)}'),
+            if (r.estado == 'pendiente' || r.estado == 'confirmada') ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _loading ? null : () => _abrirEditarFechas(r),
+                icon: const Icon(Icons.edit_calendar),
+                label: const Text('Editar fechas y precio'),
+              ),
+            ],
           ],
         ),
       ),
@@ -284,6 +292,24 @@ class _ReservaBodyState extends ConsumerState<_ReservaBody> {
         '${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
 
+  Future<void> _abrirEditarFechas(Reserva r) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: _EditarFechasBottomSheet(reserva: r),
+      ),
+    );
+    if (ok == true && mounted) {
+      widget.onRefresh();
+      ref.invalidate(reservaRentacarProvider(widget.reserva.id));
+      ref.invalidate(misReservasRentacarProvider);
+    }
+  }
+
   Future<void> _cambiarEstado(String nuevoEstado) async {
     setState(() => _loading = true);
     try {
@@ -309,5 +335,163 @@ class _ReservaBodyState extends ConsumerState<_ReservaBody> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+}
+
+class _EditarFechasBottomSheet extends ConsumerStatefulWidget {
+  const _EditarFechasBottomSheet({required this.reserva});
+  final Reserva reserva;
+
+  @override
+  ConsumerState<_EditarFechasBottomSheet> createState() =>
+      _EditarFechasBottomSheetState();
+}
+
+class _EditarFechasBottomSheetState
+    extends ConsumerState<_EditarFechasBottomSheet> {
+  late DateTime _inicio;
+  late DateTime _fin;
+  late TextEditingController _precioCtrl;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _inicio = widget.reserva.fechaInicio;
+    _fin = widget.reserva.fechaFin;
+    _precioCtrl = TextEditingController(
+      text: widget.reserva.precioTotal.toStringAsFixed(0),
+    );
+  }
+
+  @override
+  void dispose() {
+    _precioCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFecha({required bool isInicio}) async {
+    final ahora = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: isInicio ? _inicio : _fin,
+      firstDate: DateTime(ahora.year - 1),
+      lastDate: ahora.add(const Duration(days: 730)),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isInicio) {
+        _inicio = DateTime(picked.year, picked.month, picked.day);
+        if (!_fin.isAfter(_inicio)) {
+          _fin = _inicio.add(const Duration(days: 1));
+        }
+      } else {
+        _fin = DateTime(picked.year, picked.month, picked.day);
+      }
+    });
+  }
+
+  Future<void> _guardar() async {
+    if (!_fin.isAfter(_inicio)) {
+      _snack('Fecha fin debe ser posterior a inicio', Colors.orange);
+      return;
+    }
+    final precio = double.tryParse(_precioCtrl.text.trim());
+    if (precio == null || precio <= 0) {
+      _snack('Precio invalido', Colors.orange);
+      return;
+    }
+    setState(() => _guardando = true);
+    try {
+      await ref.read(rentacarRepositoryProvider).modificarReservaPropietario(
+        widget.reserva.id,
+        {
+          'fecha_inicio': _inicio.toIso8601String(),
+          'fecha_fin': _fin.toIso8601String(),
+          'precio_total': precio,
+        },
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Error: $e', Colors.red);
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  void _snack(String msg, Color color) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+  }
+
+  String _fmt(DateTime d) =>
+      '${d.day.toString().padLeft(2, "0")}/${d.month.toString().padLeft(2, "0")}/${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Editar fechas y precio',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Fecha inicio'),
+              subtitle: Text(_fmt(_inicio)),
+              onTap: () => _pickFecha(isInicio: true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Fecha fin'),
+              subtitle: Text(_fmt(_fin)),
+              onTap: () => _pickFecha(isInicio: false),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _precioCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Precio total (CLP)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _guardando ? null : _guardar,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _guardando
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Guardar cambios'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

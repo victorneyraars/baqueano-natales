@@ -41,6 +41,16 @@ class _MisReservasRentacarScreenState
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final ok = await context.push<bool>('/mis-reservas-rentacar/nueva');
+          if (ok == true && mounted) {
+            ref.invalidate(misReservasRentacarProvider(_estadoFiltro));
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva reserva'),
+      ),
       body: Column(
         children: [
           _buildFilterChips(),

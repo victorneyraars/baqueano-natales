@@ -278,4 +278,41 @@ class RentacarRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  Future<Reserva> crearReservaPropietario(Map<String, dynamic> payload) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-vehiculos-rentacar/reservas',
+        data: payload,
+      );
+      return Reserva.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<Reserva> modificarReservaPropietario(
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final res = await _dio.patch(
+        '/api/v1/mis-vehiculos-rentacar/reservas/$id',
+        data: payload,
+      );
+      return Reserva.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

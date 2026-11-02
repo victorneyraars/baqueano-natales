@@ -299,6 +299,12 @@ class _MenuPorCategoria extends StatelessWidget {
               onTap: () => context.push('/mis-reservas-rentacar'),
             ),
             HomeCard(
+              icon: Icons.calendar_month_outlined,
+              title: 'Calendario de disponibilidad',
+              subtitle: 'Ver fechas ocupadas por vehículo',
+              onTap: () => context.push('/calendario-disponibilidad-rentacar'),
+            ),
+            HomeCard(
               icon: Icons.analytics_outlined,
               title: 'Estadísticas',
               subtitle: 'Ingresos, reservas y disponibilidad',

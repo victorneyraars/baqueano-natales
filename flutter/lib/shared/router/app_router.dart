@@ -84,6 +84,9 @@ import 'package:baqueano_natales/features/brand_kit/presentation/screens/brand_k
 import 'package:baqueano_natales/features/rentacar/presentation/screens/stats_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/config_rentacar_screen.dart';
 import 'package:baqueano_natales/features/rentacar/presentation/screens/reserva_detalle_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/nueva_reserva_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/seleccionar_vehiculo_calendario_screen.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/calendario_disponibilidad_screen.dart';
 
 class _AuthChangeNotifier extends ChangeNotifier {
   _AuthChangeNotifier(Ref ref) {
@@ -674,9 +677,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ConfigRentacarScreen(),
       ),
       GoRoute(
+        path: '/calendario-disponibilidad-rentacar',
+        name: 'seleccionar-vehiculo-calendario',
+        builder: (context, state) =>
+            const SeleccionarVehiculoCalendarioScreen(),
+      ),
+      GoRoute(
+        path: '/calendario-disponibilidad-rentacar/detalle',
+        name: 'calendario-disponibilidad-rentacar',
+        builder: (context, state) {
+          final vehiculo = state.extra as Vehiculo;
+          return CalendarioDisponibilidadScreen(vehiculo: vehiculo);
+        },
+      ),
+      GoRoute(
         path: '/mis-reservas-rentacar',
         name: 'mis-reservas-rentacar',
         builder: (context, state) => const MisReservasRentacarScreen(),
+      ),
+      GoRoute(
+        path: '/mis-reservas-rentacar/nueva',
+        name: 'nueva-reserva-rentacar',
+        builder: (context, state) => const NuevaReservaScreen(),
       ),
       GoRoute(
         path: '/mis-reservas-rentacar/:id',
