@@ -10,6 +10,7 @@ import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/core/domain/whatsapp_info.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/shared/widgets/whatsapp_button.dart';
+import 'package:baqueano_natales/features/rentacar/presentation/screens/calendario_disponibilidad_screen.dart';
 
 class VehiculoDetalleScreen extends ConsumerWidget {
   const VehiculoDetalleScreen({super.key, required this.vehiculoId});
@@ -216,6 +217,17 @@ class _VehiculoDetalleBodyState extends ConsumerState<_VehiculoDetalleBody> {
                   )
                 : const Icon(Icons.upload),
             label: Text(_subiendo ? 'Subiendo...' : 'Cambiar imagen'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    CalendarioDisponibilidadScreen(vehiculo: widget.vehiculo),
+              ),
+            ),
+            icon: const Icon(Icons.calendar_month),
+            label: const Text('Ver disponibilidad'),
           ),
           const SizedBox(height: 24),
           _info(theme, 'Patente', v.patente),

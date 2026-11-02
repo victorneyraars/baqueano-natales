@@ -18,6 +18,7 @@ import 'package:baqueano_natales/features/rentacar/domain/reserva.dart';
 import 'package:baqueano_natales/features/rentacar/domain/stats_rentacar.dart';
 import 'package:baqueano_natales/features/rentacar/domain/config_rentacar.dart';
 import 'package:baqueano_natales/features/rentacar/domain/patente_lookup.dart';
+import 'package:baqueano_natales/features/rentacar/domain/bloqueo.dart';
 
 class RentacarRepository {
   RentacarRepository({Dio? dio}) : _dio = dio ?? DioClient.instance;
@@ -195,6 +196,79 @@ class RentacarRepository {
         patente,
         res.data as Map<String, dynamic>,
       );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  // =========================================================
+  // Disponibilidad y bloqueos (Fase 1.1)
+  // =========================================================
+
+  /// Lista bloqueos de un vehiculo en un rango de fechas.
+  Future<List<Bloqueo>> listarBloqueos(
+    String vehiculoId,
+    DateTime desde,
+    DateTime hasta,
+  ) async {
+    try {
+      final d = desde.toIso8601String().substring(0, 10);
+      final h = hasta.toIso8601String().substring(0, 10);
+      final res = await _dio.get(
+        '/api/v1/mis-vehiculos-rentacar/$vehiculoId/bloqueos?desde=$d&hasta=$h',
+      );
+      final list = res.data as List<dynamic>;
+      return list
+          .map((b) => Bloqueo.fromJson(b as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Crea un bloqueo manual o de mantenimiento.
+  Future<Bloqueo> crearBloqueo(
+    String vehiculoId,
+    DateTime fechaInicio,
+    DateTime fechaFin, {
+    String tipo = 'manual',
+    String? motivo,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-vehiculos-rentacar/$vehiculoId/bloqueos',
+        data: {
+          'fecha_inicio': fechaInicio.toIso8601String().substring(0, 10),
+          'fecha_fin': fechaFin.toIso8601String().substring(0, 10),
+          'tipo': tipo,
+          'motivo': motivo,
+        },
+      );
+      return Bloqueo.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  /// Elimina un bloqueo manual/mantenimiento (no permite tipo=reserva).
+  Future<void> eliminarBloqueo(String bloqueoId) async {
+    try {
+      await _dio.delete('/api/v1/mis-vehiculos-rentacar/bloqueos/$bloqueoId');
     } on ApiException {
       rethrow;
     } on DioException catch (e) {

@@ -7,6 +7,7 @@ import 'package:baqueano_natales/features/rentacar/domain/vehiculo.dart';
 import 'package:baqueano_natales/features/rentacar/domain/reserva.dart';
 import 'package:baqueano_natales/features/rentacar/domain/stats_rentacar.dart';
 import 'package:baqueano_natales/features/rentacar/domain/config_rentacar.dart';
+import 'package:baqueano_natales/features/rentacar/domain/bloqueo.dart';
 
 // =========================================================
 // Repositorio (inyectable para tests)
@@ -60,3 +61,21 @@ final reservaRentacarProvider = FutureProvider.family<Reserva, String>((
   final repo = ref.watch(rentacarRepositoryProvider);
   return repo.obtenerReserva(id);
 });
+
+// =========================================================
+// Bloqueos de disponibilidad (Fase 1.1)
+// =========================================================
+//
+// Key: record con (vehiculoId, mes). El mes se normaliza al dia 1
+// para que el cache funcione por mes calendario.
+typedef BloqueosKey = ({String vehiculoId, DateTime mes});
+
+final bloqueosRentacarProvider =
+    FutureProvider.family<List<Bloqueo>, BloqueosKey>((ref, key) async {
+      final repo = ref.watch(rentacarRepositoryProvider);
+      final mes = DateTime(key.mes.year, key.mes.month, 1);
+      // Rango: 1er dia del mes -> 1er dia del mes siguiente (exclusivo)
+      final desde = mes;
+      final hasta = DateTime(mes.year, mes.month + 1, 1);
+      return repo.listarBloqueos(key.vehiculoId, desde, hasta);
+    });
