@@ -21,7 +21,7 @@ class SeleccionarVehiculoCalendarioScreen extends ConsumerWidget {
           }
           return ListView.separated(
             itemCount: vehiculos.length,
-            separatorBuilder: (_, __) => const Divider(),
+            separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (context, index) {
               final v = vehiculos[index];
               return ListTile(
