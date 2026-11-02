@@ -4329,3 +4329,40 @@ docker exec -e DATABASE_URL="$(grep '^DATABASE_URL=' ~/baqueano-natales/.env.pro
 - `verificar_disponibilidad` con query `fecha_inicio < hasta AND fecha_fin > desde` = **NO solapamiento** (complemento de De Morgan sobre `[)`).
 - Rango vacio evitable: si reserva mismo dia (`inicio.date() == fin.date()`), usar `fin = inicio + 1 day` para que `daterange(...,'[)')` no sea vacio.
 - `ExclusionViolation` en asyncpg llega como `IntegrityError` en SQLAlchemy async; el nombre de constraint aparece en `str(exc.orig)` (contiene "no_solapamiento").
+
+#### Panel admin Flutter (cierre Fase 1.1 frontend)
+
+**Componentes creados**:
+- `flutter/lib/features/rentacar/domain/bloqueo.dart` — modelo con `cubreDia()`.
+- `flutter/lib/features/rentacar/presentation/screens/calendario_disponibilidad_screen.dart` (489 lineas) — pantalla completa.
+- `flutter/lib/features/rentacar/data/rentacar_repository.dart` — 3 metodos nuevos: `listarBloqueos`, `crearBloqueo`, `eliminarBloqueo`.
+- `flutter/lib/features/rentacar/data/rentacar_providers.dart` — `bloqueosRentacarProvider` family (key: vehiculoId+mes).
+- `vehiculo_detalle_screen.dart` — boton "Ver disponibilidad".
+- `pubspec.yaml` — `table_calendar: ^3.1.3`.
+
+**Practicas de industria aplicadas (investigadas)**:
+- `RangeSelectionMode.toggledOn` (seleccion de rango).
+- Colores semanticos: reserva=naranja, mantenimiento=gris, manual=azul (Fleetwire).
+- Validacion de conflicto antes de crear: si el rango abarca dias bloqueados -> banner rojo, no permite crear (ATOM Mobility / Vega UI Calendar).
+- markerBuilder con dots (max 3 por dia).
+- Bloqueos tipo=reserva no se pueden borrar desde el calendario (icono candado + tooltip).
+- Dialogo de motivo opcional antes de crear bloqueo.
+
+**Estado**: `flutter analyze` sin issues, `dart format` aplicado, APK admin prod desplegado.
+
+#### Bugs CI encontrados y corregidos
+
+1. **`prod-build.yml`: GitHub Actions rechaza `+` dentro de `${{ }}`**
+   - Error: `Unexpected symbol: "+"` en `github.run_number + 1000`.
+   - Fix: mover aritmetica a bash con `$((GITHUB_RUN_NUMBER + 1000))` en steps del runner.
+   - Bonus: renombrar steps `(clientDev)`/`(adminDev)` -> `(clientProd)`/`(adminProd)` (tarea pendiente del roadmap).
+
+2. **Manifest `build_number` incorrecto**
+   - Los manifests se generan dentro del step `appleboy/ssh-action`, que corre en el SERVER (no en el runner). Ahí `GITHUB_RUN_NUMBER` no existe -> bash lo trataba como 0 -> `build_number=1000` aunque el APK real tiene `versionCode=1015`.
+   - Fix: `$((${{ github.run_number }} + 1000))` (template expression sin `+`, suma en bash del server).
+
+#### Web publica: bug critico corregido
+
+**`NEXT_PUBLIC_API_URL` apuntaba a `api-dev` en prod desde el lanzamiento**. El archivo `.env.production` tenia `https://api-dev.baqueanonatales.com`. Todas las reservas de usuarios web iban a la DB de dev.
+
+**Fix**: `sed -i` + rebuild. Ademas, agregar exception en `.gitignore` para commitear `.env.production` (todos `NEXT_PUBLIC_*`, sin secretos) para que sobreviva a redeploys/reinstalaciones.
