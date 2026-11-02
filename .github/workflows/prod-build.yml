@@ -140,10 +140,10 @@ jobs:
             # Forzar la regeneración del sha256 para que coincida con el APK final
             sha256sum app-client.apk | awk '{print $1}' > app-client.apk.sha256
             
-            cp app-clientdev.apk archive/app-client-v${VERSION}.apk || true
-            cp app-clientdev.apk.sha256 archive/app-client-v${VERSION}.apk.sha256 || true
+            cp app-client.apk archive/app-client-v${VERSION}.apk || true
+            cp app-client.apk.sha256 archive/app-client-v${VERSION}.apk.sha256 || true
             
-            SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
+            SHA=$(cat app-client.apk.sha256 | awk '{print $1}')
             CLIENT_BUILD_NUMBER=$((${{ github.run_number }} + 1000))
             cat > version-client-prod.json <<EOF
             {
@@ -256,12 +256,12 @@ jobs:
             # Forzar la regeneración del sha256
             sha256sum app-admin.apk | awk '{print $1}' > app-admin.apk.sha256
             
-            cp app-admindev.apk archive/app-admin-v${VERSION}.apk || true
-            cp app-admindev.apk.sha256 archive/app-admin-v${VERSION}.apk.sha256 || true
+            cp app-admin.apk archive/app-admin-v${VERSION}.apk || true
+            cp app-admin.apk.sha256 archive/app-admin-v${VERSION}.apk.sha256 || true
             
             # Generar manifest para Admin
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
-            SHA=$(cat app-admindev.apk.sha256 | awk '{print $1}')
+            SHA=$(cat app-admin.apk.sha256 | awk '{print $1}')
             BUILD_NUMBER=$((${{ github.run_number }} + 1000))
             cat > version-admin-prod.json <<EOF
             {
