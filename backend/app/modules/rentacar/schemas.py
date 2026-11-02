@@ -202,3 +202,30 @@ class RentacarDisponibilidadOut(BaseModel):
     hasta: date
     disponible: bool
     bloqueos: list[RentacarBloqueoOut] = []
+
+
+# =========================================================
+# Reservas desde panel del prestador (walk-in / WhatsApp)
+# =========================================================
+class RentacarReservaCreatePropietario(BaseModel):
+    """Crear reserva desde el panel del prestador (sin OTP).
+
+    A diferencia de la reserva publica, esta NO requiere email verificado
+    ni nombre obligatorio (walk-in / mostrador).
+    """
+    vehiculo_id: UUID
+    fecha_inicio: datetime
+    fecha_fin: datetime
+    metodo_pago: str
+    precio_total: float
+    nombre_cliente: str | None = None
+    email_cliente: str | None = None
+    telefono_cliente: str | None = None
+    estado: str = "confirmada"  # para walk-in arranca confirmada
+
+
+class RentacarReservaUpdatePropietario(BaseModel):
+    """Modificar fechas y/o precio de una reserva existente."""
+    fecha_inicio: datetime | None = None
+    fecha_fin: datetime | None = None
+    precio_total: float | None = None

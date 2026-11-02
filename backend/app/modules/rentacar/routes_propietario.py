@@ -438,3 +438,69 @@ async def eliminar_mi_bloqueo(
         await services.eliminar_bloqueo(db, bloqueo_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================
+# Reservas desde panel del prestador (walk-in / WhatsApp)
+# =========================================================
+from .schemas import (
+    RentacarReservaCreatePropietario as _RCProp,
+    RentacarReservaUpdatePropietario as _RUProp,
+)
+
+
+@router_propietario.post(
+    "/reservas",
+    response_model=RentacarReservaDetalleOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear reserva manual (walk-in / WhatsApp)",
+)
+async def crear_reserva_manual(
+    data: _RCProp,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        reserva = await services.crear_reserva_propietario(db, user, data)
+    except ValueError as e:
+        msg = str(e)
+        code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
+        raise HTTPException(status_code=code, detail=msg)
+    # Enriquecer con datos del vehiculo
+    vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+    out = RentacarReservaDetalleOut.model_validate(reserva)
+    if vehiculo:
+        out.vehiculo_patente = vehiculo.patente
+        out.vehiculo_marca = vehiculo.marca
+        out.vehiculo_modelo = vehiculo.modelo
+        out.vehiculo_imagen_url = vehiculo.imagen_url
+        out.vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}"
+    return out
+
+
+@router_propietario.patch(
+    "/reservas/{reserva_id:uuid}",
+    response_model=RentacarReservaDetalleOut,
+    summary="Modificar fechas y/o precio de una reserva",
+)
+async def modificar_mi_reserva(
+    reserva_id: UUID,
+    data: _RUProp,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        reserva = await services.modificar_reserva(db, user, reserva_id, data)
+    except ValueError as e:
+        msg = str(e)
+        code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
+        raise HTTPException(status_code=code, detail=msg)
+    vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+    out = RentacarReservaDetalleOut.model_validate(reserva)
+    if vehiculo:
+        out.vehiculo_patente = vehiculo.patente
+        out.vehiculo_marca = vehiculo.marca
+        out.vehiculo_modelo = vehiculo.modelo
+        out.vehiculo_imagen_url = vehiculo.imagen_url
+        out.vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}"
+    return out

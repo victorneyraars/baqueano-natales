@@ -701,3 +701,128 @@ async def listar_bloqueos(
         .order_by(RentacarBloqueo.fecha_inicio)
     )
     return list((await db.execute(stmt)).scalars().all())
+
+
+# =========================================================
+# Reservas desde panel del prestador (walk-in / WhatsApp)
+# =========================================================
+async def crear_reserva_propietario(
+    db: AsyncSession, usuario: Usuario, data
+) -> RentacarReserva:
+    """Crear reserva desde el panel (sin OTP, walk-in friendly).
+
+    - Valida que el vehiculo sea del prestador del usuario.
+    - Crea reserva + bloqueo en la misma transaccion.
+    - Estado default = confirmada (walk-in ya reservado en el momento).
+    - Sin OTP: no manda email de verificacion.
+    """
+    # Validar que el vehiculo es del prestador
+    vehiculo = await _obtener_mi_vehiculo(db, usuario, data.vehiculo_id)
+    if not vehiculo.disponible:
+        raise ValueError("Vehiculo marcado como no disponible")
+    if data.fecha_fin <= data.fecha_inicio:
+        raise ValueError("Fecha de fin debe ser posterior a fecha de inicio")
+    if data.estado not in {"pendiente", "confirmada"}:
+        raise ValueError("Estado inicial invalido (debe ser pendiente o confirmada)")
+
+    reserva = RentacarReserva(
+        vehiculo_id=data.vehiculo_id,
+        fecha_inicio=data.fecha_inicio,
+        fecha_fin=data.fecha_fin,
+        metodo_pago=data.metodo_pago,
+        precio_total=data.precio_total,
+        nombre_cliente=data.nombre_cliente,
+        email_cliente=data.email_cliente,
+        telefono_cliente=data.telefono_cliente,
+        estado=data.estado,
+        email_verificado=True,  # creada por el prestador, no requiere OTP
+    )
+    db.add(reserva)
+    await db.flush()
+
+    fin_date = data.fecha_fin.date()
+    ini_date = data.fecha_inicio.date()
+    if fin_date <= ini_date:
+        fin_date = ini_date + timedelta(days=1)
+    bloqueo = RentacarBloqueo(
+        vehiculo_id=data.vehiculo_id,
+        reserva_id=reserva.id,
+        fecha_inicio=ini_date,
+        fecha_fin=fin_date,
+        tipo="reserva",
+    )
+    db.add(bloqueo)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "no_solapamiento" in str(getattr(exc, "orig", exc)):
+            raise ValueError(
+                "El vehiculo ya tiene una reserva o bloqueo en ese rango de fechas"
+            )
+        raise
+    await db.refresh(reserva)
+    return reserva
+
+
+async def modificar_reserva(
+    db: AsyncSession, usuario: Usuario, reserva_id: UUID, data
+) -> RentacarReserva:
+    """Modificar fechas y/o precio de una reserva existente.
+
+    - Solo reservas en estado pendiente o confirmada.
+    - Mueve el bloqueo asociado en la misma transaccion.
+    - Si hay solapamiento con otro bloqueo -> 409.
+    """
+    reserva = await _obtener_mi_reserva(db, usuario, reserva_id)
+    if reserva.estado not in {"pendiente", "confirmada"}:
+        raise ValueError(
+            f"No se puede modificar una reserva en estado '{reserva.estado}'"
+        )
+
+    nueva_ini = data.fecha_inicio or reserva.fecha_inicio
+    nueva_fin = data.fecha_fin or reserva.fecha_fin
+    if nueva_fin <= nueva_ini:
+        raise ValueError("Fecha de fin debe ser posterior a fecha de inicio")
+
+    # Actualizar reserva
+    reserva.fecha_inicio = nueva_ini
+    reserva.fecha_fin = nueva_fin
+    if data.precio_total is not None:
+        reserva.precio_total = data.precio_total
+
+    # Actualizar bloqueo asociado (mover rango)
+    fin_date = nueva_fin.date()
+    ini_date = nueva_ini.date()
+    if fin_date <= ini_date:
+        fin_date = ini_date + timedelta(days=1)
+
+    stmt = select(RentacarBloqueo).where(
+        RentacarBloqueo.reserva_id == reserva_id
+    )
+    bloqueo = (await db.execute(stmt)).scalar_one_or_none()
+    if bloqueo is not None:
+        bloqueo.fecha_inicio = ini_date
+        bloqueo.fecha_fin = fin_date
+    else:
+        # Caso borde: bloqueo inexistente, crearlo
+        bloqueo = RentacarBloqueo(
+            vehiculo_id=reserva.vehiculo_id,
+            reserva_id=reserva.id,
+            fecha_inicio=ini_date,
+            fecha_fin=fin_date,
+            tipo="reserva",
+        )
+        db.add(bloqueo)
+
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "no_solapamiento" in str(getattr(exc, "orig", exc)):
+            raise ValueError(
+                "El vehiculo ya tiene una reserva o bloqueo en ese rango de fechas"
+            )
+        raise
+    await db.refresh(reserva)
+    return reserva
