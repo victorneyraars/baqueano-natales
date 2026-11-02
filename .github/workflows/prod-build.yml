@@ -70,14 +70,15 @@ jobs:
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
 
-      - name: Build AAB (clientDev)
+      - name: Build AAB (clientProd)
         working-directory: flutter
         run: |
+          BUILD_NUM=$((GITHUB_RUN_NUMBER + 1000))
           flutter build appbundle --release --flavor clientProd \
             -t lib/main_client.dart \
             --dart-define=GIT_SHA=${{ github.sha }} \
             --dart-define-from-file=dart_defines/client_prod.json \
-            --build-number=${{ github.run_number + 1000 }}
+            --build-number=$BUILD_NUM
 
       - name: Descargar bundletool (con auth para evitar rate limit)
         run: |
@@ -143,7 +144,7 @@ jobs:
             cp app-clientdev.apk.sha256 archive/app-client-v${VERSION}.apk.sha256 || true
             
             SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
-            CLIENT_BUILD_NUMBER=${{ github.run_number + 1000 }}
+            CLIENT_BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 1000))
             cat > version-client-prod.json <<EOF
             {
               "latest_version": "$VERSION",
@@ -187,14 +188,15 @@ jobs:
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=baqueano-release.jks\n" \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > key.properties
 
-      - name: Build AAB (adminDev)
+      - name: Build AAB (adminProd)
         working-directory: flutter
         run: |
+          BUILD_NUM=$((GITHUB_RUN_NUMBER + 1000))
           flutter build appbundle --release --flavor adminProd \
             -t lib/main_admin.dart \
             --dart-define=GIT_SHA=${{ github.sha }} \
             --dart-define-from-file=dart_defines/admin_prod.json \
-            --build-number=${{ github.run_number + 1000 }}
+            --build-number=$BUILD_NUM
 
       - name: Descargar bundletool (con auth para evitar rate limit)
         run: |
@@ -260,7 +262,7 @@ jobs:
             # Generar manifest para Admin
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             SHA=$(cat app-admindev.apk.sha256 | awk '{print $1}')
-            BUILD_NUMBER=${{ github.run_number + 1000 }}
+            BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 1000))
             cat > version-admin-prod.json <<EOF
             {
               "latest_version": "$VERSION",
