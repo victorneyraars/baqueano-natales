@@ -193,72 +193,76 @@ class _CalendarioDisponibilidadScreenState
     return Column(
       children: [
         _buildLeyenda(),
-        TableCalendar<Bloqueo>(
-          firstDay: _firstDay,
-          lastDay: DateTime.now().add(const Duration(days: 730)),
-          focusedDay: _focusedDay,
-          rangeStartDay: _rangeStart,
-          rangeEndDay: _rangeEnd,
-          rangeSelectionMode: RangeSelectionMode.toggledOn,
-          eventLoader: (day) => events[_dayKey(day)] ?? const [],
-          calendarFormat: CalendarFormat.month,
-          availableCalendarFormats: const {CalendarFormat.month: 'Mes'},
-          startingDayOfWeek: StartingDayOfWeek.monday,
-          locale: 'es_CL',
-          headerStyle: const HeaderStyle(
-            formatButtonVisible: false,
-            titleCentered: true,
-          ),
-          calendarStyle: CalendarStyle(
-            todayDecoration: const BoxDecoration(
-              color: Colors.blueAccent,
-              shape: BoxShape.circle,
+        Expanded(
+          flex: 3,
+          child: TableCalendar<Bloqueo>(
+            firstDay: _firstDay,
+            lastDay: DateTime.now().add(const Duration(days: 730)),
+            focusedDay: _focusedDay,
+            rangeStartDay: _rangeStart,
+            rangeEndDay: _rangeEnd,
+            rangeSelectionMode: RangeSelectionMode.toggledOn,
+            eventLoader: (day) => events[_dayKey(day)] ?? const [],
+            calendarFormat: CalendarFormat.month,
+            availableCalendarFormats: const {CalendarFormat.month: 'Mes'},
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            locale: 'es_CL',
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
             ),
-            rangeStartDecoration: const BoxDecoration(
-              color: Colors.teal,
-              shape: BoxShape.circle,
+            calendarStyle: CalendarStyle(
+              todayDecoration: const BoxDecoration(
+                color: Colors.blueAccent,
+                shape: BoxShape.circle,
+              ),
+              rangeStartDecoration: const BoxDecoration(
+                color: Colors.teal,
+                shape: BoxShape.circle,
+              ),
+              rangeEndDecoration: const BoxDecoration(
+                color: Colors.teal,
+                shape: BoxShape.circle,
+              ),
+              rangeHighlightColor: Colors.teal.withValues(alpha: 0.2),
+              markerDecoration: const BoxDecoration(),
             ),
-            rangeEndDecoration: const BoxDecoration(
-              color: Colors.teal,
-              shape: BoxShape.circle,
+            calendarBuilders: CalendarBuilders<Bloqueo>(
+              markerBuilder: (context, day, dayEvents) {
+                if (dayEvents.isEmpty) return null;
+                // Mostrar hasta 3 dots por tipo
+                final tipos = dayEvents.map((e) => e.tipo).toSet().toList();
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: tipos.take(3).map((t) {
+                    return Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      decoration: BoxDecoration(
+                        color: _colorForTipo(t),
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             ),
-            rangeHighlightColor: Colors.teal.withValues(alpha: 0.2),
-            markerDecoration: const BoxDecoration(),
-          ),
-          calendarBuilders: CalendarBuilders<Bloqueo>(
-            markerBuilder: (context, day, dayEvents) {
-              if (dayEvents.isEmpty) return null;
-              // Mostrar hasta 3 dots por tipo
-              final tipos = dayEvents.map((e) => e.tipo).toSet().toList();
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: tipos.take(3).map((t) {
-                  return Container(
-                    width: 5,
-                    height: 5,
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
-                    decoration: BoxDecoration(
-                      color: _colorForTipo(t),
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                }).toList(),
-              );
+            onRangeSelected: (start, end, focusedDay) {
+              setState(() {
+                _rangeStart = start;
+                _rangeEnd = end;
+                _focusedDay = focusedDay;
+              });
+            },
+            onPageChanged: (focusedDay) {
+              setState(() => _focusedDay = focusedDay);
             },
           ),
-          onRangeSelected: (start, end, focusedDay) {
-            setState(() {
-              _rangeStart = start;
-              _rangeEnd = end;
-              _focusedDay = focusedDay;
-            });
-          },
-          onPageChanged: (focusedDay) {
-            setState(() => _focusedDay = focusedDay);
-          },
         ),
         const Divider(),
         Expanded(
+          flex: 2,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: _buildPanel(context, events, conflict),
