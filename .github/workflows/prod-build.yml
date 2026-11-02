@@ -144,7 +144,7 @@ jobs:
             cp app-clientdev.apk.sha256 archive/app-client-v${VERSION}.apk.sha256 || true
             
             SHA=$(cat app-clientdev.apk.sha256 | awk '{print $1}')
-            CLIENT_BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 1000))
+            CLIENT_BUILD_NUMBER=$((${{ github.run_number }} + 1000))
             cat > version-client-prod.json <<EOF
             {
               "latest_version": "$VERSION",
@@ -262,7 +262,7 @@ jobs:
             # Generar manifest para Admin
             COMMIT_MSG=$(git -C /home/deploy/baqueano-natales log -1 --pretty=%B | head -n 1 | tr -d '\r')
             SHA=$(cat app-admindev.apk.sha256 | awk '{print $1}')
-            BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 1000))
+            BUILD_NUMBER=$((${{ github.run_number }} + 1000))
             cat > version-admin-prod.json <<EOF
             {
               "latest_version": "$VERSION",
