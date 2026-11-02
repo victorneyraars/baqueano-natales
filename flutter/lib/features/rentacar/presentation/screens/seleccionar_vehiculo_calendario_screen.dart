@@ -25,12 +25,27 @@ class SeleccionarVehiculoCalendarioScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final v = vehiculos[index];
               return ListTile(
-                leading: const Icon(Icons.directions_car),
+                leading: v.imagenUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          v.imagenUrl!,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) =>
+                              const Icon(Icons.directions_car, size: 32),
+                        ),
+                      )
+                    : const Icon(Icons.directions_car, size: 32),
                 title: Text('${v.marca} ${v.modelo}'),
                 subtitle: Text(v.patente),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  context.push('/calendario-disponibilidad-rentacar', extra: v);
+                  context.push(
+                    '/calendario-disponibilidad-rentacar/detalle',
+                    extra: v,
+                  );
                 },
               );
             },
