@@ -3,6 +3,8 @@ library;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
@@ -14,6 +16,7 @@ Future<void> main() async {
   AppConfig.init(type: AppType.admin);
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await initializeDateFormatting('es_CL', null);
   runApp(const ProviderScope(child: BaqueanoAdminApp()));
 }
 
@@ -84,6 +87,13 @@ class _BaqueanoAdminAppState extends ConsumerState<BaqueanoAdminApp>
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('es', 'CL'), Locale('en', 'US')],
+      locale: const Locale('es', 'CL'),
       builder: (context, child) {
         final scaler = MediaQuery.textScalerOf(context);
         return MediaQuery(

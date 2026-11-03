@@ -12,7 +12,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:baqueano_natales/core/config/app_config.dart';
 import 'package:baqueano_natales/core/fcm/fcm_providers.dart';
@@ -186,6 +188,8 @@ Future<void> main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // 4. Configuración de la app
   AppConfig.init(type: AppType.client);
+  // 4b. Inicializar locales es_CL para TableCalendar y otros widgets con intl
+  await initializeDateFormatting('es_CL', null);
   // 5. Arranque
   runApp(const ProviderScope(child: BaqueanoClientApp()));
 }
@@ -278,6 +282,13 @@ class _BaqueanoClientAppState extends ConsumerState<BaqueanoClientApp>
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('es', 'CL'), Locale('en', 'US')],
+      locale: const Locale('es', 'CL'),
       builder: (context, child) {
         final scaler = MediaQuery.textScalerOf(context);
         return MediaQuery(
