@@ -945,6 +945,23 @@ class PrestadorRepository {
   }
 
   /// Elimina un colaborador (solo owner).
+
+  /// Actualiza los permisos de un colaborador (solo owner).
+  Future<void> actualizarPermisosColaborador({
+    required String prestadorId,
+    required String email,
+    required List<String> permisos,
+  }) async {
+    try {
+      await _dio.patch(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/$email/permisos',
+        data: {'permisos': permisos},
+      );
+    } catch (e) {
+      throw ApiException('Error al actualizar permisos: $e');
+    }
+  }
+
   Future<void> eliminarColaborador({
     required String prestadorId,
     required String email,

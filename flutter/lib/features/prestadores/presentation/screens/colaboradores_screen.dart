@@ -162,6 +162,12 @@ class ColaboradoresScreen extends ConsumerWidget {
                 tooltip: 'Reenviar invitación',
                 onPressed: () => _reenviar(context, ref, c),
               ),
+            if (activo)
+              IconButton(
+                icon: const Icon(Icons.settings, color: Colors.grey),
+                tooltip: 'Editar permisos',
+                onPressed: () => _abrirPermisos(context, ref, c),
+              ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
               tooltip: 'Eliminar colaborador',
@@ -269,6 +275,72 @@ class ColaboradoresScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _abrirPermisos(
+    BuildContext context,
+    WidgetRef ref,
+    Colaborador c,
+  ) async {
+    final seleccionados = List<String>.from(c.permisos);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Permisos de ${c.nombre}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CheckboxListTile(
+                  title: const Text('Gestionar Calendario'),
+                  value: seleccionados.contains('gestionar_calendario'),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true)
+                        seleccionados.add('gestionar_calendario');
+                      else
+                        seleccionados.remove('gestionar_calendario');
+                    });
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (ok == true && context.mounted) {
+      try {
+        await ref
+            .read(prestadorRepositoryProvider)
+            .actualizarPermisosColaborador(
+              prestadorId: prestadorId,
+              email: c.email,
+              permisos: seleccionados,
+            );
+        ref.invalidate(colaboradoresProvider(prestadorId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Permisos actualizados')));
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e'), backgroundColor: Colors.red),
           );
         }
       }

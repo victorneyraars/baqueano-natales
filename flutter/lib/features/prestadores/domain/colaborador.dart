@@ -13,6 +13,7 @@ class Colaborador {
   final DateTime invitadoAt;
   final DateTime? activadoAt;
   final String rol;
+  final List<String> permisos;
 
   const Colaborador({
     required this.email,
@@ -22,6 +23,7 @@ class Colaborador {
     required this.invitadoAt,
     this.activadoAt,
     this.rol = 'colaborador',
+    this.permisos = const [],
   });
 
   /// true si el colaborador ya aceptó la invitación.
@@ -38,6 +40,11 @@ class Colaborador {
           ? DateTime.parse(json['activado_at'] as String)
           : null,
       rol: json['rol'] as String? ?? 'colaborador',
+      permisos:
+          (json['permisos'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
   }
 }
