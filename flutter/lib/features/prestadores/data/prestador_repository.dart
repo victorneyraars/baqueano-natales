@@ -924,8 +924,6 @@ class PrestadorRepository {
     }
   }
 
-  /// Elimina un colaborador (solo owner).
-
   /// Reenvía la invitación a un colaborador pendiente.
   Future<void> reenviarInvitacion({
     required String prestadorId,
@@ -938,14 +936,15 @@ class PrestadorRepository {
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        throw NotFoundException('Colaborador no encontrado');
+        throw const NotFoundException('Colaborador no encontrado');
       }
-      throw ApiException('Error al reenviar invitación: ${e.message}');
+      throw ServerException('Error al reenviar invitación: ${e.message}');
     } catch (e) {
       throw UnknownException('Error inesperado: $e');
     }
   }
 
+  /// Elimina un colaborador (solo owner).
   Future<void> eliminarColaborador({
     required String prestadorId,
     required String email,
