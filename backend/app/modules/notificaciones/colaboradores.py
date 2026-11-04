@@ -13,34 +13,20 @@ async def notificar_invitacion_colaborador(
     """Envia email de invitacion con link firmado al nuevo colaborador."""
     link = f"https://rentacarvasquez.com/admin?invite={token}"
     asunto = f"Invitacion para colaborar en {nombre_prestador}"
-    whatsapp_html = (
-        f"<p style=\"color: #666; font-size: 13px;\">"
-        f"Tu WhatsApp registrado para notificaciones: <strong>{whatsapp_invitado}</strong>"
-        f"</p>"
-    ) if whatsapp_invitado else ""
+    
+    # Diseño ultra-simple para evitar la pestaña de Promociones
+    texto_whatsapp = f"\n\nTu WhatsApp registrado: {whatsapp_invitado}" if whatsapp_invitado else ""
+    
     html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2E7D32;">Invitacion para colaborar</h2>
-        <p>Hola <strong>{nombre_invitado}</strong>,</p>
-        <p>
-            <strong>{nombre_invitador}</strong> te invito a colaborar en
-            <strong>{nombre_prestador}</strong>.
-        </p>
-        <p>Como colaborador vas a poder gestionar reservas y vehiculos,
-           pero no tendras acceso a la configuracion completa.</p>
-        {whatsapp_html}
-        <p style="margin: 30px 0; text-align: center;">
-            <a href="{link}"
-               style="background-color: #2E7D32; color: white;
-                      padding: 12px 24px; text-decoration: none;
-                      border-radius: 6px; font-weight: bold;">
-                Aceptar invitacion
-            </a>
-        </p>
-        <p style="color: #666; font-size: 13px;">
-            El link expira en 7 dias. Si no solicitaste esta invitacion,
-            ignora este email.
-        </p>
+    <div style="font-family: sans-serif; color: #333; font-size: 14px; line-height: 1.5;">
+        <p>Hola {nombre_invitado},</p>
+        <p>{nombre_invitador} te ha invitado a colaborar en {nombre_prestador}.</p>
+        <p>Como colaborador vas a poder gestionar reservas y vehículos, pero no tendrás acceso a la configuración completa.{texto_whatsapp}</p>
+        <p>Para aceptar la invitación, haz clic en el siguiente enlace:</p>
+        <p><a href="{link}">{link}</a></p>
+        <p>El enlace expira en 7 días. Si no solicitaste esta invitación, puedes ignorar este correo.</p>
+        <br>
+        <p>Saludos,<br>El equipo de {nombre_prestador}</p>
     </div>
     """
     return await enviar_email(to=email_invitado, subject=asunto, html=html)

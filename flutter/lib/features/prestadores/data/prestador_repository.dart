@@ -925,6 +925,27 @@ class PrestadorRepository {
   }
 
   /// Elimina un colaborador (solo owner).
+
+  /// Reenvía la invitación a un colaborador pendiente.
+  Future<void> reenviarInvitacion({
+    required String prestadorId,
+    required String email,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/reenviar',
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw NotFoundException('Colaborador no encontrado');
+      }
+      throw ApiException('Error al reenviar invitación: ${e.message}');
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   Future<void> eliminarColaborador({
     required String prestadorId,
     required String email,

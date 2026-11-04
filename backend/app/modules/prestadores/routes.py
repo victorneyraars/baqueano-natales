@@ -615,6 +615,65 @@ async def invitar_colaborador(
     )
 
 
+
+@router_propietario.post(
+    "/{prestador_id:uuid}/colaboradores/reenviar",
+    summary="Reenviar invitacion a un colaborador pendiente",
+)
+async def reenviar_invitacion_colaborador(
+    prestador_id: UUID,
+    data: dict,
+    prestador: PrestadorOwner,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+    email = data.get("email", "").lower().strip()
+    if not email:
+        raise HTTPException(400, "Email requerido")
+
+    colaboradores = list(prestador.colaboradores or [])
+    colab = next(
+        (
+            c
+            for c in colaboradores
+            if isinstance(c, dict) and (c.get("email") or "").lower() == email
+        ),
+        None,
+    )
+
+    if not colab:
+        raise HTTPException(404, "Colaborador no encontrado")
+
+    if colab.get("activado_at"):
+        raise HTTPException(400, "El colaborador ya ha aceptado la invitacion")
+
+    token = generar_token_invitacion(str(prestador.id), email)
+    background_tasks.add_task(
+        notificar_invitacion_colaborador,
+        email_invitado=email,
+        nombre_invitado=colab.get("nombre", "Colaborador"),
+        nombre_prestador=prestador.nombre,
+        nombre_invitador=user.nombre or user.email or "el administrador",
+        token=token,
+        whatsapp_invitado=colab.get("whatsapp"),
+    )
+
+    await log_audit(
+        db=db,
+        prestador_id=prestador.id,
+        user=user,
+        accion="colaborador_reenvio_invitacion",
+        entidad="colaborador",
+        entidad_id=email,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return {"status": "ok", "message": "Invitacion reenviada"}
+
+
 @router_propietario.post(
     "/{prestador_id:uuid}/colaboradores/aceptar",
     summary="Aceptar invitacion como colaborador",

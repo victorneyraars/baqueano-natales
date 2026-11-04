@@ -153,10 +153,21 @@ class ColaboradoresScreen extends ConsumerWidget {
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          tooltip: 'Eliminar colaborador',
-          onPressed: () => _eliminar(context, ref, c),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!activo)
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.blue),
+                tooltip: 'Reenviar invitación',
+                onPressed: () => _reenviar(context, ref, c),
+              ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Eliminar colaborador',
+              onPressed: () => _eliminar(context, ref, c),
+            ),
+          ],
         ),
         isThreeLine: true,
       ),
@@ -260,6 +271,37 @@ class ColaboradoresScreen extends ConsumerWidget {
             SnackBar(content: Text(e.message), backgroundColor: Colors.red),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _reenviar(
+    BuildContext context,
+    WidgetRef ref,
+    Colaborador c,
+  ) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reenviando invitación...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    try {
+      final repo = ref.read(prestadorRepositoryProvider);
+      await repo.reenviarInvitacion(prestadorId: prestadorId, email: c.email);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invitación reenviada con éxito.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
       }
     }
   }
