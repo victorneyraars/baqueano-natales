@@ -958,7 +958,7 @@ class PrestadorRepository {
         data: {'permisos': permisos},
       );
     } catch (e) {
-      throw ApiException('Error al actualizar permisos: $e');
+      throw ServerException('Error al actualizar permisos: $e');
     }
   }
 
