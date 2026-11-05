@@ -953,8 +953,9 @@ class PrestadorRepository {
     required List<String> permisos,
   }) async {
     try {
+      final emailEncoded = Uri.encodeComponent(email);
       await _dio.patch(
-        '/api/v1/mis-prestadores/$prestadorId/colaboradores/$email/permisos',
+        '/api/v1/mis-prestadores/$prestadorId/colaboradores/permisos?email=$emailEncoded',
         data: {'permisos': permisos},
       );
     } catch (e) {
