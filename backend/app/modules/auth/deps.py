@@ -97,3 +97,17 @@ async def require_admin(
 # Tipos anotados para usar en endpoints
 CurrentUser = Annotated[Usuario, Depends(get_current_user)]
 AdminUser = Annotated[Usuario, Depends(require_admin)]
+
+
+# =========================================================
+# Helper de superusuario (admin del ecosistema)
+# =========================================================
+
+def es_admin(user) -> bool:
+    """Devuelve True si el usuario es admin del ecosistema Baqueano.
+    
+    Los admins tienen acceso total a todos los prestadores, oficios y
+    comercios, sin necesidad de ser dueños ni colaboradores.
+    """
+    from app.modules.auth.models import RolUsuario
+    return user.rol == RolUsuario.ADMIN
