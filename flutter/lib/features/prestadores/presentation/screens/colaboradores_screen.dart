@@ -301,10 +301,11 @@ class ColaboradoresScreen extends ConsumerWidget {
                   value: seleccionados.contains('gestionar_calendario'),
                   onChanged: (val) {
                     setState(() {
-                      if (val == true)
+                      if (val == true) {
                         seleccionados.add('gestionar_calendario');
-                      else
+                      } else {
                         seleccionados.remove('gestionar_calendario');
+                      }
                     });
                   },
                 ),
