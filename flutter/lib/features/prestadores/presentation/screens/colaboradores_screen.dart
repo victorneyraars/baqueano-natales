@@ -334,6 +334,7 @@ class ColaboradoresScreen extends ConsumerWidget {
               email: c.email,
               permisos: seleccionados,
             );
+        if (!context.mounted) return;
         ref.invalidate(colaboradoresProvider(prestadorId));
         ScaffoldMessenger.of(
           context,
