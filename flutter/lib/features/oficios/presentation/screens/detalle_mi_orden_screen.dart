@@ -11,7 +11,7 @@ import 'package:baqueano_natales/features/oficios/domain/orden_historial.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_item.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_trabajo.dart';
 import 'package:baqueano_natales/features/oficios/presentation/widgets/garantia_card.dart';
-import 'package:baqueano_natales/features/oficios/presentation/widgets/review_card.dart';
+import 'package:baqueano_natales/shared/widgets/review_card.dart';
 
 class DetalleMiOrdenScreen extends ConsumerStatefulWidget {
   const DetalleMiOrdenScreen({super.key, required this.ordenId});
