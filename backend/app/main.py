@@ -1,4 +1,3 @@
-from app.modules.documents.routes import router as documents_router
 """
 Baqueano Natales - Backend API
 Entry point de FastAPI.
@@ -172,6 +171,7 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------
 # Auth / usuarios / admin (base)
+from app.modules.documents.routes import router as documents_router
 from app.modules.integrations.routes import router as integrations_router
 
 app.include_router(auth_router, prefix="/api/v1")
