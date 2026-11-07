@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:baqueano_natales/core/config/app_config.dart';
 import 'package:baqueano_natales/core/storage/secure_storage.dart';
 import 'package:baqueano_natales/features/auth/data/auth_notifier.dart';
-import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 
 /// Modo activo del usuario: 'cliente' o 'prestador'.
@@ -48,8 +47,16 @@ final activeModeProvider = NotifierProvider<ActiveModeNotifier, String>(
 );
 
 /// ¿El usuario puede cambiar de modo?
-/// Regla: appType=client + rol=prestador + tiene prestador + tiene vehículo.
-/// Con esto: Cliente QA=false, Prestador QA=false (sin vehículo), Multi QA=true.
+/// Regla: appType=client + rol=prestador + tiene un perfil de prestador activo.
+///
+/// Nota de diseño: Anteriormente se exigía que el usuario tuviera un vehículo
+/// registrado en la tabla de clientes (misVehiculos) para habilitar el switch.
+/// Eso se eliminó porque bloqueaba a los prestadores de Rent a Car (que tienen
+/// su flota en rentacar_vehiculos, no en la tabla de clientes) y a mecánicos
+/// que no son dueños de un auto registrado en la app.
+///
+/// Dado que el registro público de prestadores está deshabilitado, cualquier
+/// usuario con rol 'prestador' ha sido validado y habilitado por el Admin.
 final hasDualRoleProvider = FutureProvider<bool>((ref) async {
   if (AppConfig.appType != AppType.client) return false;
 
@@ -60,8 +67,5 @@ final hasDualRoleProvider = FutureProvider<bool>((ref) async {
   if (user.role != 'prestador') return false;
 
   final misPrestadores = await ref.watch(misPrestadoresProvider.future);
-  if (misPrestadores.isEmpty) return false;
-
-  final vehiculos = await ref.watch(misVehiculosProvider.future);
-  return vehiculos.isNotEmpty;
+  return misPrestadores.isNotEmpty;
 });
