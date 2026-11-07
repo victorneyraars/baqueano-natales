@@ -23,8 +23,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     super.initState();
     // Ejecutar la restauración de sesión en el próximo frame
     // (evita llamar a ref durante build).
+    //
+    // GUARD CRÍTICO: solo restaurar si el estado todavía es `unknown`
+    // (arranque inicial). Si el router nos montó durante un logout
+    // (`loggingOut`), el authNotifier ya está cerrando la sesión y
+    // disparar restoreSession() acá provocaría una re-autenticación
+    // por race condition. Ver AUTH_FLOW.md §"Race condition en logout".
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authNotifierProvider.notifier).restoreSession();
+      if (!mounted) return;
+      final current = ref.read(authNotifierProvider);
+      if (current.status == AuthStatus.unknown) {
+        ref.read(authNotifierProvider.notifier).restoreSession();
+      }
     });
   }
 

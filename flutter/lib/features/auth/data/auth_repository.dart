@@ -152,15 +152,50 @@ class AuthRepository {
   }
 
   /// Cierra la sesión en Firebase, Google y borra el JWT local.
+  ///
+  /// Por qué cada paso va en su propio try/catch:
+  ///
+  /// Si Firebase falla (ej. sin red), NO queremos que un fallo de ese
+  /// servicio impida que se ejecute el signOut de Google o la limpieza
+  /// del storage local. El usuario debe quedar deslogueado del dispositivo
+  /// aunque los servicios externos no respondan.
+  ///
+  /// Por qué NO se propaga ninguna excepción:
+  ///
+  /// El logout es una operación "best-effort" desde el punto de vista del
+  /// usuario. Si no se puede cerrar la sesión en Firebase, igual la
+  /// limpiamos localmente y el próximo login vuelve a autenticar. Si
+  /// propagamos el error, el AuthNotifier no puede garantizar el estado
+  /// unauthenticated y el usuario queda en un estado zombie.
   Future<void> logout() async {
+    // 1. Desregistrar token FCM (best-effort): si el dispositivo deja de
+    //    recibir notificaciones del usuario anterior, mejor. No rompe el
+    //    flujo si falla (ej. sin red).
+    try {
+      await _dio.delete('/api/v1/usuarios/me/fcm-token');
+    } catch (e) {
+      debugPrint('[AuthRepo] Error desregistrando FCM: $e');
+    }
+
+    // 2. Cerrar sesión en Firebase (best-effort).
     try {
       await _firebaseAuth.signOut();
-      await _googleSignIn.signOut();
-    } catch (_) {
-      // Ignorar errores al cerrar sesión en los servicios externos
-    } finally {
-      await SecureStorageService.clearAll();
+    } catch (e) {
+      debugPrint('[AuthRepo] Error Firebase signOut: $e');
     }
+
+    // 3. Cerrar sesión en Google (best-effort).
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('[AuthRepo] Error Google signOut: $e');
+    }
+
+    // 4. Limpiar storage local: CRÍTICO. Si esto falla, el token
+    //    quedaría en Keystore y el próximo restoreSession volvería a
+    //    autenticar al usuario. No lo atrapamos: si falla, el error
+    //    sube y el usuario ve un snackbar, pero al menos se entera.
+    await SecureStorageService.clearAll();
   }
 
   /// Registra el token FCM del dispositivo en el backend.

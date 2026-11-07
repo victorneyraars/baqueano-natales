@@ -122,6 +122,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         case AuthStatus.loading:
           return location == '/splash' ? null : '/splash';
 
+        case AuthStatus.loggingOut:
+          // Durante logout NO pasamos por /splash. Si lo hiciéramos,
+          // SplashScreen dispararía restoreSession() mientras el token
+          // todavía no fue borrado, re-autenticando al usuario. Ver
+          // AUTH_FLOW.md §"Race condition en logout".
+          if (location == '/login') return null;
+          return '/login';
+
         case AuthStatus.unauthenticated:
           if (location == '/login') return null;
           return '/login';
