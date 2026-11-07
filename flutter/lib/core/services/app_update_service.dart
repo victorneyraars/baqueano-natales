@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -220,7 +221,16 @@ class AppUpdateService {
       }
 
       navigator.pop(); // Cerrar el diálogo de progreso
+      // Lanzar el installer del APK.
       await OpenFilex.open(savePath);
+
+      // Delay para que el installer arranque antes de matar la app.
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+
+      // Cerrar la app (graceful). Sin esto, la version vieja queda en
+      // "Recientes" y cuando se instala la nueva, Android muestra dos
+      // ventanas de la app.
+      SystemNavigator.pop();
     } catch (e) {
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
