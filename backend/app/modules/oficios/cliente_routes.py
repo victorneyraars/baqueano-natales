@@ -56,7 +56,8 @@ logger = logging.getLogger(__name__)
 # =========================================================
 # Publico
 # =========================================================
-router_publico = APIRouter(prefix="/oficios/mecanica", tags=["oficios-mecanica"])
+
+router_propietario = APIRouter(prefix="/mis-vehiculos", tags=["oficios-mis-vehiculos"])
 
 
 @router_propietario.get(
@@ -67,6 +68,7 @@ router_publico = APIRouter(prefix="/oficios/mecanica", tags=["oficios-mecanica"]
 async def listar_mis_vehiculos(user: CurrentUser, db: DbSession) -> list[VehiculoResponse]:
     rows = await services.listar_mis_vehiculos(db, user)
     return [VehiculoResponse(**r) for r in rows]
+
 
 @router_propietario.post(
     "",
@@ -80,6 +82,7 @@ async def crear_vehiculo(
     row = await services.crear_vehiculo(db, user, data)
     return VehiculoResponse(**row)
 
+
 @router_propietario.get(
     "/{objeto_id}",
     response_model=VehiculoResponse,
@@ -90,6 +93,7 @@ async def obtener_mi_vehiculo(
 ) -> VehiculoResponse:
     row = await services.obtener_mi_vehiculo(db, user, objeto_id)
     return VehiculoResponse(**row)
+
 
 @router_propietario.patch(
     "/{objeto_id}",
@@ -104,6 +108,7 @@ async def actualizar_mi_vehiculo(
 ) -> VehiculoResponse:
     row = await services.actualizar_vehiculo(db, user, objeto_id, data)
     return VehiculoResponse(**row)
+
 
 @router_propietario.delete(
     "/{objeto_id}",
@@ -120,10 +125,12 @@ async def eliminar_mi_vehiculo(
 # =========================================================
 # Admin: categorias mecanica
 # =========================================================
-router_admin_categorias = APIRouter(
-    prefix="/admin/oficios/mecanica/categorias",
-    tags=["admin-oficios-mecanica"],
+
+router_mis_ordenes_cliente = APIRouter(
+    prefix="/mis-ordenes",
+    tags=["oficios-ordenes-cliente"],
 )
+
 
 @router_mis_ordenes_cliente.get(
     "",
@@ -141,6 +148,7 @@ async def listar_mis_ordenes(
     )
     return [_serializar_orden(o, incluir_notas_internas=False) for o in ordenes]
 
+
 @router_mis_ordenes_cliente.get(
     "/{orden_id}",
     response_model=OrdenTrabajoDetalleResponse,
@@ -156,6 +164,7 @@ async def detalle_mi_orden(
         raise HTTPException(status_code=403, detail="No tenes permiso")
     # Sin notas internas para el cliente
     return _serializar_orden(orden, incluir_notas_internas=False, con_historial=True)
+
 
 @router_mis_ordenes_cliente.post(
     "/{orden_id}/aprobar",
@@ -179,26 +188,12 @@ async def aprobar_presupuesto(
 # =========================================================
 # M2+: Utilidades del prestador (busqueda para crear ordenes)
 # =========================================================
-router_prestador_utilidades = APIRouter(
-    prefix="/mis-prestadores/{prestador_id}",
-    tags=["oficios-prestador-utilidades"],
+
+router_turnos_cliente = APIRouter(
+    prefix="/mis-turnos",
+    tags=["oficios-turnos-cliente"],
 )
 
-
-async def _validar_prestador_del_usuario(
-    db, prestador_id: UUID, user, prestador_repo
-):
-    """Valida que el usuario sea dueno del prestador o admin."""
-    prestador = (
-        await db.execute(
-            select(prestador_repo).where(prestador_repo.id == prestador_id)
-        )
-    ).scalar_one_or_none()
-    if prestador is None:
-        raise HTTPException(status_code=404, detail="Prestador no encontrado")
-    if user.rol != "admin" and prestador.usuario_id != user.id:
-        raise HTTPException(status_code=403, detail="No tenes permiso")
-    return prestador
 
 @router_turnos_cliente.get(
     "",
@@ -217,6 +212,7 @@ async def listar_mis_turnos(
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, turnos)
     return [TurnoListItemResponse(**t) for t in enriquecidos]
 
+
 @router_turnos_cliente.post(
     "",
     response_model=TurnoResponse,
@@ -234,6 +230,7 @@ async def crear_turno(
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
 
+
 @router_turnos_cliente.get(
     "/{turno_id}",
     response_model=TurnoResponse,
@@ -249,6 +246,7 @@ async def detalle_mi_turno(
         raise HTTPException(status_code=403, detail="No tenes permiso")
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
+
 
 @router_turnos_cliente.get(
     "/{turno_id}/media",
@@ -311,6 +309,7 @@ async def listar_media_del_turno(
         })
     return {"items": items, "total": len(items)}
 
+
 @router_turnos_cliente.patch(
     "/{turno_id}",
     response_model=TurnoResponse,
@@ -326,6 +325,7 @@ async def editar_mi_turno(
     await db.refresh(turno)
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
+
 
 @router_turnos_cliente.post(
     "/{turno_id}/cancelar",
@@ -349,22 +349,12 @@ async def cancelar_mi_turno(
 # =========================================================
 # M3: Turnos - Prestador
 # =========================================================
-router_turnos_prestador = APIRouter(
-    prefix="/mis-prestadores/{prestador_id}/turnos",
-    tags=["oficios-turnos-prestador"],
+
+router_garantias_cliente = APIRouter(
+    prefix="/mis-ordenes/{orden_id}/garantia",
+    tags=["oficios-garantias-cliente"],
 )
 
-
-async def _validar_prestador_dueno(db, prestador_id: UUID, user):
-    from app.modules.prestadores.models import Prestador
-    prestador = (
-        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
-    ).scalar_one_or_none()
-    if prestador is None:
-        raise HTTPException(status_code=404, detail="Prestador no encontrado")
-    if user.rol != "admin" and prestador.usuario_id != user.id:
-        raise HTTPException(status_code=403, detail="No tenes permiso")
-    return prestador
 
 @router_garantias_cliente.get(
     "",
@@ -382,30 +372,38 @@ async def ver_garantia_mi_orden(
     g = await services.obtener_garantia_de_orden(db, orden_id)
     return GarantiaResponse.model_validate(g) if g else None
 
-
-router_garantias_prestador = APIRouter(
-    prefix="/mis-prestadores/{prestador_id}/ordenes/{orden_id}/garantia",
-    tags=["oficios-garantias-prestador"],
+router_recordatorios = APIRouter(
+    prefix="/mis-vehiculos/{objeto_id}/recordatorios",
+    tags=["oficios-recordatorios"],
 )
 
 
-async def _validar_garantia_prestador(
-    db, prestador_id: UUID, orden_id: UUID, user
-):
-    from app.modules.prestadores.models import Prestador
-
-    prestador = (
-        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+async def _validar_objeto_del_usuario(db, objeto_id: UUID, user):
+    obj = (
+        await db.execute(
+            select(ObjetoServicio).where(ObjetoServicio.id == objeto_id)
+        )
     ).scalar_one_or_none()
-    if prestador is None:
-        raise HTTPException(status_code=404, detail="Prestador no encontrado")
-    if user.rol != "admin" and prestador.usuario_id != user.id:
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Vehiculo no encontrado")
+    if obj.propietario_id != user.id and user.rol != "admin":
         raise HTTPException(status_code=403, detail="No tenes permiso")
+    return obj
 
-    orden = await services.obtener_orden(db, orden_id)
-    if orden.prestador_id != prestador_id:
-        raise HTTPException(status_code=404, detail="Orden no encontrada")
-    return orden
+
+async def _validar_recordatorio_del_usuario(db, objeto_id: UUID, rec_id: UUID):
+    rec = (
+        await db.execute(
+            select(Recordatorio).where(
+                Recordatorio.id == rec_id,
+                Recordatorio.objeto_servicio_id == objeto_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
+    return rec
+
 
 @router_recordatorios.get(
     "",
@@ -423,6 +421,7 @@ async def listar_recordatorios(
         db, objeto_id, incluir_enviados=incluir_enviados
     )
     return [RecordatorioResponse.model_validate(r) for r in recs]
+
 
 @router_recordatorios.post(
     "",
@@ -447,6 +446,7 @@ async def crear_recordatorio_endpoint(
     await db.refresh(rec)
     return RecordatorioResponse.model_validate(rec)
 
+
 @router_recordatorios.patch(
     "/{recordatorio_id}",
     response_model=RecordatorioResponse,
@@ -467,6 +467,7 @@ async def actualizar_recordatorio_endpoint(
         rec.mensaje = data.mensaje
     await db.flush()
     return RecordatorioResponse.model_validate(rec)
+
 
 @router_recordatorios.delete(
     "/{recordatorio_id}",

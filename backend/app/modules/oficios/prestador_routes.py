@@ -56,7 +56,61 @@ logger = logging.getLogger(__name__)
 # =========================================================
 # Publico
 # =========================================================
-router_publico = APIRouter(prefix="/oficios/mecanica", tags=["oficios-mecanica"])
+
+router_mis_ordenes = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/ordenes",
+    tags=["oficios-ordenes-prestador"],
+)
+
+
+def _serializar_orden(orden, incluir_notas_internas: bool = True, con_historial: bool = False):
+    """Convierte ORM -> dict, respetando visibilidad de notas_internas."""
+    data = {
+        "id": orden.id,
+        "numero": orden.numero,
+        "cliente_id": orden.cliente_id,
+        "prestador_id": orden.prestador_id,
+        "objeto_servicio_id": orden.objeto_servicio_id,
+        "estado": orden.estado.value,
+        "prioridad": orden.prioridad.value,
+        "diagnostico_inicial": orden.diagnostico_inicial,
+        "notas_cliente": orden.notas_cliente,
+        "notas_internas": orden.notas_internas if incluir_notas_internas else None,
+        "fecha_ingreso": orden.fecha_ingreso,
+        "fecha_estimada_entrega": orden.fecha_estimada_entrega,
+        "fecha_entrega_real": orden.fecha_entrega_real,
+        "km_ingreso": orden.km_ingreso,
+        "km_salida": orden.km_salida,
+        "total_presupuesto": orden.total_presupuesto,
+        "total_aprobado": orden.total_aprobado,
+        "items": [
+            {
+                "id": it.id,
+                "tipo": it.tipo.value,
+                "descripcion": it.descripcion,
+                "cantidad": it.cantidad,
+                "precio_unitario": it.precio_unitario,
+                "subtotal": it.subtotal,
+                "aprobado": it.aprobado,
+                "orden_display": it.orden_display,
+            }
+            for it in orden.items
+        ],
+    }
+    if con_historial:
+        data["historial"] = [
+            {
+                "id": ev.id,
+                "tipo": ev.tipo.value,
+                "estado_anterior": ev.estado_anterior,
+                "estado_nuevo": ev.estado_nuevo,
+                "usuario_id": ev.usuario_id,
+                "contenido": ev.contenido,
+                "created_at": ev.created_at,
+            }
+            for ev in orden.historial
+        ]
+    return data
 
 
 @router_mis_ordenes.get(
@@ -86,6 +140,7 @@ async def listar_ordenes_prestador(
     )
     return [_serializar_orden(o, incluir_notas_internas=False) for o in ordenes]
 
+
 @router_mis_ordenes.post(
     "",
     response_model=OrdenTrabajoResponse,
@@ -112,6 +167,7 @@ async def crear_orden(
     orden = await services.obtener_orden(db, orden.id)
     return _serializar_orden(orden)
 
+
 @router_mis_ordenes.get(
     "/{orden_id}",
     response_model=OrdenTrabajoDetalleResponse,
@@ -129,6 +185,7 @@ async def detalle_orden(
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     return _serializar_orden(orden, con_historial=True)
+
 
 @router_mis_ordenes.patch(
     "/{orden_id}",
@@ -150,6 +207,7 @@ async def actualizar_orden(
     orden = await services.actualizar_orden(db, orden_id, data)
     orden = await services.obtener_orden(db, orden.id)
     return _serializar_orden(orden)
+
 
 @router_mis_ordenes.post(
     "/{orden_id}/items",
@@ -173,6 +231,7 @@ async def agregar_item(
     await db.refresh(item)
     return OrdenItemResponse.model_validate(item)
 
+
 @router_mis_ordenes.patch(
     "/{orden_id}/items/{item_id}",
     response_model=OrdenItemResponse,
@@ -195,6 +254,7 @@ async def editar_item(
     await db.refresh(item)
     return OrdenItemResponse.model_validate(item)
 
+
 @router_mis_ordenes.delete(
     "/{orden_id}/items/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -213,6 +273,7 @@ async def eliminar_item(
     if orden.prestador_id != prestador_id:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     await services.eliminar_item(db, orden_id, item_id)
+
 
 @router_mis_ordenes.post(
     "/{orden_id}/estado",
@@ -241,10 +302,28 @@ async def cambiar_estado(
 # =========================================================
 # M2: Ordenes - Cliente
 # =========================================================
-router_mis_ordenes_cliente = APIRouter(
-    prefix="/mis-ordenes",
-    tags=["oficios-ordenes-cliente"],
+
+router_prestador_utilidades = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}",
+    tags=["oficios-prestador-utilidades"],
 )
+
+
+async def _validar_prestador_del_usuario(
+    db, prestador_id: UUID, user, prestador_repo
+):
+    """Valida que el usuario sea dueno del prestador o admin."""
+    prestador = (
+        await db.execute(
+            select(prestador_repo).where(prestador_repo.id == prestador_id)
+        )
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return prestador
+
 
 @router_prestador_utilidades.get(
     "/clientes",
@@ -263,6 +342,7 @@ async def buscar_clientes(
 
     clientes = await services.buscar_clientes(db, q, limit=limit)
     return [ClienteBusquedaResponse.model_validate(c) for c in clientes]
+
 
 @router_prestador_utilidades.get(
     "/clientes/{cliente_id}/vehiculos",
@@ -285,10 +365,24 @@ async def listar_vehiculos_de_cliente(
 # =========================================================
 # M3: Turnos - Cliente
 # =========================================================
-router_turnos_cliente = APIRouter(
-    prefix="/mis-turnos",
-    tags=["oficios-turnos-cliente"],
+
+router_turnos_prestador = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/turnos",
+    tags=["oficios-turnos-prestador"],
 )
+
+
+async def _validar_prestador_dueno(db, prestador_id: UUID, user):
+    from app.modules.prestadores.models import Prestador
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+    return prestador
+
 
 @router_turnos_prestador.get(
     "",
@@ -311,6 +405,7 @@ async def listar_turnos_prestador(
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, turnos)
     return [TurnoListItemResponse(**t) for t in enriquecidos]
 
+
 @router_turnos_prestador.get(
     "/{turno_id}",
     response_model=TurnoResponse,
@@ -328,6 +423,7 @@ async def detalle_turno_prestador(
         raise HTTPException(status_code=404, detail="Turno no encontrado")
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
+
 
 @router_turnos_prestador.post(
     "/{turno_id}/estado",
@@ -352,6 +448,7 @@ async def cambiar_estado_turno(
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
 
+
 @router_turnos_prestador.post(
     "/{turno_id}/completar",
     summary="Completar turno: crea orden con items y entrega (prestador)",
@@ -371,6 +468,7 @@ async def completar_turno_endpoint(
         "turno": TurnoResponse.model_validate(turno),
         "orden": OrdenTrabajoResponse.model_validate(orden),
     }
+
 
 @router_turnos_prestador.post(
     "/{turno_id}/test-push-acciones",
@@ -409,6 +507,7 @@ async def rechazar_turno(
     enriquecidos = await services.enriquecer_turnos_con_reviews(db, [turno])
     return TurnoResponse(**enriquecidos[0])
 
+
 @router_turnos_prestador.post(
     "/{turno_id}/vincular-orden",
     response_model=TurnoResponse,
@@ -432,10 +531,31 @@ async def vincular_orden(
 # =========================================================
 # M4: Garantias
 # =========================================================
-router_garantias_cliente = APIRouter(
-    prefix="/mis-ordenes/{orden_id}/garantia",
-    tags=["oficios-garantias-cliente"],
+
+router_garantias_prestador = APIRouter(
+    prefix="/mis-prestadores/{prestador_id}/ordenes/{orden_id}/garantia",
+    tags=["oficios-garantias-prestador"],
 )
+
+
+async def _validar_garantia_prestador(
+    db, prestador_id: UUID, orden_id: UUID, user
+):
+    from app.modules.prestadores.models import Prestador
+
+    prestador = (
+        await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+    ).scalar_one_or_none()
+    if prestador is None:
+        raise HTTPException(status_code=404, detail="Prestador no encontrado")
+    if user.rol != "admin" and prestador.usuario_id != user.id:
+        raise HTTPException(status_code=403, detail="No tenes permiso")
+
+    orden = await services.obtener_orden(db, orden_id)
+    if orden.prestador_id != prestador_id:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return orden
+
 
 @router_garantias_prestador.get(
     "",
@@ -451,6 +571,7 @@ async def ver_garantia_orden_prestador(
     await _validar_garantia_prestador(db, prestador_id, orden_id, user)
     g = await services.obtener_garantia_de_orden(db, orden_id)
     return GarantiaResponse.model_validate(g) if g else None
+
 
 @router_garantias_prestador.post(
     "",
@@ -487,35 +608,4 @@ async def crear_garantia_orden(
 # =========================================================
 # M4: Recordatorios
 # =========================================================
-router_recordatorios = APIRouter(
-    prefix="/mis-vehiculos/{objeto_id}/recordatorios",
-    tags=["oficios-recordatorios"],
-)
-
-
-async def _validar_objeto_del_usuario(db, objeto_id: UUID, user):
-    obj = (
-        await db.execute(
-            select(ObjetoServicio).where(ObjetoServicio.id == objeto_id)
-        )
-    ).scalar_one_or_none()
-    if obj is None:
-        raise HTTPException(status_code=404, detail="Vehiculo no encontrado")
-    if obj.propietario_id != user.id and user.rol != "admin":
-        raise HTTPException(status_code=403, detail="No tenes permiso")
-    return obj
-
-
-async def _validar_recordatorio_del_usuario(db, objeto_id: UUID, rec_id: UUID):
-    rec = (
-        await db.execute(
-            select(Recordatorio).where(
-                Recordatorio.id == rec_id,
-                Recordatorio.objeto_servicio_id == objeto_id,
-            )
-        )
-    ).scalar_one_or_none()
-    if rec is None:
-        raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
-    return rec
 

@@ -56,6 +56,7 @@ logger = logging.getLogger(__name__)
 # =========================================================
 # Publico
 # =========================================================
+
 router_publico = APIRouter(prefix="/oficios/mecanica", tags=["oficios-mecanica"])
 
 
@@ -67,6 +68,7 @@ router_publico = APIRouter(prefix="/oficios/mecanica", tags=["oficios-mecanica"]
 async def listar_categorias(db: DbSession) -> list[MecanicaCategoriaResponse]:
     cats = await services.listar_categorias_mecanica(db, solo_activas=True)
     return [MecanicaCategoriaResponse.model_validate(c) for c in cats]
+
 
 @router_publico.get(
     "/repuestos",
@@ -87,5 +89,4 @@ async def listar_repuestos(
 # =========================================================
 # Cliente: mis vehiculos
 # =========================================================
-router_propietario = APIRouter(prefix="/mis-vehiculos", tags=["oficios-mis-vehiculos"])
 
