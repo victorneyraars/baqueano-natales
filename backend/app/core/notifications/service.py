@@ -371,6 +371,26 @@ class NotificationService:
         return ahora_local >= inicio or ahora_local < fin
 
     async def _get_tokens_activos(
+        # ═══════════════════════════════════════════════════════════════════
+        # GESTIÓN DE TOKENS FCM (Firebase Cloud Messaging)
+        # ═══════════════════════════════════════════════════════════════════
+        # Este método obtiene los tokens de notificaciones push del usuario.
+        #
+        # HISTORIA / BUG RESUELTO (Sesión 2026-11-07):
+        # Antes, si el usuario tenía un token "legacy" en la tabla `usuarios`
+        # pero no en la tabla `fcm_tokens`, el método intentaba migrarlo
+        # haciendo un INSERT ciego. Si el token ya existía (porque el usuario
+        # cambió de cuenta en el mismo celular), asyncpg lanzaba
+        # `UniqueViolationError`. Esto "envenenaba" la sesión de SQLAlchemy
+        # (PendingRollbackError) y hacía fallar la creación del turno.
+        #
+        # SOLUCIÓN INDUSTRIA:
+        # Hacemos un SELECT previo. Si el token ya existe, simplemente lo
+        # reasignamos al usuario actual (UPDATE). Solo hacemos INSERT si
+        # es un token 100% nuevo. Esto garantiza idempotencia y evita
+        # que la base de datos arroje excepciones que rompan la transacción.
+        # ═══════════════════════════════════════════════════════════════════
+
         self, db: AsyncSession, usuario_id: UUID
     ) -> list[FcmToken]:
         """Devuelve tokens activos del usuario.

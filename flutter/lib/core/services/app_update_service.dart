@@ -1,3 +1,23 @@
+/// Servicio de actualización en caliente (OTA - Over The Air).
+///
+/// ## Arquitectura
+/// Este servicio consulta un manifiesto JSON (`version-client-prod.json`)
+/// alojado en el backend para determinar si hay una nueva versión del APK.
+///
+/// ## Flujo de actualización
+/// 1. Se descarga el APK.
+/// 2. Se verifica el SHA-256 (previene ataques Man-In-The-Middle).
+/// 3. Se lanza el instalador de Android (`OpenFilex`).
+/// 4. Se cierra la app forzosamente (`finishAndRemoveTask`) para evitar
+///    que queden ventanas "fantasma" en la lista de Recientes.
+///
+/// ## Decisiones de Diseño
+/// - Usamos un `MethodChannel` nativo (`com.baqueano/lifecycle`) en lugar de
+///   `exit(0)`. Matar el proceso de Dart deja una "snapshot" negra en el
+///   sistema operativo. El canal nativo invoca `Activity.finishAndRemoveTask()`
+///   que destruye la tarea en la pila de Android correctamente.
+library;
+
 import 'package:flutter/services.dart';
 
 import 'dart:io';

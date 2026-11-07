@@ -1401,6 +1401,22 @@ async def _notificar_cambio_turno(
         )
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# NOTIFICACIÓN DE NUEVO TURNO (PUSH FCM)
+# ═══════════════════════════════════════════════════════════════════════
+# Decisión de Arquitectura (Sesión 2026-11-07):
+#
+# Si el envío de la notificación push falla (ej. red caída, error de FCM),
+# la base de datos NO debe revertir la creación del turno. El turno ya
+# fue guardado y el cliente debe verlo reflejado en la app.
+#
+# Por eso usamos `async with db.begin_nested():` (un savepoint de SQLAlchemy).
+#
+# Un savepoint actúa como una "sub-transacción". Si falla, solo revierte
+# los cambios hechos DENTRO del savepoint (la notificación), pero mantiene
+# viva la transacción principal (el turno). Sin esto, el error de la
+# notificación marcaba toda la sesión como "pending rollback".
+# ═══════════════════════════════════════════════════════════════════════
 async def _notificar_nuevo_turno_prestador(
     db: AsyncSession, turno: Turno,
 ) -> None:

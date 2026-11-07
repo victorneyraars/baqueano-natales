@@ -1,3 +1,17 @@
+/**
+ * MainActivity: Punto de entrada nativo para la app Flutter.
+ * 
+ * ## Canales de comunicación (MethodChannels)
+ * 1. `com.baqueano/url_launcher`: Abre navegadores externos forzando Chrome
+ *    si está disponible (para solucionar bugs de CustomTabs en Motorola).
+ * 2. `com.baqueano/lifecycle`: Gestiona el ciclo de vida avanzado de la app.
+ * 
+ * ## Por qué existe el canal "lifecycle":
+ * Flutter no tiene un método nativo para "cerrar la app y borrarla de la
+ * lista de Recientes". El método `finishAndRemoveTask()` de Android (API 21+)
+ * hace exactamente eso. Lo exponemos a Dart para que el AppUpdateService
+ * pueda invocarlo antes de que el usuario actualice el APK.
+ */
 package cl.baqueanonatales
 
 import android.content.Intent
