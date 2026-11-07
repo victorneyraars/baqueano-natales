@@ -230,7 +230,10 @@ class AppUpdateService {
       // Cerrar la app (graceful). Sin esto, la version vieja queda en
       // "Recientes" y cuando se instala la nueva, Android muestra dos
       // ventanas de la app.
-      SystemNavigator.pop();
+      // Salir forzosamente para que Android elimine la task de "Recientes".
+      // SystemNavigator.pop() a veces deja la task viva, causando ventanas
+      // duplicadas después de la actualización.
+      exit(0);
     } catch (e) {
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
