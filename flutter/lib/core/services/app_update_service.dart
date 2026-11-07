@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -11,6 +12,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:baqueano_natales/core/config/app_config.dart';
 
 class AppUpdateService {
+  // Canal nativo para operaciones de ciclo de vida. El método
+  // finishAndRemoveTask() cierra la Activity Y elimina la entrada
+  // de "Recientes" (ver MainActivity.kt).
+  static const MethodChannel _lifecycleChannel = MethodChannel(
+    'com.baqueano/lifecycle',
+  );
+
   // Detectar flavor en runtime para elegir el manifest correcto.
   static String get _manifestFile {
     final tipo = AppConfig.appType == AppType.admin ? 'admin' : 'client';
@@ -229,10 +237,16 @@ class AppUpdateService {
       // Cerrar la app (graceful). Sin esto, la version vieja queda en
       // "Recientes" y cuando se instala la nueva, Android muestra dos
       // ventanas de la app.
-      // Salir forzosamente para que Android elimine la task de "Recientes".
-      // SystemNavigator.pop() a veces deja la task viva, causando ventanas
-      // duplicadas después de la actualización.
-      exit(0);
+      // Salir forzosamente. Usamos finishAndRemoveTask() nativo (Android)
+      // en lugar de exit(0) porque exit(0) mata el proceso de Dart pero
+      // Android conserva la snapshot (ventana oscura) en la lista de
+      // "Recientes". finishAndRemoveTask() elimina la task correctamente.
+      try {
+        await _lifecycleChannel.invokeMethod('finishAndRemoveTask');
+      } catch (_) {
+        // Fallback: si el canal falla (ej. iOS o web), salir con exit
+        exit(0);
+      }
     } catch (e) {
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text('Error al descargar: $e')));

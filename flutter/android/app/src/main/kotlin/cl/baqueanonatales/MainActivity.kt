@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.baqueano/url_launcher"
+    private val CHANNEL_LIFECYCLE = "com.baqueano/lifecycle"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -19,6 +20,19 @@ class MainActivity: FlutterActivity() {
                 } else {
                     result.error("INVALID_URL", "La URL es nula", null)
                 }
+            } else {
+                result.notImplemented()
+            }
+        }
+        
+        // Canal para operaciones de ciclo de vida (cerrar app, etc).
+        // finishAndRemoveTask() cierra la Activity Y elimina la entrada
+        // de "Recientes". Es la forma correcta de cerrar la app después
+        // de actualizar el APK, para que no quede una ventana fantasma.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_LIFECYCLE).setMethodCallHandler { call, result ->
+            if (call.method == "finishAndRemoveTask") {
+                finishAndRemoveTask()
+                result.success(true)
             } else {
                 result.notImplemented()
             }
