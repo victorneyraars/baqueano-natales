@@ -4,9 +4,9 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
-from app.core.db import Base
+from app.core.db import Base, TimestampMixin
 
-class DocumentoFirma(Base):
+class DocumentoFirma(TimestampMixin, Base):
     __tablename__ = "documentos_firma"
     
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
