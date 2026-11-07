@@ -224,7 +224,24 @@ async def _resolver_prestador_rentacar(
     - Si no tiene, lanzar ValueError.
     """
     from app.modules.prestadores.models import CategoriaOficio
+    from app.modules.auth.models import RolUsuario
     from sqlalchemy import text as sql_text, or_
+    
+    # Si es admin, retorna el primer prestador de rentacar verificado
+    # (superusuario: acceso total a todo el ecosistema)
+    if usuario.rol == RolUsuario.ADMIN:
+        stmt_admin = (
+            select(Prestador)
+            .join(CategoriaOficio, Prestador.categoria_id == CategoriaOficio.id)
+            .where(CategoriaOficio.slug == "arriendo-vehiculos")
+            .limit(1)
+        )
+        prestador = (await db.execute(stmt_admin)).scalar_one_or_none()
+        if prestador is None:
+            raise ValueError("No existe ningún prestador de rentacar registrado.")
+        return prestador
+    
+    # Usuario normal: solo sus prestadores o donde es colaborador
     stmt = (
         select(Prestador)
         .join(CategoriaOficio, Prestador.categoria_id == CategoriaOficio.id)
@@ -285,10 +302,28 @@ async def crear_mi_vehiculo(
 
 
 async def _obtener_mi_vehiculo(
-    db: AsyncSession, usuario: Usuario, vehiculo_id: UUID
+    db: AsyncSession, usuario: Usuario, vehiculo_id: UUID, permiso_requerido: str | None = None
 ) -> RentacarVehiculo:
-    """Obtiene un vehículo validando que pertenece al usuario."""
+    """Obtiene un vehículo validando que pertenece al usuario (o es colaborador con permiso)."""
     prestador = await _resolver_prestador_rentacar(db, usuario)
+
+    # Si es admin, saltar validaciones (superusuario del ecosistema)
+    from app.modules.auth.models import RolUsuario as _RolUsuario
+    if usuario.rol == _RolUsuario.ADMIN:
+        stmt = select(RentacarVehiculo).where(RentacarVehiculo.id == vehiculo_id)
+        vehiculo = (await db.execute(stmt)).scalar_one_or_none()
+        if vehiculo is None:
+            raise ValueError("Vehículo no encontrado.")
+        return vehiculo
+    
+    if prestador.usuario_id != usuario.id:
+        # Es colaborador, validar permisos
+        colab = next((c for c in prestador.colaboradores if c.get("email") == usuario.email), None)
+        if not colab or not colab.get("activado_at"):
+            raise PermissionError("No tenés acceso a este prestador.")
+        if permiso_requerido and permiso_requerido not in colab.get("permisos", []):
+            raise PermissionError(f"Falta permiso: {permiso_requerido}")
+
     stmt = select(RentacarVehiculo).where(
         RentacarVehiculo.id == vehiculo_id,
         RentacarVehiculo.prestador_id == prestador.id,
@@ -429,6 +464,8 @@ async def cambiar_estado_reserva(
         )
 
     reserva.estado = nuevo_estado
+    reserva.gestionado_por = getattr(usuario, 'nombre', 'Admin')
+    reserva.gestionado_at = datetime.now(timezone.utc)
     if nuevo_estado == "cancelada":
         await db.execute(
             delete(RentacarBloqueo).where(RentacarBloqueo.reserva_id == reserva_id)
@@ -557,7 +594,7 @@ async def obtener_mis_stats(
 
 async def confirmar_reserva(
     db: AsyncSession, reserva_id: UUID
-) -> RentacarReserva:
+, gestionado_por: str | None = None) -> RentacarReserva:
     """Cambia estado 'pendiente' -> 'confirmada'."""
     from sqlalchemy import select
     stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
@@ -567,6 +604,9 @@ async def confirmar_reserva(
     if reserva.estado != "pendiente":
         raise ValueError(f"Reserva en estado '{reserva.estado}', no se puede confirmar")
     reserva.estado = "confirmada"
+    if gestionado_por:
+        reserva.gestionado_por = gestionado_por
+        reserva.gestionado_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(reserva)
     return reserva
@@ -574,7 +614,7 @@ async def confirmar_reserva(
 
 async def cancelar_reserva(
     db: AsyncSession, reserva_id: UUID
-) -> RentacarReserva:
+, gestionado_por: str | None = None) -> RentacarReserva:
     """Cambia estado 'pendiente' -> 'cancelada' y libera el bloqueo."""
     from sqlalchemy import select, delete
     stmt = select(RentacarReserva).where(RentacarReserva.id == reserva_id)
@@ -584,6 +624,9 @@ async def cancelar_reserva(
     if reserva.estado != "pendiente":
         raise ValueError(f"Reserva en estado '{reserva.estado}', no se puede cancelar")
     reserva.estado = "cancelada"
+    if gestionado_por:
+        reserva.gestionado_por = gestionado_por
+        reserva.gestionado_at = datetime.now(timezone.utc)
     # Liberar bloqueo asociado
     await db.execute(
         delete(RentacarBloqueo).where(RentacarBloqueo.reserva_id == reserva_id)
@@ -797,23 +840,24 @@ async def modificar_reserva(
     if fin_date <= ini_date:
         fin_date = ini_date + timedelta(days=1)
 
+    # En lugar de actualizar (que puede chocar con la constraint), eliminamos y creamos
     stmt = select(RentacarBloqueo).where(
         RentacarBloqueo.reserva_id == reserva_id
     )
     bloqueo = (await db.execute(stmt)).scalar_one_or_none()
+    
     if bloqueo is not None:
-        bloqueo.fecha_inicio = ini_date
-        bloqueo.fecha_fin = fin_date
-    else:
-        # Caso borde: bloqueo inexistente, crearlo
-        bloqueo = RentacarBloqueo(
-            vehiculo_id=reserva.vehiculo_id,
-            reserva_id=reserva.id,
-            fecha_inicio=ini_date,
-            fecha_fin=fin_date,
-            tipo="reserva",
-        )
-        db.add(bloqueo)
+        await db.delete(bloqueo)
+        await db.flush() # Forzamos el DELETE antes del INSERT
+
+    nuevo_bloqueo = RentacarBloqueo(
+        vehiculo_id=reserva.vehiculo_id,
+        reserva_id=reserva.id,
+        fecha_inicio=ini_date,
+        fecha_fin=fin_date,
+        tipo="reserva",
+    )
+    db.add(nuevo_bloqueo)
 
     try:
         await db.commit()
@@ -826,3 +870,12 @@ async def modificar_reserva(
         raise
     await db.refresh(reserva)
     return reserva
+
+
+async def eliminar_reserva(db: AsyncSession, usuario: Usuario, reserva_id: UUID) -> None:
+    """Elimina una reserva y sus bloqueos de calendario asociados (Hard Delete)."""
+    # _obtener_mi_reserva valida que el usuario tenga permiso sobre el vehículo/reserva
+    reserva = await _obtener_mi_reserva(db, usuario, reserva_id)
+    await db.delete(reserva)
+    await db.commit()
+

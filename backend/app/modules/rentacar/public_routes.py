@@ -30,6 +30,7 @@ from app.modules.notificaciones.reservas import (
     notificar_nueva_reserva_cliente,
     notificar_nueva_reserva_prestador,
     notificar_otp_cliente,
+    notificar_email_verificado_cliente,
     notificar_reserva_cancelada_cliente,
     notificar_reserva_confirmada_cliente,
 )
@@ -154,7 +155,7 @@ async def pagina_accion_reserva(id: UUID, token: str):
                 Si, {texto}
             </button>
         </form>
-        <p style="margin-top: 20px;"><a href="https://rentacarvasquez.com">Volver al sitio</a></p>
+        <p style="margin-top: 20px;"><a href="https://rentacarvasquez.com/admin/dashboard" style="color: #1E293B; font-weight: bold;">Volver al Panel de Administración</a></p>
     </body>
     </html>
     """
@@ -182,16 +183,45 @@ async def ejecutar_accion_reserva(
     accion = payload["accion"]
     try:
         if accion == "confirmar":
-            reserva = await services.confirmar_reserva(db, id)
+            reserva = await services.confirmar_reserva(db, id, gestionado_por='Enlace de email')
             msg = "Reserva Confirmada"
             color = "#16A34A"
         elif accion == "cancelar":
-            reserva = await services.cancelar_reserva(db, id)
+            reserva = await services.cancelar_reserva(db, id, gestionado_por='Enlace de email')
             msg = "Reserva Cancelada"
             color = "#DC2626"
         else:
             return HTMLResponse("<h2>Accion no reconocida.</h2>", status_code=400)
     except ValueError as e:
+        # Si el error es por transición inválida, la reserva ya fue gestionada
+        if "Transicion invalida" in str(e) or "ya tiene" in str(e):
+            try:
+                # Refrescar la reserva para ver su estado actual
+                await db.refresh(reserva) if 'reserva' in locals() else None
+                from app.modules.rentacar.models import RentacarReserva
+                from uuid import UUID
+                from sqlalchemy import select
+                stmt = select(RentacarReserva).where(RentacarReserva.id == id)
+                res_db = (await db.execute(stmt)).scalar_one_or_none()
+                
+                if res_db and res_db.gestionado_por:
+                    fecha_str = res_db.gestionado_at.strftime('%d/%m/%Y %H:%M') if res_db.gestionado_at else "fecha desconocida"
+                    estado_str = res_db.estado.upper()
+                    html_ya_gestionado = f'''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f8f9fa;">
+                        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h2 style="color: #4B5563;">Acción ya realizada</h2>
+                            <p>Esta reserva ya fue <strong>{estado_str}</strong> el {fecha_str} por <strong>{res_db.gestionado_por}</strong>.</p>
+                            <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">No es necesario realizar ninguna acción adicional.</p>
+                            <a href="https://rentacarvasquez.com/admin/dashboard" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #1E293B; color: white; text-decoration: none; border-radius: 5px;">Ir al Panel de Administración</a>
+                        </div>
+                    </body>
+                    </html>
+                    '''
+                    return HTMLResponse(html_ya_gestionado, status_code=200)
+            except Exception:
+                pass
         return HTMLResponse(f"<h2>Error: {e}</h2>", status_code=400)
 
     # Notificar al cliente de la transicion (background)
@@ -252,85 +282,27 @@ async def crear_reserva_publica(
         code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
         raise HTTPException(status_code=code, detail=msg)
 
-    # Notificaciones (background = no bloquea la respuesta al cliente)
+    # Solo enviamos el OTP enriquecido al cliente. 
+    # Al dueño y la confirmación se envían SOLO cuando el correo sea verificado.
     try:
         vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
-        prestador = await obtener_prestador_por_slug(db, "rentacar-vasquez")
-        if vehiculo and prestador:
-            canales = build_canales_contacto(prestador)
-            email_prestador = next(
-                (
-                    c["direccion"]
-                    for c in canales.get("email", [])
-                    if c.get("tipo") == "reservas" and c.get("activo", True)
-                ),
-                prestador.email,
-            )
-            vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo}"
+        if vehiculo and reserva.email_cliente and reserva.otp_code:
             total = float(getattr(reserva, "precio_total", 0) or 0)
-
-            # Recolectar TODOS los destinatarios: dueño + colaboradores activos
-            destinatarios: set[str] = set()
-            if email_prestador:
-                destinatarios.add(email_prestador.strip().lower())
-
-            for colab in (prestador.colaboradores or []):
-                if isinstance(colab, dict):
-                    email_c = (colab.get("email") or "").strip().lower()
-                    activado = colab.get("activado_at")
-                    if email_c and activado:
-                        destinatarios.add(email_c)
-
-            # Enviar a cada destinatario (template premium)
-            for email_dest in destinatarios:
-                background_tasks.add_task(
-                    notificar_nueva_reserva_prestador,
-                    reserva_id=str(reserva.id),
-                    email_prestador=email_dest,
-                    nombre_cliente=reserva.nombre_cliente or "Sin nombre",
-                    email_cliente=reserva.email_cliente or "",
-                    telefono_cliente=reserva.telefono_cliente or "",
-                    vehiculo=vehiculo_label,
-                    inicio=reserva.fecha_inicio.isoformat(),
-                    fin=reserva.fecha_fin.isoformat(),
-                    total=total,
-                    patente=vehiculo.patente,
-                    imagen_url=vehiculo.imagen_url,
-                    metodo_pago=reserva.metodo_pago,
-                    email_verificado=bool(reserva.email_verificado),
-                    categoria=vehiculo.categoria,
-                )
-
-            # Enviar OTP al cliente (verifica que el email es real)
-            if reserva.email_cliente and reserva.otp_code:
-                background_tasks.add_task(
-                    notificar_otp_cliente,
-                    email_cliente=reserva.email_cliente,
-                    nombre_cliente=reserva.nombre_cliente or "Cliente",
-                    codigo=reserva.otp_code,
-                    vehiculo=vehiculo_label,
-                    inicio=reserva.fecha_inicio.isoformat(),
-                    fin=reserva.fecha_fin.isoformat(),
-                )
-
-            if reserva.email_cliente:
-                background_tasks.add_task(
-                    notificar_nueva_reserva_cliente,
-                    email_cliente=reserva.email_cliente,
-                    nombre_cliente=reserva.nombre_cliente or "Cliente",
-                    vehiculo=vehiculo_label,
-                    inicio=reserva.fecha_inicio.isoformat(),
-                    fin=reserva.fecha_fin.isoformat(),
-                    total=total,
-                    patente=vehiculo.patente,
-                    imagen_url=vehiculo.imagen_url,
-                    metodo_pago=reserva.metodo_pago,
-                )
+            background_tasks.add_task(
+                notificar_otp_cliente,
+                email_cliente=reserva.email_cliente,
+                nombre_cliente=reserva.nombre_cliente or "Cliente",
+                codigo=reserva.otp_code,
+                vehiculo=f"{vehiculo.marca} {vehiculo.modelo}",
+                inicio=reserva.fecha_inicio.isoformat(),
+                fin=reserva.fecha_fin.isoformat(),
+                patente=vehiculo.patente,
+                total=total,
+                metodo_pago=reserva.metodo_pago,
+            )
     except Exception as exc:
         import logging
-        logging.getLogger(__name__).warning(
-            f"No se pudo notificar reserva {reserva.id}: {exc}"
-        )
+        logging.getLogger(__name__).warning(f"Error enviando OTP inicial: {exc}")
 
     return reserva
 
@@ -348,6 +320,7 @@ async def verificar_email_reserva(
     reserva_id: UUID,
     data: VerificarEmailRequest,
     db: DbSession,
+    background_tasks: BackgroundTasks,
 ) -> VerificarEmailResponse:
     try:
         reserva = await services.verificar_email_reserva(
@@ -355,6 +328,61 @@ async def verificar_email_reserva(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Una vez verificado, notificamos al cliente y al prestador
+    try:
+        vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
+        prestador = await obtener_prestador_por_slug(db, "rentacar-vasquez")
+        if vehiculo and prestador:
+            canales = build_canales_contacto(prestador)
+            email_prestador = next(
+                (c["direccion"] for c in canales.get("email", []) if c.get("tipo") == "reservas" and c.get("activo", True)),
+                prestador.email,
+            )
+            vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo}"
+            total = float(getattr(reserva, "precio_total", 0) or 0)
+
+            # 1. Correo al cliente: "Verificado"
+            background_tasks.add_task(
+                notificar_email_verificado_cliente,
+                email_cliente=reserva.email_cliente,
+                nombre_cliente=reserva.nombre_cliente or "Cliente",
+                vehiculo=vehiculo_label,
+                inicio=reserva.fecha_inicio.isoformat(),
+                fin=reserva.fecha_fin.isoformat(),
+            )
+
+            # 2. Correos al prestador y colaboradores: "Nueva reserva verificada"
+            destinatarios = set()
+            if email_prestador:
+                destinatarios.add(email_prestador.strip().lower())
+            for colab in (prestador.colaboradores or []):
+                if isinstance(colab, dict):
+                    email_c = (colab.get("email") or "").strip().lower()
+                    if email_c and colab.get("activado_at"):
+                        destinatarios.add(email_c)
+
+            for email_dest in destinatarios:
+                background_tasks.add_task(
+                    notificar_nueva_reserva_prestador,
+                    reserva_id=str(reserva.id),
+                    email_prestador=email_dest,
+                    nombre_cliente=reserva.nombre_cliente or "Sin nombre",
+                    email_cliente=reserva.email_cliente or "",
+                    telefono_cliente=reserva.telefono_cliente or "",
+                    vehiculo=vehiculo_label,
+                    inicio=reserva.fecha_inicio.isoformat(),
+                    fin=reserva.fecha_fin.isoformat(),
+                    total=total,
+                    patente=vehiculo.patente,
+                    imagen_url=vehiculo.imagen_url,
+                    metodo_pago=reserva.metodo_pago,
+                    email_verificado=True,
+                    categoria=vehiculo.categoria,
+                )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(f"Error notificando verificacion: {exc}")
 
     return VerificarEmailResponse(
         ok=True,
@@ -390,6 +418,7 @@ async def reenviar_otp_reserva(
     if reserva.email_cliente and reserva.otp_code:
         background_tasks.add_task(
             notificar_otp_cliente,
+    notificar_email_verificado_cliente,
             email_cliente=reserva.email_cliente,
             nombre_cliente=reserva.nombre_cliente or "Cliente",
             codigo=reserva.otp_code,

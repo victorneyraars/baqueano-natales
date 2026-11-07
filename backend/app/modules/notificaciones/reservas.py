@@ -299,8 +299,8 @@ async def notificar_nueva_reserva_prestador(
 
             <!-- Ver detalle -->
             <tr><td style="padding: 8px 24px 24px 24px;" align="center">
-              <a href="{url_detalle}" style="color: #64748B; text-decoration: underline; font-family: -apple-system, sans-serif; font-size: 13px;" class="txt-muted">
-                Ver detalle completo en el panel →
+              <a href="{url_detalle}" style="display: inline-block; padding: 12px 24px; background-color: #475569; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-family: -apple-system, sans-serif; font-size: 14px; font-weight: bold; margin-top: 10px;" class="btn-secondary">
+                Ver detalle completo en el panel
               </a>
               <div style="margin-top: 8px; font-family: -apple-system, sans-serif; font-size: 11px; color: #94A3B8;" class="txt-muted">
                 Requiere iniciar sesión con tu cuenta de administrador.
@@ -942,28 +942,139 @@ async def notificar_otp_cliente(
     vehiculo: str,
     inicio: str,
     fin: str,
+    patente: str | None = None,
+    total: float = 0,
+    metodo_pago: str | None = None,
 ):
-    """Email con el codigo OTP de 6 digitos para verificar la reserva."""
-    asunto = f"Tu codigo de verificacion: {codigo}"
+    """Email enriquecido con el codigo OTP y resumen de reserva."""
+    asunto = f"Acción requerida: Verifica tu correo para confirmar tu reserva ({codigo})"
+    
+    # Formateo
+    fecha_ini = _formatear_fecha(inicio)
+    fecha_fin = _formatear_fecha(fin)
+    e_patente = _esc(patente or "N/A")
+    e_pago = _esc((metodo_pago or "No especificado").capitalize())
+    e_total = f"${total:,.0f}".replace(",", ".")
+    
     html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2E7D32;">Verifica tu reserva</h2>
-        <p>Hola {nombre_cliente},</p>
-        <p>Recibimos tu solicitud de reserva del <strong>{vehiculo}</strong>
-           del {_formatear_fecha(inicio)} al {_formatear_fecha(fin)}.</p>
-        <p>Ingresa este codigo en la web para confirmar que tu email es real:</p>
-        <div style="background-color: #f5f5f5; padding: 30px; border-radius: 8px;
-                    margin: 20px 0; text-align: center;">
-            <div style="font-size: 42px; font-weight: bold;
-                        letter-spacing: 8px; color: #2E7D32; font-family: monospace;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <h2 style="color: #2E7D32; text-align: center;">Verifica tu correo para continuar</h2>
+        <p>Hola <strong>{nombre_cliente}</strong>,</p>
+        <p>Hemos recibido tu solicitud de reserva. Para confirmar que tu correo es real y asegurar tu vehículo, por favor ingresa el siguiente código en nuestra web:</p>
+        
+        <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 30px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <div style="font-size: 42px; font-weight: bold; letter-spacing: 8px; color: #2E7D32; font-family: monospace;">
                 {codigo}
             </div>
+            <p style="color: #666; font-size: 13px; margin-top: 10px;">Este código expira en 15 minutos.</p>
         </div>
-        <p style="color: #666; font-size: 13px;">
-            Este codigo expira en 15 minutos. Si no solicitaste esta reserva,
-            ignora este email.
+
+        <h3 style="color: #2E7D32; border-bottom: 2px solid #2E7D32; padding-bottom: 5px;">Resumen de tu solicitud</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 15px;">
+            <tr><td style="padding: 8px 0;"><strong>Vehículo:</strong></td><td>{vehiculo} ({e_patente})</td></tr>
+            <tr><td style="padding: 8px 0;"><strong>Fecha de retiro:</strong></td><td>{fecha_ini}</td></tr>
+            <tr><td style="padding: 8px 0;"><strong>Fecha de entrega:</strong></td><td>{fecha_fin}</td></tr>
+            <tr><td style="padding: 8px 0;"><strong>Método de pago:</strong></td><td>{e_pago}</td></tr>
+            <tr><td style="padding: 8px 0; font-size: 18px; color: #2E7D32;"><strong>Total:</strong></td><td style="font-size: 18px; color: #2E7D32;"><strong>{e_total}</strong></td></tr>
+        </table>
+
+        <p style="margin-top: 30px; color: #666; font-size: 13px;">
+            Si no solicitaste esta reserva, por favor ignora este correo. Ningún cargo se realizará hasta que la reserva sea confirmada por nuestro equipo.
         </p>
-        <p>Gracias,<br>Rent a Car Vasquez</p>
+        <p>Gracias,<br><strong>Rent a Car Vásquez</strong></p>
     </div>
     """
     await enviar_email(to=email_cliente, subject=asunto, html=html)
+
+
+async def notificar_email_verificado_cliente(
+    email_cliente: str, nombre_cliente: str, vehiculo: str, inicio: str, fin: str
+):
+    """Email al cliente confirmando que su correo fue verificado y la reserva está en revisión."""
+    asunto = "Correo verificado: Tu reserva está en revisión"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <h2 style="color: #2E7D32;">¡Correo verificado con éxito!</h2>
+        <p>Hola <strong>{nombre_cliente}</strong>,</p>
+        <p>Tu dirección de correo ha sido confirmada. Tu solicitud de reserva para el <strong>{vehiculo}</strong> del {_formatear_fecha(inicio)} al {_formatear_fecha(fin)} ha sido recibida.</p>
+        <p>Nuestro equipo está revisando la disponibilidad final y se pondrá en contacto contigo a la brevedad para confirmar los detalles del retiro.</p>
+        <p>Gracias por elegirnos,<br><strong>Rent a Car Vásquez</strong></p>
+    </div>
+    """
+    await enviar_email(to=email_cliente, subject=asunto, html=html)
+
+
+
+
+async def notificar_accion_colaboradores(
+    emails: list[str],
+    actor_nombre: str,
+    accion: str,
+    cliente: str,
+    vehiculo: str,
+    inicio: str,
+    fin: str,
+):
+    """Envía un correo a los demás colaboradores avisando de una acción."""
+    asunto = f"Reserva actualizada: {accion} por {actor_nombre}"
+    fecha_ini = _formatear_fecha(inicio)
+    fecha_fin = _formatear_fecha(fin)
+    
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <h2 style="color: #2E7D32;">Actualización de Reserva en Equipo</h2>
+        <p>Hola equipo,</p>
+        <p>Les informamos que <strong>{actor_nombre}</strong> ha realizado la siguiente acción:</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 15px; background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+            <tr><td style="padding: 8px;"><strong>Acción:</strong></td><td style="color: #2E7D32; font-weight: bold;">{accion.upper()}</td></tr>
+            <tr><td style="padding: 8px;"><strong>Cliente:</strong></td><td>{cliente}</td></tr>
+            <tr><td style="padding: 8px;"><strong>Vehículo:</strong></td><td>{vehiculo}</td></tr>
+            <tr><td style="padding: 8px;"><strong>Fechas:</strong></td><td>Del {fecha_ini} al {fecha_fin}</td></tr>
+        </table>
+        
+        <p style="margin-top: 30px; font-size: 13px; color: #666;">
+            Este es un aviso automático para mantener al equipo sincronizado.
+        </p>
+    </div>
+    """
+    
+    for email in emails:
+        await enviar_email(to=email, subject=asunto, html=html)
+
+
+
+async def notificar_contrato_cliente(
+    email_cliente: str,
+    nombre_cliente: str,
+    link_firma: str,
+    vehiculo: str,
+):
+    """Envía un correo al cliente con el enlace para firmar el contrato."""
+    asunto = "Acción requerida: Firma tu contrato de arriendo"
+    
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <h2 style="color: #1E293B; text-align: center;">Firma tu Contrato Digital</h2>
+        <p>Hola <strong>{nombre_cliente}</strong>,</p>
+        <p>Ya está listo tu contrato de arriendo para el vehículo <strong>{vehiculo}</strong>.</p>
+        <p>Por favor, haz clic en el siguiente botón para revisar los términos y firmar digitalmente. El proceso toma menos de 2 minutos.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{link_firma}" style="display: inline-block; padding: 14px 28px; background-color: #2563EB; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Firmar Contrato Ahora
+            </a>
+        </div>
+        
+        <p style="color: #666; font-size: 13px;">
+            Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+            <a href="{link_firma}" style="color: #2563EB;">{link_firma}</a>
+        </p>
+        <p style="color: #666; font-size: 13px; margin-top: 30px;">
+            Si tienes alguna duda, no dudes en contactarnos por WhatsApp.
+        </p>
+        <p>Gracias,<br><strong>Rent a Car Vásquez</strong></p>
+    </div>
+    """
+    await enviar_email(to=email_cliente, subject=asunto, html=html)
+

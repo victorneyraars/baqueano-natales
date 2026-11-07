@@ -97,6 +97,23 @@ async def login_google(
     summary="Datos del usuario actual",
     description="Devuelve los datos del usuario autenticado (requiere JWT).",
 )
-async def get_me(user: CurrentUser) -> UsuarioResponse:
-    """Devuelve el usuario actual."""
-    return UsuarioResponse.model_validate(user)
+async def get_me(user: CurrentUser, db: DbSession) -> UsuarioResponse:
+    """Devuelve el usuario actual (incluye permisos si es colaborador)."""
+    from app.modules.prestadores.models import Prestador
+    from sqlalchemy import select
+    
+    user_out = UsuarioResponse.model_validate(user)
+    permisos_set = set()
+    email_lower = (user.email or "").lower()
+    
+    stmt = select(Prestador).where(Prestador.colaboradores.isnot(None))
+    prestadores = (await db.execute(stmt)).scalars().all()
+    
+    for p in prestadores:
+        for c in (p.colaboradores or []):
+            if isinstance(c, dict) and (c.get("email") or "").lower() == email_lower:
+                if c.get("activado_at"):
+                    permisos_set.update(c.get("permisos", []))
+    
+    user_out.permisos = list(permisos_set)
+    return user_out

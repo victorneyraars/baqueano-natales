@@ -265,8 +265,20 @@ async def listar_prestadores_mios(
     db: AsyncSession,
     propietario: Usuario,
 ) -> list[Prestador]:
-    """Lista prestadores donde el user es dueño O colaborador activo."""
+    """Lista prestadores donde el user es dueño O colaborador activo.
+    Si el usuario es admin, devuelve TODOS los prestadores activos (superusuario).
+    """
     from sqlalchemy import text as sql_text, or_
+    from app.modules.auth.models import RolUsuario
+
+    # Admin: acceso total a todos los prestadores del ecosistema
+    if propietario.rol == RolUsuario.ADMIN:
+        stmt_admin = (
+            _prestador_select_full()
+            .where(Prestador.activo.is_(True))
+            .order_by(Prestador.created_at.desc())
+        )
+        return list((await db.execute(stmt_admin)).scalars().all())
 
     stmt = (
         _prestador_select_full()

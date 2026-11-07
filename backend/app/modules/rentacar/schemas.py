@@ -225,7 +225,11 @@ class RentacarReservaCreatePropietario(BaseModel):
 
 
 class RentacarReservaUpdatePropietario(BaseModel):
-    """Modificar fechas y/o precio de una reserva existente."""
+    """Modificar datos, fechas y/o precio de una reserva existente."""
     fecha_inicio: datetime | None = None
     fecha_fin: datetime | None = None
     precio_total: float | None = None
+    nombre_cliente: str | None = None
+    email_cliente: str | None = None
+    telefono_cliente: str | None = None
+    metodo_pago: str | None = None
