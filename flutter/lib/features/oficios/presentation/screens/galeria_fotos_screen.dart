@@ -15,10 +15,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
-import 'package:baqueano_natales/core/network/authed_image_provider.dart';
 import 'package:baqueano_natales/features/oficios/data/oficios_providers.dart';
 import 'package:baqueano_natales/features/oficios/domain/orden_foto.dart';
 import 'package:baqueano_natales/features/oficios/presentation/widgets/foto_thumb.dart';
+import 'package:baqueano_natales/shared/widgets/photo_viewer.dart';
 
 class GaleriaFotosScreen extends ConsumerStatefulWidget {
   const GaleriaFotosScreen({
@@ -221,14 +221,17 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
   }
 
   void _abrirVisor(List<OrdenFoto> fotos, int initialIndex) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _VisorFotos(
-          fotos: fotos,
-          initialIndex: initialIndex,
-          onEliminar: _eliminarFoto,
-        ),
-      ),
+    // Extraemos solo las URLs en orden para pasarselas al visor generico
+    final urls = fotos
+        .map((f) => f.urlOriginal ?? f.urlMedium ?? f.urlThumb ?? '')
+        .toList();
+    PhotoViewer.show(
+      context,
+      urls,
+      initialIndex: initialIndex,
+      onEliminar: (idx) async {
+        await _eliminarFoto(fotos[idx]);
+      },
     );
   }
 
@@ -342,109 +345,6 @@ class _GaleriaFotosScreenState extends ConsumerState<GaleriaFotosScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// =========================================================
-// Visor fullscreen
-// =========================================================
-class _VisorFotos extends StatefulWidget {
-  const _VisorFotos({
-    required this.fotos,
-    required this.initialIndex,
-    required this.onEliminar,
-  });
-
-  final List<OrdenFoto> fotos;
-  final int initialIndex;
-  final Future<void> Function(OrdenFoto) onEliminar;
-
-  @override
-  State<_VisorFotos> createState() => _VisorFotosState();
-}
-
-class _VisorFotosState extends State<_VisorFotos> {
-  late final PageController _ctrl;
-  late int _idx;
-
-  @override
-  void initState() {
-    super.initState();
-    _idx = widget.initialIndex;
-    _ctrl = PageController(initialPage: _idx);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.fotos.isEmpty) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Text('Sin fotos', style: TextStyle(color: Colors.white)),
-        ),
-      );
-    }
-    final foto = widget.fotos[_idx];
-    final url = foto.urlOriginal ?? foto.urlMedium ?? foto.urlThumb;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(
-          '${_idx + 1} / ${widget.fotos.length}  -  ${foto.momento.label}',
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Eliminar',
-            onPressed: () async {
-              await widget.onEliminar(foto);
-              if (context.mounted) Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-      body: url == null
-          ? const Center(
-              child: Text('Sin imagen', style: TextStyle(color: Colors.white)),
-            )
-          : PageView.builder(
-              controller: _ctrl,
-              itemCount: widget.fotos.length,
-              onPageChanged: (i) => setState(() => _idx = i),
-              itemBuilder: (context, i) {
-                final f = widget.fotos[i];
-                final u = f.urlOriginal ?? f.urlMedium ?? f.urlThumb;
-                if (u == null) return const SizedBox.shrink();
-                return InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 5,
-                  child: Center(
-                    child: Image(
-                      image: AuthedImage(url: u),
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
-                      errorBuilder: (context, error, _) => const Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.white54,
-                          size: 64,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
     );
   }
 }
