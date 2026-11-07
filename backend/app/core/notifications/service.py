@@ -395,7 +395,26 @@ class NotificationService:
         if not legacy:
             return []
 
-        # Auto-migrar
+        # Auto-migrar: verificar si el token ya existe (evita UniqueViolation
+        # si el mismo dispositivo cambió de cuenta). Si existe, reasignarlo
+        # al usuario actual en lugar de hacer INSERT ciego.
+        existing = await db.execute(
+            select(FcmToken).where(FcmToken.token == legacy)
+        )
+        existing_token = existing.scalar_one_or_none()
+
+        if existing_token:
+            if existing_token.usuario_id != usuario_id:
+                existing_token.usuario_id = usuario_id
+                existing_token.activo = True
+                await db.flush()
+                logger.info(
+                    "Token legacy reasignado a user_id=%s (antes: %s)",
+                    usuario_id, existing_token.usuario_id,
+                )
+            return [existing_token]
+
+        # Token no existe: INSERT seguro
         nuevo = FcmToken(
             usuario_id=usuario_id,
             token=legacy,

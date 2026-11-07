@@ -1404,89 +1404,101 @@ async def _notificar_cambio_turno(
 async def _notificar_nuevo_turno_prestador(
     db: AsyncSession, turno: Turno,
 ) -> None:
-    """Envia push al prestador con botones Aceptar/Rechazar."""
+    """Envia push al prestador con botones Aceptar/Rechazar.
+
+    IMPORTANTE: usa savepoint (begin_nested) para que un fallo en el envio
+    (ej. token FCM duplicado, red caida) NO contamine la transaccion
+    principal. Sin esto, la sesion queda en "pending rollback" y el commit
+    del turno falla con PendingRollbackError.
+
+    Bug historico: el try/except solo capturaba la excepcion Python, pero
+    SQLAlchemy ya habia marcado la sesion como invalida. Los SELECT
+    posteriores (enriquecer_turnos_con_reviews) fallaban con
+    PendingRollbackError.
+    """
     try:
-        from app.core import push as push_legacy
-        from app.modules.prestadores.models import Prestador
-        from app.modules.oficios.models import ObjetoServicio
-        from app.modules.auth.models import Usuario
+        async with db.begin_nested():
+            from app.core import push as push_legacy
+            from app.modules.prestadores.models import Prestador
+            from app.modules.oficios.models import ObjetoServicio
+            from app.modules.auth.models import Usuario
 
-        prestador = (
-            await db.execute(
-                select(Prestador).where(Prestador.id == turno.prestador_id)
-            )
-        ).scalar_one_or_none()
-        if not prestador or not prestador.usuario_id:
-            return
-
-        cliente = (
-            await db.execute(
-                select(Usuario).where(Usuario.id == turno.cliente_id)
-            )
-        ).scalar_one_or_none()
-        objeto = (
-            await db.execute(
-                select(ObjetoServicio).where(
-                    ObjetoServicio.id == turno.objeto_servicio_id
-                )
-            )
-        ).scalar_one_or_none()
-
-        cliente_nombre = ""
-        cliente_foto = ""
-        if cliente:
-            cliente_nombre = (cliente.nombre or cliente.email or "").strip()
-            cliente_foto = str(cliente.avatar_url) if cliente.avatar_url else ""
-        servicio = (objeto.alias or "") if objeto else ""
-        fecha = (
-            turno.fecha_inicio.strftime("%d/%m %H:%M")
-            if turno.fecha_inicio else ""
-        )
-
-        titulo = "Nuevo turno solicitado"
-        body = f"{cliente_nombre} solicito {servicio} para el {fecha}"
-
-        servicio_nombre = ""
-        servicio_precio = ""
-        if turno.servicio_id:
-            from app.modules.prestadores.models import PrestadorServicio
-            srv = (
+            prestador = (
                 await db.execute(
-                    select(PrestadorServicio).where(
-                        PrestadorServicio.id == turno.servicio_id
+                    select(Prestador).where(Prestador.id == turno.prestador_id)
+                )
+            ).scalar_one_or_none()
+            if not prestador or not prestador.usuario_id:
+                return
+
+            cliente = (
+                await db.execute(
+                    select(Usuario).where(Usuario.id == turno.cliente_id)
+                )
+            ).scalar_one_or_none()
+            objeto = (
+                await db.execute(
+                    select(ObjetoServicio).where(
+                        ObjetoServicio.id == turno.objeto_servicio_id
                     )
                 )
             ).scalar_one_or_none()
-            if srv:
-                servicio_nombre = srv.nombre or ""
-                if srv.precio_desde_clp:
-                    servicio_precio = f"${srv.precio_desde_clp:,}".replace(",", ".")
 
-        await push_legacy.enviar_push_a_usuario(
-            user_id=prestador.usuario_id,
-            titulo=titulo,
-            body=body,
-            data={
-                "tipo": "turno_nuevo",
-                "turno_id": str(turno.id),
-                "prestador_id": str(turno.prestador_id),
-                "estado": turno.estado.value,
-                "cliente_nombre": cliente_nombre,
-                "cliente_foto_url": cliente_foto,
-                "servicio_alias": servicio,
-                "servicio_nombre": servicio_nombre,
-                "servicio_precio": servicio_precio,
-                "fecha_hora": fecha,
-                "titulo": titulo,
-                "body": body,
-            },
-            db=db,
-        )
+            cliente_nombre = ""
+            cliente_foto = ""
+            if cliente:
+                cliente_nombre = (cliente.nombre or cliente.email or "").strip()
+                cliente_foto = str(cliente.avatar_url) if cliente.avatar_url else ""
+            servicio = (objeto.alias or "") if objeto else ""
+            fecha = (
+                turno.fecha_inicio.strftime("%d/%m %H:%M")
+                if turno.fecha_inicio else ""
+            )
+
+            titulo = "Nuevo turno solicitado"
+            body = f"{cliente_nombre} solicito {servicio} para el {fecha}"
+
+            servicio_nombre = ""
+            servicio_precio = ""
+            if turno.servicio_id:
+                from app.modules.prestadores.models import PrestadorServicio
+                srv = (
+                    await db.execute(
+                        select(PrestadorServicio).where(
+                            PrestadorServicio.id == turno.servicio_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if srv:
+                    servicio_nombre = srv.nombre or ""
+                    if srv.precio_desde_clp:
+                        servicio_precio = f"${srv.precio_desde_clp:,}".replace(",", ".")
+
+            await push_legacy.enviar_push_a_usuario(
+                user_id=prestador.usuario_id,
+                titulo=titulo,
+                body=body,
+                data={
+                    "tipo": "turno_nuevo",
+                    "turno_id": str(turno.id),
+                    "prestador_id": str(turno.prestador_id),
+                    "estado": turno.estado.value,
+                    "cliente_nombre": cliente_nombre,
+                    "cliente_foto_url": cliente_foto,
+                    "servicio_alias": servicio,
+                    "servicio_nombre": servicio_nombre,
+                    "servicio_precio": servicio_precio,
+                    "fecha_hora": fecha,
+                    "titulo": titulo,
+                    "body": body,
+                },
+                db=db,
+            )
     except Exception:
-        import logging
-        logging.getLogger(__name__).exception(
-            f"No se pudo enviar push al prestador del turno {turno.id}"
+        logger.exception(
+            "No se pudo enviar push al prestador del turno %s", turno.id
         )
+
 
 async def cambiar_estado_turno(
     db: AsyncSession,
