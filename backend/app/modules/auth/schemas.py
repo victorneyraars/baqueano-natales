@@ -50,3 +50,4 @@ class UsuarioResponse(UsuarioBase):
     tiene_sms: bool
     created_at: datetime
     ultimo_login: datetime | None
+    permisos: list[str] = []

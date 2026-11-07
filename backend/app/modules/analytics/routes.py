@@ -10,10 +10,15 @@ from app.modules.analytics import services
 from app.modules.analytics.schemas import StatsRequest, StatsResponse
 from app.modules.auth.deps import AdminUser, CurrentUser
 from app.modules.prestadores.models import Prestador
+from app.modules.prestadores.deps import PrestadorOwner
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+PROPERTY_ID = "562461404"
+import os as _os
+_os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/secrets/ga4-service-account.json"
 
 
 @router.get(
@@ -91,3 +96,119 @@ async def get_my_stats(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Cloudflare no disponible: {e}",
         )
+
+
+# =========================================================
+# Endpoints de Google Analytics 4 (para la app de Flutter)
+# =========================================================
+
+@router.get(
+    "/metrics/summary",
+    summary="Resumen de métricas de los últimos 30 días",
+)
+async def get_metrics_summary(
+    user: CurrentUser,
+    prestador: PrestadorOwner,
+):
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric
+
+        client = BetaAnalyticsDataClient()
+
+        request = RunReportRequest(
+            property=f"properties/{PROPERTY_ID}",
+            date_ranges=[DateRange(start_date="30daysAgo", end_date="today")],
+            metrics=[
+                Metric(name="activeUsers"),
+                Metric(name="screenPageViews"),
+                Metric(name="sessions"),
+            ],
+        )
+
+        response = client.run_report(request)
+
+        if not response.rows:
+            return {"usuarios_activos": 0, "paginas_vistas": 0, "sesiones": 0}
+
+        row = response.rows[0]
+        return {
+            "usuarios_activos": int(row.metric_values[0].value),
+            "paginas_vistas": int(row.metric_values[1].value),
+            "sesiones": int(row.metric_values[2].value),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error consultando GA4: {e}")
+
+
+@router.get(
+    "/metrics/daily",
+    summary="Métricas diarias de los últimos 30 días",
+)
+async def get_metrics_daily(
+    user: CurrentUser,
+    prestador: PrestadorOwner,
+):
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric, Dimension
+
+        client = BetaAnalyticsDataClient()
+
+        request = RunReportRequest(
+            property=f"properties/{PROPERTY_ID}",
+            date_ranges=[DateRange(start_date="30daysAgo", end_date="today")],
+            dimensions=[Dimension(name="date")],
+            metrics=[
+                Metric(name="activeUsers"),
+                Metric(name="screenPageViews"),
+            ],
+        )
+
+        response = client.run_report(request)
+        data = []
+        for row in response.rows:
+            fecha_str = row.dimension_values[0].value
+            fecha_formateada = f"{fecha_str[:4]}-{fecha_str[4:6]}-{fecha_str[6:]}"
+            data.append({
+                "fecha": fecha_formateada,
+                "usuarios": int(row.metric_values[0].value),
+                "paginas_vistas": int(row.metric_values[1].value),
+            })
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error consultando GA4: {e}")
+
+
+@router.get(
+    "/metrics/pages",
+    summary="Top 10 páginas más visitadas",
+)
+async def get_top_pages(
+    user: CurrentUser,
+    prestador: PrestadorOwner,
+):
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric, Dimension
+
+        client = BetaAnalyticsDataClient()
+
+        request = RunReportRequest(
+            property=f"properties/{PROPERTY_ID}",
+            date_ranges=[DateRange(start_date="30daysAgo", end_date="today")],
+            dimensions=[Dimension(name="pagePath")],
+            metrics=[Metric(name="screenPageViews")],
+            limit=10,
+        )
+
+        response = client.run_report(request)
+        data = []
+        for row in response.rows:
+            data.append({
+                "pagina": row.dimension_values[0].value,
+                "vistas": int(row.metric_values[0].value),
+            })
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error consultando GA4: {e}")

@@ -171,9 +171,11 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------
 # Auth / usuarios / admin (base)
+from app.modules.documents.routes import router as documents_router
 from app.modules.integrations.routes import router as integrations_router
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(documents_router, prefix="/api/v1")
 app.include_router(integrations_router, prefix="/api/v1")
 app.include_router(usuarios_router, prefix="/api/v1")
 app.include_router(notificaciones_router, prefix="/api/v1")

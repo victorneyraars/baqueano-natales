@@ -20,6 +20,7 @@ from sqlalchemy import (
     Numeric,
     String,
     func,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -91,6 +92,11 @@ class RentacarReserva(TimestampMixin, Base):
     otp_intentos: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
+    # Auditoria de gestion
+    gestionado_por: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    gestionado_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class RentacarBloqueo(TimestampMixin, Base):
@@ -126,3 +132,18 @@ class RentacarBloqueo(TimestampMixin, Base):
     created_by: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
+
+
+class RentacarInspeccion(TimestampMixin, Base):
+    __tablename__ = "rentacar_inspecciones"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    reserva_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("rentacar_reservas.id", ondelete="CASCADE"), index=True
+    )
+    tipo: Mapped[str] = mapped_column(String(20)) # 'entrega' o 'recepcion'
+    kilometraje: Mapped[int] = mapped_column(Integer)
+    nivel_combustible: Mapped[str] = mapped_column(String(20))
+    fotos: Mapped[dict] = mapped_column(JSONB) # Array de Base64
+    firma_cliente: Mapped[str | None] = mapped_column(Text, nullable=True)
+    firmado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

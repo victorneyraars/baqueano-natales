@@ -38,6 +38,7 @@ from app.modules.prestadores.schemas import (
     AuditLogEntry,
     AuditLogPage,
     ColaboradorInviteRequest,
+    ColaboradorPermisosUpdate,
     ColaboradorResponse,
     CategoriaOficioCreate,
     CategoriaOficioResponse,
@@ -239,7 +240,8 @@ async def listar_mis_prestadores(
     items_serialized = []
     for p in items:
         resp = PrestadorPrivadoResponse.model_validate(p)
-        resp.es_owner = str(user.id) == str(p.usuario_id)
+        from app.modules.auth.models import RolUsuario as _Rol
+        resp.es_owner = (str(user.id) == str(p.usuario_id)) or (user.rol == _Rol.ADMIN)
         items_serialized.append(resp)
     return PrestadorPrivadoListResponse(
         items=items_serialized,
@@ -262,9 +264,8 @@ async def obtener_mi_prestador(
     user: CurrentUser,
 ) -> PrestadorPrivadoResponse:
     resp = PrestadorPrivadoResponse.model_validate(prestador)
-    resp.es_owner = str(user.id) == str(prestador.usuario_id)
-    import logging
-    logging.warning(f'DEBUG_ES_OWNER: user.id={user.id} prestador.usuario_id={prestador.usuario_id} es_owner={resp.es_owner}')
+    from app.modules.auth.models import RolUsuario as _Rol
+    resp.es_owner = (str(user.id) == str(prestador.usuario_id)) or (user.rol == _Rol.ADMIN)
     return resp
 
 
@@ -384,6 +385,8 @@ async def aceptar_invitacion_publica(
         if c.get("email") == email:
             if not c.get("activado_at"):
                 c["activado_at"] = datetime.now(timezone.utc).isoformat()
+            if "permisos" not in c:
+                c["permisos"] = []
             encontrado = True
             break
     if not encontrado:
@@ -534,6 +537,7 @@ async def listar_colaboradores(
             activado_at=datetime.fromisoformat(c["activado_at"])
                 if c.get("activado_at") else None,
             rol=c.get("rol", "colaborador"),
+            permisos=c.get("permisos", []),
         )
         for c in colaboradores
         if isinstance(c, dict)
@@ -559,61 +563,27 @@ async def invitar_colaborador(
     if user.email and user.email.lower() == email:
         raise HTTPException(400, "No podes invitarte a vos mismo")
     colaboradores = list(prestador.colaboradores or [])
-    if any(
-        isinstance(c, dict) and (c.get("email") or "").lower() == email
-        for c in colaboradores
-    ):
-        raise HTTPException(400, "Este email ya esta invitado")
-    now_iso = datetime.now(timezone.utc).isoformat()
-    nuevo = {
-        "email": email,
-        "nombre": data.nombre.strip(),
-        "whatsapp": (data.whatsapp or "").strip() or None,
-        "invitado_por": user.email or "",
-        "invitado_at": now_iso,
-        "activado_at": None,
-        "rol": "colaborador",
-    }
-    colaboradores.append(nuevo)
-    prestador.colaboradores = colaboradores
+    encontrado = False
+    nuevos = []
+    
+    for c in colaboradores:
+        if not isinstance(c, dict):
+            nuevos.append(c)
+            continue
+        c_nuevo = dict(c)
+        if (c_nuevo.get("email") or "").lower() == email.lower():
+            c_nuevo["permisos"] = data.permisos
+            encontrado = True
+        nuevos.append(c_nuevo)
+
+    if not encontrado:
+        raise HTTPException(404, "Colaborador no encontrado")
+
+    prestador.colaboradores = nuevos
     flag_modified(prestador, "colaboradores")
-    await log_audit(
-        db=db,
-        prestador_id=prestador.id,
-        user=user,
-        accion="colaborador_invitado",
-        entidad="colaborador",
-        entidad_id=email,
-        metadata={
-            "email": email,
-            "nombre": data.nombre,
-            "whatsapp": data.whatsapp,
-        },
-        ip=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-    )
     await db.commit()
     await db.refresh(prestador)
-    token = generar_token_invitacion(str(prestador.id), email)
-    background_tasks.add_task(
-        notificar_invitacion_colaborador,
-        email_invitado=email,
-        nombre_invitado=data.nombre,
-        nombre_prestador=prestador.nombre,
-        nombre_invitador=user.nombre or user.email or "el administrador",
-        token=token,
-        whatsapp_invitado=data.whatsapp,
-    )
-    return ColaboradorResponse(
-        email=email,
-        nombre=data.nombre,
-        whatsapp=data.whatsapp,
-        invitado_por=user.email or "",
-        invitado_at=datetime.fromisoformat(now_iso),
-        activado_at=None,
-        rol="colaborador",
-    )
-
+    return {"status": "ok", "message": "Permisos actualizados"}
 
 
 @router_propietario.post(
@@ -731,6 +701,41 @@ async def aceptar_invitacion(
     await db.commit()
     return {"ok": True, "mensaje": "Invitacion aceptada. Ya podes operar."}
 
+
+@router_propietario.patch(
+    "/{prestador_id:uuid}/colaboradores/permisos",
+    summary="Actualizar permisos de un colaborador",
+)
+async def actualizar_permisos_colaborador(
+    prestador_id: UUID,
+    email: str,
+    data: ColaboradorPermisosUpdate,
+    prestador: PrestadorOwner,
+    user: CurrentUser,
+    db: DbSession,
+):
+    colaboradores = list(prestador.colaboradores or [])
+    encontrado = False
+    nuevos = []
+
+    for c in colaboradores:
+        if not isinstance(c, dict):
+            nuevos.append(c)
+            continue
+        c_nuevo = dict(c)
+        if (c_nuevo.get("email") or "").lower() == email.lower():
+            c_nuevo["permisos"] = data.permisos
+            encontrado = True
+        nuevos.append(c_nuevo)
+
+    if not encontrado:
+        raise HTTPException(404, "Colaborador no encontrado")
+
+    prestador.colaboradores = nuevos
+    flag_modified(prestador, "colaboradores")
+    await db.commit()
+    await db.refresh(prestador)
+    return {"status": "ok", "message": "Permisos actualizados"}
 
 @router_propietario.delete(
     "/{prestador_id:uuid}/colaboradores/{email}",

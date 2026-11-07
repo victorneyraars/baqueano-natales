@@ -20,6 +20,7 @@ from app.core.storage import (
 
 from . import services
 from app.modules.notificaciones.reservas import (
+    notificar_accion_colaboradores,
     notificar_reserva_cancelada_cliente,
     notificar_reserva_confirmada_cliente,
 )
@@ -246,6 +247,23 @@ async def obtener_mi_reserva(
     return out
 
 
+
+
+@router_propietario.delete(
+    "/reservas/{reserva_id:uuid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar una reserva permanentemente (Hard Delete)",
+)
+async def eliminar_mi_reserva(
+    reserva_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+):
+    try:
+        await services.eliminar_reserva(db, user, reserva_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 @router_propietario.patch(
     "/reservas/{reserva_id:uuid}/estado",
     response_model=RentacarReservaOut,
@@ -285,6 +303,27 @@ async def cambiar_estado_mi_reserva(
                     imagen_url=vehiculo.imagen_url if vehiculo else None,
                     metodo_pago=reserva.metodo_pago,
                 )
+            # 4. Notificar a los DEMAS colaboradores (Equipo)
+            if getattr(user, 'rol', None) != 'cliente': # Si es staff/admin
+                prestador = await services._resolver_prestador_rentacar(db, user)
+                if prestador and prestador.colaboradores:
+                    destinatarios_equipo = []
+                    for c in prestador.colaboradores:
+                        if isinstance(c, dict) and c.get('activado_at') and c.get('email') != user.email:
+                            destinatarios_equipo.append(c['email'])
+                    
+                    if destinatarios_equipo:
+                        background_tasks.add_task(
+                            notificar_accion_colaboradores,
+                            emails=destinatarios_equipo,
+                            actor_nombre=getattr(user, 'nombre', 'Un colaborador'),
+                            accion=data.estado.capitalize(),
+                            cliente=reserva.nombre_cliente or "Cliente",
+                            vehiculo=vehiculo_label,
+                            inicio=reserva.fecha_inicio.isoformat(),
+                            fin=reserva.fecha_fin.isoformat(),
+                        )
+
             elif data.estado == "cancelada":
                 background_tasks.add_task(
                     notificar_reserva_cancelada_cliente,
@@ -375,9 +414,9 @@ async def listar_mis_bloqueos(
     user: CurrentUser,
 ):
     try:
-        await services._obtener_mi_vehiculo(db, user, vehiculo_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        await services._obtener_mi_vehiculo(db, user, vehiculo_id, permiso_requerido='gestionar_calendario')
+    except (ValueError, PermissionError) as e:
+        raise HTTPException(status_code=403, detail=str(e))
     try:
         return await services.listar_bloqueos(db, vehiculo_id, desde, hasta)
     except ValueError as e:
@@ -397,9 +436,9 @@ async def crear_mi_bloqueo(
     user: CurrentUser,
 ):
     try:
-        await services._obtener_mi_vehiculo(db, user, vehiculo_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        await services._obtener_mi_vehiculo(db, user, vehiculo_id, permiso_requerido='gestionar_calendario')
+    except (ValueError, PermissionError) as e:
+        raise HTTPException(status_code=403, detail=str(e))
     try:
         return await services.crear_bloqueo(
             db,
@@ -459,6 +498,7 @@ async def crear_reserva_manual(
     data: _RCProp,
     db: DbSession,
     user: CurrentUser,
+    background_tasks: BackgroundTasks,
 ):
     try:
         reserva = await services.crear_reserva_propietario(db, user, data)
@@ -475,6 +515,37 @@ async def crear_reserva_manual(
         out.vehiculo_modelo = vehiculo.modelo
         out.vehiculo_imagen_url = vehiculo.imagen_url
         out.vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}"
+    # Notificar si hay email de cliente
+    if reserva.email_cliente:
+        background_tasks.add_task(
+            notificar_nueva_reserva_cliente,
+            email_cliente=reserva.email_cliente,
+            nombre_cliente=reserva.nombre_cliente or "Cliente",
+            vehiculo=f"{vehiculo.marca} {vehiculo.modelo}" if vehiculo else "Vehiculo",
+            inicio=reserva.fecha_inicio.isoformat(),
+            fin=reserva.fecha_fin.isoformat(),
+            total=float(reserva.precio_total or 0),
+            patente=vehiculo.patente if vehiculo else None,
+            imagen_url=vehiculo.imagen_url if vehiculo else None,
+            metodo_pago=reserva.metodo_pago,
+        )
+    
+    # Notificar a los demás colaboradores
+    prestador = await services._resolver_prestador_rentacar(db, user)
+    if prestador and prestador.colaboradores:
+        destinatarios = [c['email'] for c in prestador.colaboradores if isinstance(c, dict) and c.get('activado_at') and c.get('email') != user.email]
+        if destinatarios:
+            background_tasks.add_task(
+                notificar_accion_colaboradores,
+                emails=destinatarios,
+                actor_nombre=getattr(user, 'nombre', 'Colaborador'),
+                accion="Reserva Manual Creada",
+                cliente=reserva.nombre_cliente or "Cliente",
+                vehiculo=f"{vehiculo.marca} {vehiculo.modelo}" if vehiculo else "Vehiculo",
+                inicio=reserva.fecha_inicio.isoformat(),
+                fin=reserva.fecha_fin.isoformat(),
+            )
+
     return out
 
 
@@ -504,3 +575,69 @@ async def modificar_mi_reserva(
         out.vehiculo_imagen_url = vehiculo.imagen_url
         out.vehiculo_label = f"{vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}"
     return out
+
+
+from pydantic import BaseModel
+from datetime import datetime, timezone
+class InspeccionCreate(BaseModel):
+    tipo: str
+    kilometraje: int
+    nivel_combustible: str
+    fotos: list[str]
+    firma_cliente: str | None = None
+
+@router_propietario.post(
+    "/reservas/{reserva_id:uuid}/inspeccion",
+    summary="Guardar inspeccion de entrega o recepcion",
+)
+async def crear_inspeccion(
+    reserva_id: UUID,
+    data: InspeccionCreate,
+    db: DbSession,
+    user: CurrentUser,
+):
+    from .models import RentacarInspeccion
+    from uuid import uuid4
+    
+    # Validar que la reserva exista y pertenezca al usuario
+    await services._obtener_mi_reserva(db, user, reserva_id)
+    
+    inspeccion = RentacarInspeccion(
+        id=uuid4(),
+        reserva_id=reserva_id,
+        tipo=data.tipo,
+        kilometraje=data.kilometraje,
+        nivel_combustible=data.nivel_combustible,
+        fotos=data.fotos,
+        firma_cliente=data.firma_cliente,
+        firmado_at=datetime.now(timezone.utc) if data.firma_cliente else None
+    )
+    db.add(inspeccion)
+    
+    # Si es check-out, pasamos la reserva a "en_curso" para que el calendario lo sepa
+    if data.tipo == "entrega":
+        reserva = await services._obtener_mi_reserva(db, user, reserva_id)
+        reserva.estado = "en_curso"
+        
+    await db.commit()
+    return {"ok": True, "mensaje": "Inspección guardada correctamente"}
+
+
+@router_propietario.get(
+    "/reservas/{reserva_id:uuid}/inspecciones",
+    summary="Listar inspecciones de una reserva",
+)
+async def listar_inspecciones(
+    reserva_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+):
+    from .models import RentacarInspeccion
+    from sqlalchemy import select
+    
+    await services._obtener_mi_reserva(db, user, reserva_id)
+    
+    stmt = select(RentacarInspeccion).where(RentacarInspeccion.reserva_id == reserva_id)
+    inspecciones = (await db.execute(stmt)).scalars().all()
+    
+    return inspecciones

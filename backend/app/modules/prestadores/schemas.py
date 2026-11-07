@@ -540,6 +540,7 @@ class ColaboradorResponse(BaseModel):
     invitado_at: datetime
     activado_at: datetime | None = None
     rol: str = "colaborador"
+    permisos: list[str] = []
 
 
 # =========================================================
@@ -566,3 +567,8 @@ class AuditLogPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ColaboradorPermisosUpdate(BaseModel):
+    """Payload para actualizar los permisos de un colaborador."""
+    permisos: list[str]
