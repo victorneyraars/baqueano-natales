@@ -257,3 +257,108 @@ async def admin_cancelar_reserva(
         return await services.cancelar_reserva(db, reserva_id, gestionado_por="Admin Web")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================
+# Inspecciones de entrega/recepcion (admin multi-tenant)
+# =========================================================
+from datetime import datetime, timezone as _tz
+from pydantic import BaseModel as _BaseModel
+
+
+class _InspeccionCreate(_BaseModel):
+    tipo: str  # "entrega" | "recepcion"
+    kilometraje: int
+    nivel_combustible: str
+    fotos: list[str]
+    firma_cliente: str | None = None
+
+
+async def _validar_reserva_del_admin(db, admin_user, reserva_id):
+    """Valida que el admin tenga permiso sobre la reserva."""
+    from app.modules.rentacar.models import RentacarReserva as _RR, RentacarVehiculo as _RV
+    from sqlalchemy import select as _sel
+
+    stmt = _sel(_RR).where(_RR.id == reserva_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if not reserva:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+
+    # Verificar que el vehiculo pertenezca a un prestador del admin
+    stmt = _sel(_RV).where(_RV.id == reserva.vehiculo_id)
+    vehiculo = (await db.execute(stmt)).scalar_one_or_none()
+    if not vehiculo:
+        raise HTTPException(status_code=404, detail="Vehiculo de la reserva no encontrado")
+
+    admin_prestadores = await get_admin_prestadores_ids(admin_user, db)
+    if admin_prestadores is not None and vehiculo.prestador_id not in admin_prestadores:
+        raise HTTPException(status_code=403, detail="Sin acceso a esta reserva")
+
+    return reserva, vehiculo
+
+
+@router_admin.post(
+    "/reservas/{reserva_id}/inspeccion",
+    summary="Guardar inspeccion de entrega o recepcion (admin)",
+)
+async def admin_crear_inspeccion(
+    reserva_id: UUID,
+    data: _InspeccionCreate,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    from app.modules.rentacar.models import RentacarInspeccion as _RI
+    from uuid import uuid4 as _uuid4
+
+    reserva, _ = await _validar_reserva_del_admin(db, _admin, reserva_id)
+
+    inspeccion = _RI(
+        id=_uuid4(),
+        reserva_id=reserva_id,
+        tipo=data.tipo,
+        kilometraje=data.kilometraje,
+        nivel_combustible=data.nivel_combustible,
+        fotos=data.fotos,
+        firma_cliente=data.firma_cliente,
+        firmado_at=datetime.now(_tz.utc) if data.firma_cliente else None,
+    )
+    db.add(inspeccion)
+
+    if data.tipo == "entrega":
+        reserva.estado = "en_curso"
+
+    await db.commit()
+    return {"ok": True, "mensaje": "Inspeccion guardada correctamente"}
+
+
+@router_admin.get(
+    "/reservas/{reserva_id}/inspecciones",
+    summary="Listar inspecciones de una reserva (admin)",
+)
+async def admin_listar_inspecciones(
+    reserva_id: UUID,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    from app.modules.rentacar.models import RentacarInspeccion as _RI
+    from sqlalchemy import select as _sel
+
+    await _validar_reserva_del_admin(db, _admin, reserva_id)
+
+    stmt = _sel(_RI).where(_RI.reserva_id == reserva_id)
+    inspecciones = (await db.execute(stmt)).scalars().all()
+
+    return [
+        {
+            "id": str(i.id),
+            "reserva_id": str(i.reserva_id),
+            "tipo": i.tipo,
+            "kilometraje": i.kilometraje,
+            "nivel_combustible": i.nivel_combustible,
+            "fotos": i.fotos,
+            "firma_cliente": i.firma_cliente,
+            "firmado_at": i.firmado_at.isoformat() if i.firmado_at else None,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+        }
+        for i in inspecciones
+    ]
