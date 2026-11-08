@@ -3,6 +3,7 @@
 from .public_routes import router_publico
 from .admin_routes import router_admin_categorias
 from .admin_routes import router_admin_repuestos
+from .admin_routes import router_admin_ordenes
 from .cliente_routes import router_propietario
 from .cliente_routes import router_mis_ordenes_cliente
 from .cliente_routes import router_turnos_cliente
