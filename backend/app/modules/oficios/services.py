@@ -1996,3 +1996,19 @@ async def buscar_recordatorios_pendientes(
         .limit(limit)
     )
     return list((await db.execute(stmt)).scalars().all())
+
+async def listar_todas_ordenes_admin(db: AsyncSession, estado: str | None = None, limit: int = 200) -> list[OrdenTrabajo]:
+    """Lista TODAS las ordenes para el panel de administrador."""
+    stmt = (
+        select(OrdenTrabajo)
+        .options(selectinload(OrdenTrabajo.items))
+        .order_by(OrdenTrabajo.fecha_ingreso.desc())
+        .limit(limit)
+    )
+    if estado:
+        try:
+            stmt = stmt.where(OrdenTrabajo.estado == EstadoOrden(estado))
+        except ValueError:
+            pass # ignorar estado invalido
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

@@ -166,3 +166,19 @@ async def admin_actualizar_repuesto(
 # M2: Ordenes - Prestador
 # =========================================================
 
+
+router_admin_ordenes = APIRouter(
+    prefix="/admin/oficios/ordenes",
+    tags=["oficios-admin-ordenes"],
+)
+
+@router_admin_ordenes.get("", response_model=list[OrdenListItemResponse])
+async def listar_ordenes_admin(
+    user: AdminUser,
+    db: DbSession,
+    estado: str | None = Query(None),
+):
+    """Lista todas las ordenes de mecanica (solo admins)."""
+    from ._serializers import _serializar_orden
+    ordenes = await services.listar_todas_ordenes_admin(db, estado)
+    return [_serializar_orden(o) for o in ordenes]
