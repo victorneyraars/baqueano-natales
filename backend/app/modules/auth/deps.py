@@ -111,3 +111,63 @@ def es_admin(user) -> bool:
     """
     from app.modules.auth.models import RolUsuario
     return user.rol == RolUsuario.ADMIN
+
+
+# =========================================================
+# Multi-tenant: helpers de super admin y prestadores
+# =========================================================
+
+async def require_super_admin(
+    user: Annotated[Usuario, Depends(require_admin)],
+) -> Usuario:
+    """
+    Verifica que el usuario sea super admin del ecosistema.
+    Solo ellos pueden asignar admins a prestadores.
+    """
+    if not user.es_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere ser super admin del ecosistema",
+        )
+    return user
+
+
+async def get_admin_prestadores_ids(
+    user: Usuario,
+    db: AsyncSession,
+) -> list[UUID] | None:
+    """
+    Devuelve la lista de prestador_ids que el admin puede gestionar.
+    - Retorna None si es super admin (ve todo)
+    - Retorna [] si es admin sin prestadores asignados
+    - Retorna [uuid1, uuid2, ...] si tiene prestadores asignados
+    """
+    if not es_admin(user):
+        return []
+
+    if user.es_super_admin:
+        return None  # None = ve todo
+
+    from app.modules.auth.models_admin_prestador import AdminPrestador
+    result = await db.execute(
+        select(AdminPrestador.prestador_id).where(AdminPrestador.admin_id == user.id)
+    )
+    return [row[0] for row in result.all()]
+
+
+async def admin_puede_gestionar_prestador(
+    user: Usuario,
+    prestador_id: UUID,
+    db: AsyncSession,
+) -> bool:
+    """Verifica si el admin puede gestionar un prestador específico."""
+    if not es_admin(user):
+        return False
+    if user.es_super_admin:
+        return True
+    prestador_ids = await get_admin_prestadores_ids(user, db)
+    return prestador_ids is not None and prestador_id in prestador_ids
+
+
+# Alias para usar en endpoints
+SuperAdminUser = Annotated[Usuario, Depends(require_super_admin)]

@@ -83,6 +83,10 @@ class Usuario(Base):
     verificado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    # Super admin del ecosistema (ve todos los prestadores)
+    # Si es False y tiene filas en admin_prestadores, ve solo esos prestadores
+    es_super_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Métodos de auth vinculados
     tiene_google: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     tiene_whatsapp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

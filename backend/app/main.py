@@ -16,6 +16,7 @@ from app.modules.notificaciones.admin_routes import router as admin_notificacion
 from app.modules.notificaciones.routes import router as notificaciones_router
 from app.modules.usuarios.routes import router as usuarios_router
 from app.modules.admin.routes import router as admin_router
+from app.modules.admin.routes_prestadores import router as admin_prestadores_router
 from app.modules.comercios.routes import (
     router_admin_categorias as comercios_admin_categorias_router,
 )
@@ -183,6 +184,7 @@ app.include_router(usuarios_router, prefix="/api/v1")
 app.include_router(notificaciones_router, prefix="/api/v1")
 app.include_router(admin_notificaciones_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(admin_prestadores_router, prefix="/api/v1")
 
 # Comercios
 app.include_router(comercios_publico_router, prefix="/api/v1")
