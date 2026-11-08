@@ -4,7 +4,8 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
-from app.core.db import Base, TimestampMixin
+from app.core.db import Base
+from app.core.mixins import TimestampMixin
 
 class DocumentoFirma(TimestampMixin, Base):
     __tablename__ = "documentos_firma"
