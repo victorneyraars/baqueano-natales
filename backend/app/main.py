@@ -78,6 +78,7 @@ from app.modules.rentacar.routes import (
 )
 from app.modules.rentacar.public_routes import (
     router_publico as rentacar_publico_router,
+    routes_cliente as rentacar_cliente_router,
 )
 from app.modules.rentacar.routes_propietario import (
     router_propietario as rentacar_propietario_router,
@@ -202,6 +203,7 @@ app.include_router(brand_public_router, prefix="/api/v1")
 # Rent a Car Vásquez (vertical de alquiler de vehículos)
 app.include_router(rentacar_admin_router, prefix="/api/v1")
 app.include_router(rentacar_publico_router, prefix="/api/v1")
+app.include_router(rentacar_cliente_router, prefix="/api/v1")
 app.include_router(rentacar_propietario_router, prefix="/api/v1")
 
 # Promocion (afiches SVG)

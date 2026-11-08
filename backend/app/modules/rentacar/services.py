@@ -879,3 +879,13 @@ async def eliminar_reserva(db: AsyncSession, usuario: Usuario, reserva_id: UUID)
     await db.delete(reserva)
     await db.commit()
 
+
+async def listar_reservas_cliente(db: AsyncSession, cliente_id: UUID) -> list[RentacarReserva]:
+    """Lista las reservas de un cliente autenticado."""
+    stmt = (
+        select(RentacarReserva)
+        .where(RentacarReserva.cliente_id == cliente_id)
+        .order_by(RentacarReserva.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
