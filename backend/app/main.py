@@ -78,8 +78,8 @@ from app.modules.rentacar.routes import (
 )
 from app.modules.rentacar.public_routes import (
     router_publico as rentacar_publico_router,
-    routes_cliente as rentacar_cliente_router,
 )
+from app.modules.rentacar.routes_cliente import router_cliente as rentacar_cliente_router
 from app.modules.rentacar.routes_propietario import (
     router_propietario as rentacar_propietario_router,
 )
