@@ -180,3 +180,41 @@ async def confirmar_imagen_vehiculo(
     await db.commit()
     await db.refresh(vehiculo)
     return vehiculo
+
+
+# =========================================================
+# Acciones de admin sobre reservas (Fase Admin Web)
+# =========================================================
+
+@router_admin.post(
+    "/reservas/{reserva_id}/confirmar",
+    response_model=RentacarReservaOut,
+    summary="Confirmar reserva (admin)",
+)
+async def admin_confirmar_reserva(
+    reserva_id: UUID,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    """Cambia estado 'pendiente' -> 'confirmada'. Solo admins."""
+    try:
+        return await services.confirmar_reserva(db, reserva_id, gestionado_por="Admin Web")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router_admin.post(
+    "/reservas/{reserva_id}/cancelar",
+    response_model=RentacarReservaOut,
+    summary="Cancelar reserva (admin)",
+)
+async def admin_cancelar_reserva(
+    reserva_id: UUID,
+    db: DbSession,
+    _admin: AdminUser,
+):
+    """Cambia estado 'pendiente' -> 'cancelada' y libera el bloqueo. Solo admins."""
+    try:
+        return await services.cancelar_reserva(db, reserva_id, gestionado_por="Admin Web")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
