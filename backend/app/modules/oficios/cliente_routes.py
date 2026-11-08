@@ -49,6 +49,7 @@ from app.modules.oficios.schemas import (
     VehiculoResponse,
     VehiculoUpdate,
 )
+from ._serializers import _serializar_orden
 
 logger = logging.getLogger(__name__)
 
