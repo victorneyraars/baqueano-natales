@@ -182,3 +182,17 @@ async def listar_ordenes_admin(
     from ._serializers import _serializar_orden
     ordenes = await services.listar_todas_ordenes_admin(db, estado)
     return [_serializar_orden(o) for o in ordenes]
+
+
+@router_admin_ordenes.get("/{orden_id}", response_model=OrdenTrabajoDetalleResponse)
+async def detalle_orden_admin(
+    orden_id: UUID,
+    user: AdminUser,
+    db: DbSession,
+):
+    """Detalle completo de una orden con historial (solo admins)."""
+    from ._serializers import _serializar_orden
+    orden = await services.obtener_orden(db, orden_id)
+    if orden is None:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return _serializar_orden(orden, incluir_notas_internas=True, con_historial=True)
