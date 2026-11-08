@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.core.db import DbSession
 from app.modules.social.deps import AdminUser
+from app.modules.auth.deps import get_admin_prestadores_ids
 
 from . import services
 from .schemas import (
@@ -42,8 +43,29 @@ async def actualizar_config(
 
 # ---------------------------- Vehículos ----------------------------
 @router_admin.get("/vehiculos", response_model=list[RentacarVehiculoOut])
-async def listar_vehiculos(db: DbSession, _admin: AdminUser):
-    return await services.listar_vehiculos(db)
+async def listar_vehiculos(
+    db: DbSession,
+    _admin: AdminUser,
+    prestador_id: UUID | None = None,
+):
+    """Lista vehiculos. Super admin ve todos; admin de servicio solo los suyos."""
+    admin_prestadores = await get_admin_prestadores_ids(_admin, db)
+
+    if admin_prestadores is None:
+        return await services.listar_vehiculos(db, prestador_id=prestador_id)
+    elif len(admin_prestadores) == 0:
+        return []
+    else:
+        if prestador_id:
+            if prestador_id not in admin_prestadores:
+                raise HTTPException(status_code=403, detail="Sin acceso a este prestador")
+            return await services.listar_vehiculos(db, prestador_id=prestador_id)
+        else:
+            all_vehiculos = []
+            for pid in admin_prestadores:
+                vehiculos = await services.listar_vehiculos(db, prestador_id=pid)
+                all_vehiculos.extend(vehiculos)
+            return all_vehiculos
 
 
 @router_admin.get(
@@ -94,8 +116,25 @@ async def eliminar_vehiculo(
 
 # ---------------------------- Reservas ----------------------------
 @router_admin.get("/reservas", response_model=list[RentacarReservaOut])
-async def listar_reservas(db: DbSession, _admin: AdminUser):
-    return await services.listar_reservas(db)
+async def listar_reservas(
+    db: DbSession,
+    _admin: AdminUser,
+    prestador_id: UUID | None = None,
+):
+    """Lista reservas. Super admin ve todas; admin de servicio solo las suyas."""
+    admin_prestadores = await get_admin_prestadores_ids(_admin, db)
+
+    if admin_prestadores is None:
+        return await services.listar_reservas(db, prestador_id=prestador_id)
+    elif len(admin_prestadores) == 0:
+        return []
+    else:
+        if prestador_id:
+            if prestador_id not in admin_prestadores:
+                raise HTTPException(status_code=403, detail="Sin acceso a este prestador")
+            return await services.listar_reservas(db, prestador_id=prestador_id)
+        else:
+            return await services.listar_reservas(db, prestador_ids=admin_prestadores)
 
 
 @router_admin.post(

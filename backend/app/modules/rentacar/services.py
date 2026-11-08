@@ -81,11 +81,29 @@ async def eliminar_vehiculo(db: AsyncSession, vehiculo_id: UUID) -> bool:
 
 # ---------------------------- Reservas ----------------------------
 async def listar_reservas(
-    db: AsyncSession, cliente_id: UUID | None = None
+    db: AsyncSession,
+    cliente_id: UUID | None = None,
+    prestador_id: UUID | None = None,
+    prestador_ids: list[UUID] | None = None,
 ) -> list[RentacarReserva]:
+    """Lista reservas. Filtra por cliente, prestador individual o lista de prestadores.
+
+    - prestador_ids (list): usado por admin multi-tenant (solo sus prestadores)
+    - prestador_id (single): usado cuando el admin pide un prestador especifico
+    """
     stmt = select(RentacarReserva).order_by(RentacarReserva.created_at.desc())
     if cliente_id is not None:
         stmt = stmt.where(RentacarReserva.cliente_id == cliente_id)
+    if prestador_ids is not None:
+        if not prestador_ids:
+            return []
+        stmt = stmt.join(
+            RentacarVehiculo, RentacarVehiculo.id == RentacarReserva.vehiculo_id
+        ).where(RentacarVehiculo.prestador_id.in_(prestador_ids))
+    elif prestador_id is not None:
+        stmt = stmt.join(
+            RentacarVehiculo, RentacarVehiculo.id == RentacarReserva.vehiculo_id
+        ).where(RentacarVehiculo.prestador_id == prestador_id)
     return list((await db.execute(stmt)).scalars().all())
 
 
