@@ -108,7 +108,9 @@ async def listar_reservas(
 
 
 async def crear_reserva(
-    db: AsyncSession, data: RentacarReservaCreate
+    db: AsyncSession,
+    data: RentacarReservaCreate,
+    cliente_id=None,
 ) -> RentacarReserva:
     """Crea una reserva publica en una sola transaccion.
 
@@ -116,6 +118,9 @@ async def crear_reserva(
     2. INSERT bloqueo tipo=reserva con daterange [inicio, fin).
     La constraint EXCLUDE USING gist en rentacar_bloqueos impide
     doble-booking a nivel motor. Si falla, todo revierte -> 409.
+
+    Si cliente_id viene, se asocia la reserva a ese cliente (logueado).
+    Si no, la reserva queda como invitado (guest-first).
     """
     vehiculo = await get_vehiculo(db, data.vehiculo_id)
     if vehiculo is None:
@@ -129,6 +134,7 @@ async def crear_reserva(
     otp = f"{secrets.randbelow(1000000):06d}"
     reserva = RentacarReserva(
         **data.model_dump(),
+        cliente_id=cliente_id,
         otp_code=otp,
         otp_expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
         otp_intentos=0,
@@ -907,3 +913,26 @@ async def listar_reservas_cliente(db: AsyncSession, cliente_id: UUID) -> list[Re
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+from sqlalchemy.orm import selectinload
+from app.modules.rentacar.models import RentacarInspeccion
+
+async def obtener_detalle_reserva_cliente(db: AsyncSession, reserva_id: UUID, user_id: UUID):
+    # Cargamos la reserva asegurando que pertenezca al usuario
+    stmt = select(RentacarReserva).where(
+        RentacarReserva.id == reserva_id,
+        RentacarReserva.cliente_id == user_id
+    )
+    result = await db.execute(stmt)
+    reserva = result.scalar_one_or_none()
+    
+    if not reserva:
+        return None
+        
+    # Cargamos las inspecciones asociadas
+    stmt_ins = select(RentacarInspeccion).where(RentacarInspeccion.reserva_id == reserva_id)
+    result_ins = await db.execute(stmt_ins)
+    reserva.inspecciones = result_ins.scalars().all()
+    
+    return reserva

@@ -66,6 +66,22 @@ class RentacarReservaOut(RentacarReservaBase):
         from_attributes = True
 
 
+
+class RentacarInspeccionOut(BaseModel):
+    id: UUID
+    tipo: str
+    kilometraje: int
+    nivel_combustible: str
+    fotos: dict
+    firma_cliente: str | None = None
+    firmado_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+class RentacarReservaDetalleOut(RentacarReservaOut):
+    inspecciones: list[RentacarInspeccionOut] = []
+
 class RentacarImagenPresignedRequest(BaseModel):
     filename: str
     content_type: str

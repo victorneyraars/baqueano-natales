@@ -171,3 +171,49 @@ async def admin_puede_gestionar_prestador(
 
 # Alias para usar en endpoints
 SuperAdminUser = Annotated[Usuario, Depends(require_super_admin)]
+
+
+# =========================================================
+# Helper de auth OPCIONAL (para endpoints públicos que quieren
+# vincular reservas al cliente si está logueado, pero permiten
+# reservas como invitado si no hay token)
+# =========================================================
+
+async def get_current_user_optional(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Usuario | None:
+    """
+    Igual que get_current_user pero devuelve None si:
+    - No hay header Authorization
+    - El JWT es inválido o expiró
+    - El usuario no existe o está inactivo
+
+    Útil para endpoints públicos que quieren enriquecer
+    la reserva con el cliente_id cuando está logueado.
+    """
+    if credentials is None:
+        return None
+
+    try:
+        payload = decode_access_token(credentials.credentials)
+    except Exception:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+
+    try:
+        from uuid import UUID
+        user_uuid = UUID(user_id)
+    except (ValueError, TypeError):
+        return None
+
+    from sqlalchemy import select
+    stmt = select(Usuario).where(Usuario.id == user_uuid, Usuario.activo == True)  # noqa: E712
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+CurrentUserOptional = Annotated[Usuario | None, Depends(get_current_user_optional)]

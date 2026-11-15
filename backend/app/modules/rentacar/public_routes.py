@@ -16,6 +16,7 @@ from app.modules.notificaciones.tokens import validar_token_accion
 import jwt
 
 from app.core.db import DbSession
+from app.modules.auth.deps import CurrentUserOptional
 
 from . import services
 from .schemas import (
@@ -274,9 +275,11 @@ async def crear_reserva_publica(
     data: RentacarReservaCreate,
     db: DbSession,
     background_tasks: BackgroundTasks,
+    user: CurrentUserOptional = None,
 ):
     try:
-        reserva = await services.crear_reserva(db, data)
+        cliente_id = user.id if user else None
+        reserva = await services.crear_reserva(db, data, cliente_id=cliente_id)
     except ValueError as e:
         msg = str(e)
         code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
