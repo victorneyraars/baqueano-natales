@@ -17,6 +17,7 @@ from app.modules.prestadores import services_reviews
 from app.modules.prestadores.models import Prestador
 from app.modules.prestadores.schemas_reviews import (
     ReviewCreate,
+    ReviewCreateGeneric,
     ReviewPublicaListResponse,
     ReviewResponderRequest,
     ReviewResponse,
@@ -137,3 +138,28 @@ async def listar_reviews_publicas_endpoint(
         db, prestador.id, page=page, page_size=page_size,
     )
     return data
+
+
+router_reviews_generic = APIRouter(prefix="/reviews", tags=["reviews"])
+
+
+@router_reviews_generic.post(
+    "",
+    response_model=ReviewResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Calificar cualquier entidad (orden, reserva)",
+)
+async def crear_review_generica_endpoint(
+    data: ReviewCreateGeneric,
+    user: CurrentUser,
+    db: DbSession,
+):
+    """Crea una review para cualquier entidad del ecosistema.
+    
+    - entidad_tipo='orden' → se delega a la lógica existente
+    - entidad_tipo='reserva' → validación de rentacar (estado completada)
+    """
+    review = await services_reviews.crear_review_generica(
+        db, user, data,
+    )
+    return ReviewResponse.model_validate(review)

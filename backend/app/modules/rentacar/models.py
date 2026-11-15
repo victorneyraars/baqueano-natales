@@ -78,6 +78,9 @@ class RentacarReserva(TimestampMixin, Base):
     metodo_pago: Mapped[str] = mapped_column(String(50))
     precio_total: Mapped[float] = mapped_column(Numeric(10, 2))
     estado: Mapped[str] = mapped_column(String(20), default="pendiente", nullable=False)
+
+    # Relación con vehiculo (para acceder a vehiculo.prestador_id)
+    vehiculo: Mapped["RentacarVehiculo"] = relationship(lazy="selectin")
     # Verificacion OTP de email (Guest-First)
     email_verificado: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False

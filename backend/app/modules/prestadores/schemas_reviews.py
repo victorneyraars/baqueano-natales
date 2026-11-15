@@ -12,6 +12,16 @@ class ReviewCreate(BaseModel):
     comentario: str | None = Field(None, max_length=2000)
 
 
+
+
+class ReviewCreateGeneric(BaseModel):
+    """Cliente crea una review para cualquier entidad (orden, reserva, etc.)."""
+    
+    entidad_tipo: str = Field(..., pattern="^(orden|reserva)$", description="Tipo de entidad: 'orden' o 'reserva'")
+    entidad_id: UUID = Field(..., description="ID de la orden o reserva")
+    rating: int = Field(..., ge=1, le=5, description="1 a 5 estrellas")
+    comentario: str | None = Field(None, max_length=2000)
+
 class ReviewResponderRequest(BaseModel):
     """Prestador responde una review (una sola vez)."""
 

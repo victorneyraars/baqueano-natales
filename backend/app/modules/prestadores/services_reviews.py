@@ -277,3 +277,127 @@ async def listar_reviews_publicas(
         "page": page,
         "page_size": page_size,
     }
+
+
+# =========================================================
+# REVIEW GENÉRICA (polimórfica: orden o reserva)
+# =========================================================
+async def crear_review_generica(
+    db: AsyncSession,
+    usuario: Usuario,
+    data,  # ReviewCreateGeneric
+) -> Review:
+    """Dispatcher: crea review según entidad_tipo (orden o reserva)."""
+    if data.entidad_tipo == "orden":
+        from app.modules.prestadores.schemas_reviews import ReviewCreate
+        return await crear_review(
+            db, usuario, data.entidad_id,
+            ReviewCreate(rating=data.rating, comentario=data.comentario)
+        )
+    elif data.entidad_tipo == "reserva":
+        return await _crear_review_reserva(db, usuario, data)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"entidad_tipo no soportado: {data.entidad_tipo}"
+        )
+
+
+async def _crear_review_reserva(
+    db: AsyncSession,
+    usuario: Usuario,
+    data,
+) -> Review:
+    """Cliente crea una review para una reserva de rentacar COMPLETADA."""
+    from app.modules.rentacar.models import RentacarReserva
+
+    # 1. Buscar la reserva con el vehiculo cargado
+    stmt = select(RentacarReserva).where(RentacarReserva.id == data.entidad_id)
+    reserva = (await db.execute(stmt)).scalar_one_or_none()
+    if reserva is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reserva no encontrada",
+        )
+
+    # 2. Validar ownership (o admin)
+    if reserva.cliente_id != usuario.id and usuario.rol != RolUsuario.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenés permiso para calificar esta reserva",
+        )
+
+    # 3. Validar estado
+    if reserva.estado != "completada":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Solo se puede calificar una reserva completada. "
+                f"Estado actual: {reserva.estado}"
+            ),
+        )
+
+    # 4. Verificar que no existe review previa
+    existente = (
+        await db.execute(
+            select(Review).where(
+                Review.entidad_tipo == "reserva",
+                Review.entidad_id == data.entidad_id,
+                Review.cliente_id == usuario.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existente is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya dejaste una reseña para esta reserva",
+        )
+
+    # 5. Obtener prestador_id desde el vehiculo
+    prestador_id = reserva.vehiculo.prestador_id
+
+    # 6. Crear review
+    review = Review(
+        prestador_id=prestador_id,
+        cliente_id=usuario.id,
+        orden_id=None,
+        entidad_tipo="reserva",
+        entidad_id=data.entidad_id,
+        rating=data.rating,
+        comentario=data.comentario,
+    )
+    db.add(review)
+    await db.flush()
+    await _recalcular_stats_prestador(db, prestador_id)
+    await db.commit()
+    await db.refresh(review)
+
+    # 7. Notificar al prestador
+    try:
+        from app.core.notifications.models import TipoNotificacion
+        from app.core.notifications.service import NotificationService
+
+        prestador = (
+            await db.execute(select(Prestador).where(Prestador.id == prestador_id))
+        ).scalar_one()
+        service = NotificationService()
+        await service.enviar_in_app(
+            db=db,
+            usuario_id=prestador.usuario_id,
+            titulo=f"Nueva reseña en {prestador.nombre}",
+            body=f"Recibiste {data.rating} estrellas en una reserva de rentacar.",
+            tipo=TipoNotificacion.CAMPANA,
+            data={
+                "tipo": "review",
+                "prestador_id": str(prestador_id),
+                "review_id": str(review.id),
+                "rating": data.rating,
+                "entidad_tipo": "reserva",
+                "entidad_id": str(data.entidad_id),
+            },
+        )
+        await db.commit()
+    except Exception:
+        logger.exception("Error enviando notif de review de reserva")
+
+    return review
