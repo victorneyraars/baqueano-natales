@@ -41,4 +41,20 @@ async def detalle_reserva(reserva_id: UUID, db: DbSession, user: CurrentUser):
         logging.getLogger(__name__).warning(f"Error buscando contrato: {e}")
         reserva.contrato = None
 
+    # Verificar si el cliente ya dejó review
+    try:
+        from app.modules.prestadores.models import Review
+        from sqlalchemy import select
+        stmt = select(Review).where(
+            Review.entidad_tipo == "reserva",
+            Review.entidad_id == reserva_id,
+            Review.cliente_id == user.id,
+        )
+        review_existente = (await db.execute(stmt)).scalar_one_or_none()
+        reserva.tiene_review = review_existente is not None
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error buscando review: {e}")
+        reserva.tiene_review = False
+
     return reserva
