@@ -73,3 +73,20 @@ async def firmar_documento(db: AsyncSession, token: str, firma_base64: str, ip: 
     
     await db.commit()
     return True
+
+
+async def obtener_contrato_por_reserva(db, reserva_id):
+    """Busca el contrato (documento_firma) asociado a una reserva,
+    usando el payload JSON donde el admin guarda el reserva_id."""
+    from sqlalchemy import select, text
+    from .models import DocumentoFirma
+    from uuid import UUID
+
+    # Buscamos por payload->>'reserva_id' con cast a texto
+    stmt = select(DocumentoFirma).where(
+        DocumentoFirma.tipo == 'contrato_rentacar',
+        text("payload->>'reserva_id' = :rid")
+    ).params(rid=str(reserva_id)).order_by(DocumentoFirma.created_at.desc()).limit(1)
+
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()

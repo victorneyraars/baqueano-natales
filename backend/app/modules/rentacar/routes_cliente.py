@@ -16,9 +16,29 @@ async def mis_reservas(db: DbSession, user: CurrentUser):
 
 @router_cliente.get("/{reserva_id}", response_model=schemas.RentacarReservaDetalleOut)
 async def detalle_reserva(reserva_id: UUID, db: DbSession, user: CurrentUser):
-    """Obtiene el detalle completo de una reserva con sus inspecciones (fotos, firmas)."""
+    """Obtiene el detalle completo de una reserva con sus inspecciones y contrato."""
     reserva = await services.obtener_detalle_reserva_cliente(db, reserva_id, user.id)
     if not reserva:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Reserva no encontrada o no tienes permiso para verla")
+
+    # Buscar contrato asociado
+    try:
+        from app.modules.documents.services import obtener_contrato_por_reserva
+        contrato = await obtener_contrato_por_reserva(db, reserva_id)
+        if contrato:
+            reserva.contrato = {
+                "token": contrato.token,
+                "estado": contrato.estado,
+                "firmado_at": contrato.firmado_at.isoformat() if contrato.firmado_at else None,
+                "pdf_url": f"/api/v1/documents/{contrato.token}/pdf",
+                "url_firma": f"https://rentacarvasquez.com/firmar/{contrato.token}",
+            }
+        else:
+            reserva.contrato = None
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error buscando contrato: {e}")
+        reserva.contrato = None
+
     return reserva

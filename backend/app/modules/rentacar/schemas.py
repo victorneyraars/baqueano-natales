@@ -81,6 +81,7 @@ class RentacarInspeccionOut(BaseModel):
 
 class RentacarReservaDetalleOut(RentacarReservaOut):
     inspecciones: list[RentacarInspeccionOut] = []
+    contrato: dict | None = None
 
 class RentacarImagenPresignedRequest(BaseModel):
     filename: str
