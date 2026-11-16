@@ -36,7 +36,9 @@ class ReviewResponse(BaseModel):
     id: UUID
     prestador_id: UUID
     cliente_id: UUID
-    orden_id: UUID
+    orden_id: UUID | None = None  # Nullable para reviews de reserva
+    entidad_tipo: str = "orden"
+    entidad_id: UUID | None = None
     rating: int
     comentario: str | None
     respuesta_prestador: str | None

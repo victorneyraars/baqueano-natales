@@ -163,7 +163,7 @@ async def confirmar_mi_imagen(
 # Reservas propietario
 # =========================================================
 from .schemas import (
-    RentacarReservaDetalleOut,
+    RentacarReservaPropietarioOut,
     RentacarReservaEstadoUpdate,
     RentacarStatsOut,
     RentacarConfigOut,
@@ -174,7 +174,7 @@ from app.modules.rentacar.schemas import RentacarReservaOut
 
 @router_propietario.get(
     "/reservas",
-    response_model=list[RentacarReservaDetalleOut],
+    response_model=list[RentacarReservaPropietarioOut],
     summary="Listar mis reservas",
 )
 async def listar_mis_reservas(
@@ -206,7 +206,7 @@ async def listar_mis_reservas(
     result = []
     for r in reservas:
         vehiculo = await services.get_vehiculo(db, r.vehiculo_id)
-        out = RentacarReservaDetalleOut.model_validate(r)
+        out = RentacarReservaPropietarioOut.model_validate(r)
         if vehiculo:
             out.vehiculo_patente = vehiculo.patente
             out.vehiculo_marca = vehiculo.marca
@@ -224,7 +224,7 @@ async def listar_mis_reservas(
 
 @router_propietario.get(
     "/reservas/{reserva_id:uuid}",
-    response_model=RentacarReservaDetalleOut,
+    response_model=RentacarReservaPropietarioOut,
     summary="Detalle de una reserva",
 )
 async def obtener_mi_reserva(
@@ -238,7 +238,7 @@ async def obtener_mi_reserva(
         raise HTTPException(status_code=404, detail=str(e))
 
     vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
-    out = RentacarReservaDetalleOut.model_validate(reserva)
+    out = RentacarReservaPropietarioOut.model_validate(reserva)
     if vehiculo:
         out.vehiculo_patente = vehiculo.patente
         out.vehiculo_marca = vehiculo.marca
@@ -490,7 +490,7 @@ from .schemas import (
 
 @router_propietario.post(
     "/reservas",
-    response_model=RentacarReservaDetalleOut,
+    response_model=RentacarReservaPropietarioOut,
     status_code=status.HTTP_201_CREATED,
     summary="Crear reserva manual (walk-in / WhatsApp)",
 )
@@ -508,7 +508,7 @@ async def crear_reserva_manual(
         raise HTTPException(status_code=code, detail=msg)
     # Enriquecer con datos del vehiculo
     vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
-    out = RentacarReservaDetalleOut.model_validate(reserva)
+    out = RentacarReservaPropietarioOut.model_validate(reserva)
     if vehiculo:
         out.vehiculo_patente = vehiculo.patente
         out.vehiculo_marca = vehiculo.marca
@@ -551,7 +551,7 @@ async def crear_reserva_manual(
 
 @router_propietario.patch(
     "/reservas/{reserva_id:uuid}",
-    response_model=RentacarReservaDetalleOut,
+    response_model=RentacarReservaPropietarioOut,
     summary="Modificar fechas y/o precio de una reserva",
 )
 async def modificar_mi_reserva(
@@ -567,7 +567,7 @@ async def modificar_mi_reserva(
         code = 409 if "ya tiene una reserva o bloqueo" in msg else 400
         raise HTTPException(status_code=code, detail=msg)
     vehiculo = await services.get_vehiculo(db, reserva.vehiculo_id)
-    out = RentacarReservaDetalleOut.model_validate(reserva)
+    out = RentacarReservaPropietarioOut.model_validate(reserva)
     if vehiculo:
         out.vehiculo_patente = vehiculo.patente
         out.vehiculo_marca = vehiculo.marca

@@ -72,7 +72,7 @@ class RentacarInspeccionOut(BaseModel):
     tipo: str
     kilometraje: int
     nivel_combustible: str
-    fotos: dict
+    fotos: list[str] | dict  # Puede ser lista de base64 (nuevo) o dict (viejo)
     firma_cliente: str | None = None
     firmado_at: datetime | None = None
 
@@ -125,7 +125,7 @@ class RentacarVehiculoUpdatePropietario(BaseModel):
 # =========================================================
 # Reservas propietario (detalle con vehiculo + cliente)
 # =========================================================
-class RentacarReservaDetalleOut(RentacarReservaOut):
+class RentacarReservaPropietarioOut(RentacarReservaOut):
     """Reserva con datos del vehiculo para el panel del prestador."""
     vehiculo_patente: str | None = None
     vehiculo_marca: str | None = None

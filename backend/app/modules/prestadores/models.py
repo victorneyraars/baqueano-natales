@@ -636,7 +636,10 @@ class Review(TimestampMixin, SoftDeleteMixin, Base):
             "rating >= 1 AND rating <= 5",
             name="ck_review_rating",
         ),
-        UniqueConstraint("orden_id", name="uq_review_orden"),
+        UniqueConstraint(
+            "entidad_tipo", "entidad_id", "cliente_id",
+            name="uq_review_entidad_cliente",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -656,12 +659,27 @@ class Review(TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
         index=True,
     )
-    orden_id: Mapped[UUID] = mapped_column(
+    orden_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("ordenes_trabajo.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        comment="Deprecado: usar entidad_tipo=orden, entidad_id=orden.id",
+    )
+
+    # Campos polimórficos para soportar TODO el ecosistema
+    entidad_tipo: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="orden",
+        index=True,
+        comment="Tipo de entidad calificada: orden, reserva, vehiculo, prestador",
+    )
+    entidad_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         nullable=False,
         index=True,
-        comment="Una sola review por orden (UNIQUE)",
+        comment="ID de la entidad calificada (orden_id, reserva_id, etc.)",
     )
 
     rating: Mapped[int] = mapped_column(
