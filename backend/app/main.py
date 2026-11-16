@@ -105,6 +105,8 @@ from app.modules.oficios.worker import (
     stop_worker as stop_recordatorios_worker,
 )
 
+from app.modules.oficios.public_turnos_routes import router as oficios_turnos_publicos_router
+
 logger = logging.getLogger(__name__)
 
 
@@ -230,6 +232,7 @@ app.include_router(oficios_fotos_cliente_router, prefix="/api/v1")
 app.include_router(oficios_fotos_prestador_router, prefix="/api/v1")
 app.include_router(oficios_fotos_archivo_router, prefix="/api/v1")
 app.include_router(oficios_reportes_prestador_router, prefix="/api/v1")
+app.include_router(oficios_turnos_publicos_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_cliente_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_prestador_router, prefix="/api/v1")
 app.include_router(prestadores_reviews_publico_router, prefix="/api/v1")

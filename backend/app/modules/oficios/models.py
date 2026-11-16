@@ -900,6 +900,34 @@ class Turno(TimestampMixin, Base):
         index=True,
         comment="Servicio del catalogo reservado (opcional)",
     )
+    
+    # --- Campos para solicitudes via landing publica ---
+    otp_code: Mapped[str | None] = mapped_column(
+        String(10), nullable=True, index=True,
+        comment="Codigo OTP para verificar email",
+    )
+    email_verificado: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+        comment="True cuando el cliente verifico su email",
+    )
+    email_verificado_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    otp_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    otp_intentos: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0",
+    )
+    email_cliente: Mapped[str | None] = mapped_column(
+        String(255), nullable=True,
+    )
+    nombre_cliente: Mapped[str | None] = mapped_column(
+        String(255), nullable=True,
+    )
+    telefono_cliente: Mapped[str | None] = mapped_column(
+        String(50), nullable=True,
+    )
 
     # Relaciones (opcionales, para hidratar)
     objeto_servicio: Mapped["ObjetoServicio"] = relationship(lazy="selectin")
