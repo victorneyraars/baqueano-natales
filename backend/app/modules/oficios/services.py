@@ -1672,11 +1672,10 @@ async def completar_turno_y_crear_orden(
         meta["auto_publicar_redes"] = True
         orden.metadata_extra = meta
         try:
-            from app.modules.social.services_cola import encolar_publicacion_orden
-            await encolar_publicacion_orden(
+            from app.modules.social.eventos_oficios import encolar_orden_completada
+            await encolar_orden_completada(
                 db=db,
-                prestador_id=prestador_id,
-                orden_id=orden.id,
+                orden=orden,
             )
         except Exception as e:
             logger.warning(f"No se pudo encolar orden {orden.numero} en redes: {e}")
