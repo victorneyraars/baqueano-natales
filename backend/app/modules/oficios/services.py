@@ -1667,6 +1667,19 @@ async def completar_turno_y_crear_orden(
     await db.flush()
     await db.commit()
     await db.refresh(turno)
+    if getattr(data, "auto_publicar_redes", False):
+        meta = getattr(orden, "metadata_extra", None) or {}
+        meta["auto_publicar_redes"] = True
+        orden.metadata_extra = meta
+        try:
+            from app.modules.social.services_cola import encolar_publicacion_orden
+            await encolar_publicacion_orden(
+                db=db,
+                prestador_id=prestador_id,
+                orden_id=orden.id,
+            )
+        except Exception as e:
+            logger.warning(f"No se pudo encolar orden {orden.numero} en redes: {e}")
     await db.refresh(orden)
     await _notificar_cambio_turno(db, turno, EstadoTurno.COMPLETADO)
     return turno, orden

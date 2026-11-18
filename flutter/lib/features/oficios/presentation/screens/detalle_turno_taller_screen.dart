@@ -482,6 +482,7 @@ class _CompletarTurnoSheetState extends ConsumerState<_CompletarTurnoSheet> {
   final _precioCtrl = TextEditingController();
   final _notasCtrl = TextEditingController();
   final List<_ServicioForm> _servicios = [_ServicioForm()];
+  bool _autoPublicarRedes = false;
   bool _enviando = false;
   String? _error;
 
@@ -535,6 +536,7 @@ class _CompletarTurnoSheetState extends ConsumerState<_CompletarTurnoSheet> {
         notasPrestador: _notasCtrl.text.trim().isEmpty
             ? null
             : _notasCtrl.text.trim(),
+        autoPublicarRedes: _autoPublicarRedes,
       );
       if (!mounted) return;
       Navigator.of(context).pop(res);
@@ -644,6 +646,22 @@ class _CompletarTurnoSheetState extends ConsumerState<_CompletarTurnoSheet> {
                 labelText: 'Notas internas (opcional)',
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Auto-publicar resumen en redes',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Se envía a la cola anti-spam sin exponer la patente del vehículo.',
+                style: TextStyle(fontSize: 12),
+              ),
+              value: _autoPublicarRedes,
+              onChanged: _enviando
+                  ? null
+                  : (val) => setState(() => _autoPublicarRedes = val),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),

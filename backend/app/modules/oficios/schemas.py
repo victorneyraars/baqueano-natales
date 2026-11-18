@@ -194,6 +194,7 @@ class TurnoCompletarRequest(BaseModel):
         ..., min_length=1, description="Al menos 1 servicio"
     )
     notas_prestador: str | None = Field(None, max_length=2000)
+    auto_publicar_redes: bool = False
 
 
 class OrdenTrabajoCreate(BaseModel):

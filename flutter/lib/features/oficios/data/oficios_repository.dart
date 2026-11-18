@@ -612,6 +612,7 @@ class OficiosRepository {
       if (notasPrestador != null && notasPrestador.trim().isNotEmpty) {
         data['notas_prestador'] = notasPrestador.trim();
       }
+      data['auto_publicar_redes'] = autoPublicarRedes;
       final res = await _dio.post(
         '/api/v1/mis-prestadores/$prestadorId/turnos/$turnoId/completar',
         data: data,
