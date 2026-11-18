@@ -810,7 +810,7 @@ async def get_perfil_completo(
         {
             "nombre": s.nombre,
             "descripcion": s.descripcion,
-            "precio_desde": float(s.precio) if s.precio else None,
+            "precio_desde": float(getattr(s, "precio_desde_clp", None) or 0) if getattr(s, "precio_desde_clp", None) else None,
         }
         for s in (prestador.servicios or [])
         if s.activo
