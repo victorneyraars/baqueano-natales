@@ -336,6 +336,9 @@ class TurnoCreate(BaseModel):
     duracion_min: int = Field(30, ge=15, le=480)
     motivo: str | None = Field(None, max_length=255)
     notas_cliente: str | None = None
+    modalidad: str = Field("domicilio", max_length=30)
+    direccion_atencion: str | None = Field(None, max_length=500)
+    metadata_extra: dict | None = None
 
 
 class TurnoUpdate(BaseModel):
@@ -345,6 +348,9 @@ class TurnoUpdate(BaseModel):
     duracion_min: int | None = Field(None, ge=15, le=480)
     motivo: str | None = Field(None, max_length=255)
     notas_cliente: str | None = None
+    modalidad: str | None = Field(None, max_length=30)
+    direccion_atencion: str | None = Field(None, max_length=500)
+    metadata_extra: dict | None = None
 
 
 class TurnoRechazarRequest(BaseModel):
@@ -413,6 +419,9 @@ class TurnoResponse(BaseModel):
     servicio_id: UUID | None = None
     servicio_nombre: str | None = None
     servicio_precio_desde_clp: int | None = None
+    modalidad: str = "domicilio"
+    direccion_atencion: str | None = None
+    metadata_extra: dict | None = None
     created_at: datetime
     updated_at: datetime
     review_rating: int | None = None

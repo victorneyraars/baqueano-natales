@@ -31,6 +31,8 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
   final _formKey = GlobalKey<FormState>();
   final _motivoCtrl = TextEditingController();
   final _notasCtrl = TextEditingController();
+  final _direccionCtrl = TextEditingController();
+  String _modalidadSel = 'domicilio';
 
   Vehiculo? _vehiculoSel;
   Servicio? _servicioSel;
@@ -43,6 +45,7 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
   void dispose() {
     _motivoCtrl.dispose();
     _notasCtrl.dispose();
+    _direccionCtrl.dispose();
     super.dispose();
   }
 
@@ -101,6 +104,10 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
       await repo.crearTurno(
         prestadorId: widget.prestadorId,
         objetoId: _vehiculoSel!.objetoId,
+        modalidad: _modalidadSel,
+        direccionAtencion: _direccionCtrl.text.trim().isEmpty
+            ? null
+            : _direccionCtrl.text.trim(),
         fechaInicio: fechaInicio,
         duracionMin: _duracionMin,
         servicioId: _servicioSel?.id,
@@ -243,6 +250,52 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
               },
             ),
 
+            const SizedBox(height: 16),
+            // Modalidad de atencion
+            Text(
+              'Modalidad de atencion',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _modalidadSel,
+              decoration: const InputDecoration(
+                labelText: 'Modalidad *',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'domicilio',
+                  child: Text('A domicilio / En ruta'),
+                ),
+                DropdownMenuItem(
+                  value: 'taller_fisico',
+                  child: Text('En taller del prestador'),
+                ),
+                DropdownMenuItem(
+                  value: 'punto_estrategico',
+                  child: Text('Punto estrategico'),
+                ),
+                DropdownMenuItem(
+                  value: 'recogida_entrega',
+                  child: Text('Recogida y entrega de vehiculo'),
+                ),
+              ],
+              onChanged: (v) =>
+                  setState(() => _modalidadSel = v ?? 'domicilio'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _direccionCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Direccion o referencia (ej. Calle o KM en ruta)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.location_on_outlined),
+              ),
+            ),
             const SizedBox(height: 20),
             // Servicio del catalogo
             Consumer(

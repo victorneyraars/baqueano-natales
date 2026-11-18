@@ -16,6 +16,8 @@ class SolicitudTurnoCreate(BaseModel):
     fecha_preferida: datetime
     duracion_min: int = Field(30, ge=15, le=480)
     motivo: str | None = Field(None, max_length=500)
+    modalidad: str = Field("domicilio", max_length=30)
+    direccion_atencion: str | None = Field(None, max_length=500)
     metadata_extra: dict | None = None
 
 

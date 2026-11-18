@@ -1132,6 +1132,9 @@ async def crear_turno(
         estado=EstadoTurno.PENDIENTE,
         motivo=motivo_final,
         notas_cliente=data.notas_cliente,
+        modalidad=getattr(data, "modalidad", None) or "domicilio",
+        direccion_atencion=getattr(data, "direccion_atencion", None),
+        metadata_extra=getattr(data, "metadata_extra", None),
     )
     db.add(turno)
     await db.flush()
@@ -1181,6 +1184,10 @@ async def enriquecer_turnos_con_reviews(
                 "notas_cliente": getattr(t, "notas_cliente", None),
                 "notas_prestador": getattr(t, "notas_prestador", None),
                 "orden_id": t.orden_id,
+                "servicio_id": getattr(t, "servicio_id", None),
+                "modalidad": getattr(t, "modalidad", None) or "domicilio",
+                "direccion_atencion": getattr(t, "direccion_atencion", None),
+                "metadata_extra": getattr(t, "metadata_extra", None),
                 "created_at": t.created_at,
                 "updated_at": t.updated_at,
                 "cliente": getattr(t, "cliente", None),

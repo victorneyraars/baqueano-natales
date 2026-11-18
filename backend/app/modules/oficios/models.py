@@ -900,6 +900,24 @@ class Turno(TimestampMixin, Base):
         index=True,
         comment="Servicio del catalogo reservado (opcional)",
     )
+    modalidad: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="domicilio",
+        server_default="domicilio",
+        index=True,
+        comment="Modalidad: domicilio, taller_fisico, punto_estrategico, recogida_entrega, etc.",
+    )
+    direccion_atencion: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Direccion o referencia para atencion a domicilio o rescate",
+    )
+    metadata_extra: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Datos polimorficos de la modalidad u oficio",
+    )
     
     # --- Campos para solicitudes via landing publica ---
     otp_code: Mapped[str | None] = mapped_column(

@@ -477,6 +477,8 @@ class OficiosRepository {
   Future<Turno> crearTurno({
     required String prestadorId,
     required String objetoId,
+    String modalidad = 'domicilio',
+    String? direccionAtencion,
     required DateTime fechaInicio,
     int duracionMin = 30,
     String? servicioId,

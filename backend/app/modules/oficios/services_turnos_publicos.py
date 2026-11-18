@@ -124,6 +124,9 @@ async def crear_solicitud_turno(db: AsyncSession, slug: str, data) -> Turno:
         duracion_min=data.duracion_min,
         estado=EstadoTurno.PENDIENTE,
         motivo=data.motivo,
+        modalidad=getattr(data, "modalidad", None) or "domicilio",
+        direccion_atencion=getattr(data, "direccion_atencion", None),
+        metadata_extra=getattr(data, "metadata_extra", None),
         email_cliente=data.email_cliente,
         nombre_cliente=data.nombre_cliente,
         telefono_cliente=data.telefono_cliente,
@@ -168,6 +171,8 @@ async def verificar_otp_turno(db: AsyncSession, turno_id: UUID, codigo: str) -> 
     turno.otp_expires_at = None
     await db.commit()
     await db.refresh(turno)
+    from .services import _notificar_nuevo_turno_prestador
+    await _notificar_nuevo_turno_prestador(db, turno)
     return turno
 
 
