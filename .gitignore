@@ -61,7 +61,7 @@ google-services.json
 .env.staging
 
 # --- Datos locales ---
-media/
+/media/
 uploads/
 logs/
 *.log
