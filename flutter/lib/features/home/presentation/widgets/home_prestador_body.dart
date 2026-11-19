@@ -271,9 +271,16 @@ class _MenuPorCategoria extends StatelessWidget {
             const SizedBox(height: 24),
             _tituloSeccion('Mi perfil de prestador'),
             HomeCard(
-              icon: Icons.tune,
+              icon: Icons.list_alt_outlined,
               title: 'Servicios y precios',
               subtitle: 'Catálogo del taller',
+              onTap: () =>
+                  context.push('/mis-prestadores/$prestadorId/servicios'),
+            ),
+            HomeCard(
+              icon: Icons.tune,
+              title: 'Modalidades de servicio',
+              subtitle: 'Taller, domicilio, retiro y planes',
               onTap: () =>
                   context.push('/mis-prestadores/$prestadorId/modalidades'),
             ),
