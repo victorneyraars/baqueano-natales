@@ -36,7 +36,25 @@ async def _obtener_cuenta_central(
         )
         .limit(1)
     )
-    return (await db.execute(stmt)).scalar_one_or_none()
+    cuenta = (await db.execute(stmt)).scalar_one_or_none()
+    if cuenta is not None:
+        return cuenta
+
+    if red == Red.INSTAGRAM:
+        fb_stmt = (
+            select(CuentaSocial)
+            .where(
+                CuentaSocial.red == Red.FACEBOOK,
+                CuentaSocial.propietario_tipo == PropietarioTipo.BAQUEANO,
+                CuentaSocial.propietario_id.is_(None),
+                CuentaSocial.activo.is_(True),
+            )
+            .limit(1)
+        )
+        fb_cuenta = (await db.execute(fb_stmt)).scalar_one_or_none()
+        if fb_cuenta and (fb_cuenta.metadata_extra or {}).get("instagram_business_account_id"):
+            return fb_cuenta
+    return None
 
 
 async def _obtener_cuenta_prestador(
@@ -55,7 +73,25 @@ async def _obtener_cuenta_prestador(
         )
         .limit(1)
     )
-    return (await db.execute(stmt)).scalar_one_or_none()
+    cuenta = (await db.execute(stmt)).scalar_one_or_none()
+    if cuenta is not None:
+        return cuenta
+
+    if red == Red.INSTAGRAM:
+        fb_stmt = (
+            select(CuentaSocial)
+            .where(
+                CuentaSocial.red == Red.FACEBOOK,
+                CuentaSocial.propietario_tipo == PropietarioTipo.PRESTADOR,
+                CuentaSocial.propietario_id == prestador_id,
+                CuentaSocial.activo.is_(True),
+            )
+            .limit(1)
+        )
+        fb_cuenta = (await db.execute(fb_stmt)).scalar_one_or_none()
+        if fb_cuenta and (fb_cuenta.metadata_extra or {}).get("instagram_business_account_id"):
+            return fb_cuenta
+    return None
 
 
 def _construir_mensaje(media_asset) -> str:
@@ -65,7 +101,7 @@ def _construir_mensaje(media_asset) -> str:
         f"Trabajo en Baqueano Natales\n"
         f"Fase: {fase_label}\n"
         f"{descripcion}\n\n"
-        f"#SeAlquilaMarido #PuertoNatales #Mecanica"
+        f"#BaqueanoNatales #PuertoNatales #Mecanica"
     )
 
 
@@ -155,7 +191,14 @@ async def encolar_media_aprobada(db: AsyncSession, media_asset) -> None:
                 prioridad=0,
             )
         elif media_asset.tipo == "foto":
-            for red in [Red.FACEBOOK, Red.INSTAGRAM, Red.GOOGLE_BUSINESS]:
+            redes_foto = []
+            if getattr(config, "publicar_en_facebook", True):
+                redes_foto.append(Red.FACEBOOK)
+            if getattr(config, "publicar_en_instagram", True) and getattr(media_asset, "url_publica", None):
+                redes_foto.append(Red.INSTAGRAM)
+            if getattr(config, "publicar_en_google", False):
+                redes_foto.append(Red.GOOGLE_BUSINESS)
+            for red in redes_foto:
                 await _encolar_para_red(
                     db,
                     red=red,
