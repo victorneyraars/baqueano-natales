@@ -2,7 +2,8 @@
 
 Cuando se completa un turno/orden con `auto_publicar_redes=True`, encola un
 resumen publico (sin exponer patente ni datos del cliente) en las cuentas
-activas configuradas, usando la cola existente (`publicaciones_sociales`).
+activas configuradas, usando la cola existente (`publicaciones_sociales`) y
+espaciado anti-spam.
 
 Best-effort: NUNCA rompe el flujo de completar turno/orden.
 """
@@ -29,6 +30,17 @@ def _precio_clp(valor) -> str:
     except (TypeError, ValueError):
         return ""
     return f"${s}"
+
+
+def _url_absoluta(url: str | None) -> str | None:
+    if not url:
+        return None
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    base = (getattr(settings, "PUBLIC_API_URL", None) or "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}/{url.lstrip('/')}"
 
 
 async def _obtener_cuenta_activa(
@@ -64,18 +76,21 @@ def _construir_mensaje_orden(orden, prestador=None) -> str:
 
     servicios = getattr(orden, "items", None) or []
     if servicios:
-        nombres = [getattr(it, "descripcion", None) for it in servicios if getattr(it, "descripcion", None)]
+        nombres = [
+            getattr(it, "descripcion", None)
+            for it in servicios
+            if getattr(it, "descripcion", None)
+        ]
         if nombres:
             lineas.append("Servicios: " + ", ".join(nombres[:4]))
 
-    web = getattr(settings, "PUBLIC_WEB_URL", "").rstrip("/")
+    web = (getattr(settings, "PUBLIC_WEB_URL", None) or "").rstrip("/")
     if web:
         lineas.append(f"Agenda en: {web}")
 
     lineas.append("")
     lineas.append("#BaqueanoNatales #PuertoNatales #Mecanica #Oficios")
-    return "
-".join(lineas)
+    return "\n".join(lineas)
 
 
 async def encolar_orden_completada(
@@ -87,18 +102,26 @@ async def encolar_orden_completada(
     try:
         config = await social_services.obtener_config(db)
         if config is None or not config.auto_publish:
-            logger.info("Social: auto_publish desactivado para orden %s", getattr(orden, "id", ""))
+            logger.info(
+                "Social: auto_publish desactivado para orden %s",
+                getattr(orden, "id", ""),
+            )
             return
 
         mensaje = _construir_mensaje_orden(orden, prestador)
         prestador_id = getattr(orden, "prestador_id", None)
+        image_url = _url_absoluta(
+            getattr(prestador, "foto_portada_url", None)
+            or getattr(prestador, "foto_url", None)
+        )
 
         redes_objetivo: list[tuple[Red, bool]] = [
             (Red.FACEBOOK, bool(getattr(config, "publicar_en_facebook", True))),
-            (Red.INSTAGRAM, bool(getattr(config, "publicar_en_instagram", True))),
+            (Red.INSTAGRAM, bool(getattr(config, "publicar_en_instagram", True)) and bool(image_url)),
             (Red.GOOGLE_BUSINESS, bool(getattr(config, "publicar_en_google", False))),
         ]
 
+        delay_acumulado = 0
         for red, habilitada in redes_objetivo:
             if not habilitada:
                 continue
@@ -113,14 +136,23 @@ async def encolar_orden_completada(
                 if cuenta is None:
                     continue
                 try:
+                    contenido: dict = {"message": mensaje}
+                    if image_url:
+                        contenido["image_urls"] = [image_url]
                     pub = PublicacionSocialCreate(
                         cuenta_id=cuenta.id,
                         recurso_tipo="orden_trabajo",
                         recurso_id=orden.id,
                         red=red,
-                        contenido={"message": mensaje},
+                        contenido=contenido,
                     )
-                    await social_services.encolar_publicacion(db, pub, prioridad=prio)
+                    await social_services.encolar_publicacion(
+                        db,
+                        pub,
+                        prioridad=prio,
+                        delay_segundos=delay_acumulado,
+                    )
+                    delay_acumulado += 60
                     logger.info(
                         "Social: encolada orden %s en %s (%s, prio=%s)",
                         getattr(orden, "numero", orden.id),

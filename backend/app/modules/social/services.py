@@ -322,6 +322,7 @@ async def encolar_publicacion(
     db: AsyncSession,
     datos: PublicacionSocialCreate,
     prioridad: int | None = None,
+    delay_segundos: int = 0,
 ) -> PublicacionSocial:
     """
     Encola una publicación.
@@ -337,6 +338,28 @@ async def encolar_publicacion(
             detail="Cuenta no encontrada o inactiva",
         )
 
+    ahora = datetime.now(timezone.utc)
+    proximo_intento = (
+        ahora + timedelta(seconds=delay_segundos)
+        if delay_segundos and delay_segundos > 0
+        else None
+    )
+    if proximo_intento is None:
+        ultima_stmt = (
+            select(func.max(PublicacionSocial.proximo_intento_en))
+            .where(
+                PublicacionSocial.cuenta_id == datos.cuenta_id,
+                PublicacionSocial.estado.in_([
+                    EstadoPublicacion.PENDIENTE,
+                    EstadoPublicacion.PUBLICANDO,
+                ]),
+                PublicacionSocial.proximo_intento_en.is_not(None),
+            )
+        )
+        ultima_prog = (await db.execute(ultima_stmt)).scalar_one_or_none()
+        if ultima_prog is not None and ultima_prog >= ahora:
+            proximo_intento = ultima_prog + timedelta(seconds=60)
+
     pub = PublicacionSocial(
         cuenta_id=datos.cuenta_id,
         recurso_tipo=datos.recurso_tipo,
@@ -345,7 +368,7 @@ async def encolar_publicacion(
         contenido=datos.contenido,
         estado=EstadoPublicacion.PENDIENTE,
         intentos=0,
-        proximo_intento_en=None,
+        proximo_intento_en=proximo_intento,
         prioridad=prioridad if prioridad is not None else datos.prioridad,
     )
     db.add(pub)
