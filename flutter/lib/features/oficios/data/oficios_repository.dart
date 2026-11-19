@@ -603,6 +603,7 @@ class OficiosRepository {
     required int precioFinal,
     required List<Map<String, dynamic>> serviciosRealizados,
     String? notasPrestador,
+    bool autoPublicarRedes = false,
   }) async {
     try {
       final data = <String, dynamic>{
