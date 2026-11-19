@@ -261,7 +261,7 @@ class _ReservarTurnoScreenState extends ConsumerState<ReservarTurnoScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _modalidadSel,
+              initialValue: _modalidadSel,
               decoration: const InputDecoration(
                 labelText: 'Modalidad *',
                 border: OutlineInputBorder(),
