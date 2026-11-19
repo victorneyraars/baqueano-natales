@@ -9,6 +9,7 @@ library;
 import 'package:baqueano_natales/features/social/presentation/screens/agregar_cuenta_screen.dart';
 
 import 'package:flutter/material.dart';
+import 'package:baqueano_natales/features/social/presentation/screens/admin_facebook_gestion_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
@@ -240,6 +241,27 @@ class _CuentaCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   _AutoPublishSwitch(cuenta: cuenta),
+                  if (cuenta.red == RedSocial.facebook) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  AdminFacebookGestionScreen(cuenta: cuenta),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.manage_accounts_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Gestionar pagina'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

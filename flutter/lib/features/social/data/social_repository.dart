@@ -449,4 +449,142 @@ class SocialRepository {
       throw UnknownException('Error inesperado: $e');
     }
   }
+
+  Future<List<dynamic>> listarPostsFacebook(
+    String cuentaId, {
+    int limit = 20,
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/posts',
+      queryParameters: {'limit': limit},
+    );
+    return ((res.data as Map)['items'] as List?) ?? const [];
+  }
+
+  Future<bool> editarPostFacebook({
+    required String cuentaId,
+    required String postId,
+    required String mensaje,
+  }) async {
+    final res = await _dio.post(
+      '/api/v1/admin/social/facebook/posts/$postId/editar',
+      queryParameters: {'cuenta_id': cuentaId},
+      data: {'mensaje': mensaje},
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
+
+  Future<bool> eliminarPostFacebook({
+    required String cuentaId,
+    required String postId,
+  }) async {
+    final res = await _dio.delete(
+      '/api/v1/admin/social/facebook/posts/$postId',
+      queryParameters: {'cuenta_id': cuentaId},
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
+
+  Future<List<dynamic>> listarComentariosFacebook({
+    required String cuentaId,
+    required String objectId,
+    int limit = 50,
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/facebook/objetos/$objectId/comentarios',
+      queryParameters: {'cuenta_id': cuentaId, 'limit': limit},
+    );
+    return ((res.data as Map)['items'] as List?) ?? const [];
+  }
+
+  Future<String?> responderComentarioFacebook({
+    required String cuentaId,
+    required String objectId,
+    required String mensaje,
+  }) async {
+    final res = await _dio.post(
+      '/api/v1/admin/social/facebook/objetos/$objectId/comentarios',
+      queryParameters: {'cuenta_id': cuentaId},
+      data: {'mensaje': mensaje},
+    );
+    return (res.data as Map)['id'] as String?;
+  }
+
+  Future<bool> ocultarComentarioFacebook({
+    required String cuentaId,
+    required String commentId,
+    bool ocultar = true,
+  }) async {
+    final res = await _dio.post(
+      '/api/v1/admin/social/facebook/comentarios/$commentId/ocultar',
+      queryParameters: {'cuenta_id': cuentaId},
+      data: {'ocultar': ocultar},
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
+
+  Future<bool> eliminarComentarioFacebook({
+    required String cuentaId,
+    required String commentId,
+  }) async {
+    final res = await _dio.delete(
+      '/api/v1/admin/social/facebook/comentarios/$commentId',
+      queryParameters: {'cuenta_id': cuentaId},
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
+
+  Future<List<dynamic>> listarConversacionesFacebook(
+    String cuentaId, {
+    String platform = 'messenger',
+    int limit = 25,
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/conversaciones',
+      queryParameters: {'platform': platform, 'limit': limit},
+    );
+    return ((res.data as Map)['items'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> listarMensajesConversacionFacebook({
+    required String cuentaId,
+    required String conversationId,
+    int limit = 50,
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/facebook/conversaciones/$conversationId/mensajes',
+      queryParameters: {'cuenta_id': cuentaId, 'limit': limit},
+    );
+    return ((res.data as Map)['items'] as List?) ?? const [];
+  }
+
+  Future<String?> enviarMensajeFacebook({
+    required String cuentaId,
+    required String recipientId,
+    required String texto,
+  }) async {
+    final res = await _dio.post(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/mensajes',
+      data: {'recipient_id': recipientId, 'texto': texto},
+    );
+    return (res.data as Map)['message_id'] as String?;
+  }
+
+  Future<List<dynamic>> obtenerInsightsFacebook(
+    String cuentaId, {
+    String period = 'day',
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/insights',
+      queryParameters: {'period': period},
+    );
+    return ((res.data as Map)['items'] as List?) ?? const [];
+  }
+
+  Future<bool> suscribirWebhookFacebook(String cuentaId) async {
+    final res = await _dio.post(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/suscribir-webhook',
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
 }

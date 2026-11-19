@@ -295,3 +295,259 @@ async def publicar_post_en_pagina(
 
     return post_id, None
 
+
+
+# ---------------------------------------------------------------------------
+# Gestion completa de Pagina: Posts, Comentarios, Mensajes, Insights y Webhook
+# ---------------------------------------------------------------------------
+
+
+async def listar_posts_pagina(
+    page_id: str,
+    page_token: str,
+    limit: int = 20,
+) -> tuple[list[dict], FacebookError | None]:
+    """Lista los posts publicados en la pagina con estadisticas basicas."""
+    params = {
+        "fields": (
+            "id,message,created_time,permalink_url,full_picture,is_published,"
+            "shares,likes.summary(true),comments.summary(true)"
+        ),
+        "limit": limit,
+        "access_token": page_token,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.get(_graph_url(f"{page_id}/posts"), params=params)
+        except httpx.HTTPError as e:
+            return [], FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return [], _parse_error(resp)
+    return resp.json().get("data", []), None
+
+
+async def actualizar_post_pagina(
+    post_id: str,
+    page_token: str,
+    mensaje: str,
+) -> tuple[bool, FacebookError | None]:
+    """Edita el texto de un post existente de la pagina."""
+    payload = {"message": mensaje, "access_token": page_token}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(_graph_url(post_id), data=payload)
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None
+
+
+async def eliminar_post_pagina(
+    post_id: str,
+    page_token: str,
+) -> tuple[bool, FacebookError | None]:
+    """Elimina un post de la pagina."""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.delete(
+                _graph_url(post_id), params={"access_token": page_token}
+            )
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None
+
+
+async def listar_comentarios_post(
+    object_id: str,
+    page_token: str,
+    limit: int = 50,
+) -> tuple[list[dict], FacebookError | None]:
+    """Lista comentarios de un post (o respuestas de un comentario)."""
+    params = {
+        "fields": "id,message,from,created_time,is_hidden,can_hide,can_remove,like_count,comment_count",
+        "filter": "stream",
+        "limit": limit,
+        "access_token": page_token,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.get(
+                _graph_url(f"{object_id}/comments"), params=params
+            )
+        except httpx.HTTPError as e:
+            return [], FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return [], _parse_error(resp)
+    return resp.json().get("data", []), None
+
+
+async def responder_comentario(
+    object_id: str,
+    page_token: str,
+    mensaje: str,
+) -> tuple[str | None, FacebookError | None]:
+    """Publica un comentario en un post o responde a un comentario existente."""
+    payload = {"message": mensaje, "access_token": page_token}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(
+                _graph_url(f"{object_id}/comments"), data=payload
+            )
+        except httpx.HTTPError as e:
+            return None, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code not in (200, 201):
+        return None, _parse_error(resp)
+    return resp.json().get("id"), None
+
+
+async def ocultar_comentario(
+    comment_id: str,
+    page_token: str,
+    ocultar: bool = True,
+) -> tuple[bool, FacebookError | None]:
+    """Oculta o vuelve visible un comentario en la pagina."""
+    payload = {"is_hidden": "true" if ocultar else "false", "access_token": page_token}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(_graph_url(comment_id), data=payload)
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None
+
+
+async def eliminar_comentario(
+    comment_id: str,
+    page_token: str,
+) -> tuple[bool, FacebookError | None]:
+    """Elimina un comentario."""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.delete(
+                _graph_url(comment_id), params={"access_token": page_token}
+            )
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None
+
+
+async def listar_conversaciones_pagina(
+    page_id: str,
+    page_token: str,
+    platform: str = "messenger",
+    limit: int = 25,
+) -> tuple[list[dict], FacebookError | None]:
+    """Lista conversaciones del Inbox de la pagina (messenger o instagram)."""
+    params = {
+        "platform": platform,
+        "fields": "id,snippet,updated_time,unread_count,can_reply,participants",
+        "limit": limit,
+        "access_token": page_token,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.get(
+                _graph_url(f"{page_id}/conversations"), params=params
+            )
+        except httpx.HTTPError as e:
+            return [], FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return [], _parse_error(resp)
+    return resp.json().get("data", []), None
+
+
+async def listar_mensajes_conversacion(
+    conversation_id: str,
+    page_token: str,
+    limit: int = 50,
+) -> tuple[list[dict], FacebookError | None]:
+    """Obtiene los mensajes de una conversacion especifica."""
+    params = {
+        "fields": "id,message,from,to,created_time,attachments",
+        "limit": limit,
+        "access_token": page_token,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.get(
+                _graph_url(f"{conversation_id}/messages"), params=params
+            )
+        except httpx.HTTPError as e:
+            return [], FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return [], _parse_error(resp)
+    return resp.json().get("data", []), None
+
+
+async def enviar_mensaje_pagina(
+    page_id: str,
+    page_token: str,
+    recipient_id: str,
+    texto: str,
+) -> tuple[str | None, FacebookError | None]:
+    """Envia un mensaje de respuesta desde la pagina a un usuario (PSID)."""
+    payload = {
+        "recipient": {"id": recipient_id},
+        "messaging_type": "RESPONSE",
+        "message": {"text": texto},
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(
+                _graph_url(f"{page_id}/messages"),
+                params={"access_token": page_token},
+                json=payload,
+            )
+        except httpx.HTTPError as e:
+            return None, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code not in (200, 201):
+        return None, _parse_error(resp)
+    return resp.json().get("message_id"), None
+
+
+async def obtener_insights_pagina(
+    page_id: str,
+    page_token: str,
+    period: str = "day",
+) -> tuple[list[dict], FacebookError | None]:
+    """Consulta metricas/insights de la pagina."""
+    params = {
+        "metric": "page_impressions,page_post_engagements,page_views_total,page_follows",
+        "period": period,
+        "access_token": page_token,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.get(
+                _graph_url(f"{page_id}/insights"), params=params
+            )
+        except httpx.HTTPError as e:
+            return [], FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return [], _parse_error(resp)
+    return resp.json().get("data", []), None
+
+
+async def suscribir_webhooks_pagina(
+    page_id: str,
+    page_token: str,
+    fields: str = "feed,messages,messaging_postbacks,message_reads",
+) -> tuple[bool, FacebookError | None]:
+    """Suscribe la pagina para enviar webhooks de feed y mensajes a nuestra app."""
+    payload = {"subscribed_fields": fields, "access_token": page_token}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(
+                _graph_url(f"{page_id}/subscribed_apps"), data=payload
+            )
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None

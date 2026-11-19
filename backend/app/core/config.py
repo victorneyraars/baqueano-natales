@@ -139,8 +139,12 @@ class Settings(BaseSettings):
     FACEBOOK_GRAPH_API_VERSION: str = "v26.0"
     # Permisos que pide el di?logo OAuth (comma-separated).
     FACEBOOK_OAUTH_SCOPES: str = (
-        "pages_show_list,pages_read_engagement,pages_manage_posts"
+        "pages_show_list,pages_read_engagement,pages_manage_posts,"
+        "pages_manage_engagement,pages_read_user_content,"
+        "pages_messaging,pages_manage_metadata,read_insights,"
+        "instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_messages"
     )
+    FACEBOOK_WEBHOOK_VERIFY_TOKEN: str = ""
 
     # --- Google Business Profile (Etapa 8) ---
     # Feature flag: activa/desactiva la publicacion en GBP. Cuando se

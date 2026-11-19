@@ -670,3 +670,238 @@ async def facebook_conectar_directo(
     await db.commit()
     return ConectarCuentaResponse(cuenta=cuenta, nombre_pagina=nombre)
 
+
+
+from fastapi import Query, Request
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
+from app.core.config import settings as _social_settings
+from app.modules.social import facebook_service as _fb
+
+
+class _TextoRequest(BaseModel):
+    mensaje: str = Field(..., min_length=1, max_length=5000)
+
+
+class _OcultarComentarioRequest(BaseModel):
+    ocultar: bool = True
+
+
+class _EnviarMensajeRequest(BaseModel):
+    recipient_id: str = Field(..., min_length=1, max_length=120)
+    texto: str = Field(..., min_length=1, max_length=2000)
+
+
+async def _resolver_pagina_y_token(db: DbSession, cuenta_id: str) -> tuple[str, str]:
+    from uuid import UUID
+    from fastapi import HTTPException
+    from app.modules.social import services as social_services
+
+    try:
+        uid = UUID(cuenta_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="cuenta_id invalido") from exc
+
+    cuenta = await social_services.obtener_cuenta(db, uid)
+    if not cuenta:
+        raise HTTPException(status_code=404, detail="Cuenta social no encontrada")
+    token, _ = await social_services.obtener_token_vigente_de_cuenta(db, cuenta.id)
+    if not token:
+        raise HTTPException(status_code=400, detail="La cuenta no tiene token vigente")
+    return cuenta.external_id, token
+
+
+def _fb_http_error(err: _fb.FacebookError | None) -> None:
+    from fastapi import HTTPException
+    if err is not None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=err.to_dict(),
+        )
+
+
+@router_admin.get("/cuentas/{cuenta_id}/facebook/posts", summary="Listar posts de la pagina")
+async def fb_listar_posts(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    items, err = await _fb.listar_posts_pagina(page_id, token, limit=limit)
+    _fb_http_error(err)
+    return {"items": items}
+
+
+@router_admin.post("/facebook/posts/{post_id}/editar", summary="Editar texto de un post")
+async def fb_editar_post(
+    post_id: str,
+    data: _TextoRequest,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.actualizar_post_pagina(post_id, token, data.mensaje)
+    _fb_http_error(err)
+    return {"ok": ok}
+
+
+@router_admin.delete("/facebook/posts/{post_id}", summary="Eliminar un post")
+async def fb_eliminar_post(
+    post_id: str,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.eliminar_post_pagina(post_id, token)
+    _fb_http_error(err)
+    return {"ok": ok}
+
+
+@router_admin.get("/facebook/objetos/{object_id}/comentarios", summary="Listar comentarios")
+async def fb_listar_comentarios(
+    object_id: str,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+    limit: int = Query(50, ge=1, le=100),
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    items, err = await _fb.listar_comentarios_post(object_id, token, limit=limit)
+    _fb_http_error(err)
+    return {"items": items}
+
+
+@router_admin.post("/facebook/objetos/{object_id}/comentarios", summary="Responder o comentar")
+async def fb_responder_comentario(
+    object_id: str,
+    data: _TextoRequest,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    comment_id, err = await _fb.responder_comentario(object_id, token, data.mensaje)
+    _fb_http_error(err)
+    return {"id": comment_id}
+
+
+@router_admin.post("/facebook/comentarios/{comment_id}/ocultar", summary="Ocultar o mostrar comentario")
+async def fb_ocultar_comentario(
+    comment_id: str,
+    data: _OcultarComentarioRequest,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.ocultar_comentario(comment_id, token, ocultar=data.ocultar)
+    _fb_http_error(err)
+    return {"ok": ok}
+
+
+@router_admin.delete("/facebook/comentarios/{comment_id}", summary="Eliminar comentario")
+async def fb_eliminar_comentario(
+    comment_id: str,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.eliminar_comentario(comment_id, token)
+    _fb_http_error(err)
+    return {"ok": ok}
+
+
+@router_admin.get("/cuentas/{cuenta_id}/facebook/conversaciones", summary="Listar conversaciones Inbox")
+async def fb_listar_conversaciones(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+    platform: str = Query("messenger"),
+    limit: int = Query(25, ge=1, le=100),
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    items, err = await _fb.listar_conversaciones_pagina(
+        page_id, token, platform=platform, limit=limit
+    )
+    _fb_http_error(err)
+    return {"items": items}
+
+
+@router_admin.get("/facebook/conversaciones/{conversation_id}/mensajes", summary="Listar mensajes")
+async def fb_listar_mensajes(
+    conversation_id: str,
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+    limit: int = Query(50, ge=1, le=100),
+) -> dict:
+    _, token = await _resolver_pagina_y_token(db, cuenta_id)
+    items, err = await _fb.listar_mensajes_conversacion(
+        conversation_id, token, limit=limit
+    )
+    _fb_http_error(err)
+    return {"items": items}
+
+
+@router_admin.post("/cuentas/{cuenta_id}/facebook/mensajes", summary="Enviar mensaje desde la pagina")
+async def fb_enviar_mensaje(
+    cuenta_id: str,
+    data: _EnviarMensajeRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    msg_id, err = await _fb.enviar_mensaje_pagina(
+        page_id, token, recipient_id=data.recipient_id, texto=data.texto
+    )
+    _fb_http_error(err)
+    return {"message_id": msg_id}
+
+
+@router_admin.get("/cuentas/{cuenta_id}/facebook/insights", summary="Metricas de la pagina")
+async def fb_insights(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+    period: str = Query("day"),
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    items, err = await _fb.obtener_insights_pagina(page_id, token, period=period)
+    _fb_http_error(err)
+    return {"items": items}
+
+
+@router_admin.post("/cuentas/{cuenta_id}/facebook/suscribir-webhook", summary="Suscribir pagina a webhooks")
+async def fb_suscribir_webhook(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.suscribir_webhooks_pagina(page_id, token)
+    _fb_http_error(err)
+    return {"ok": ok}
+
+
+@router_admin.get("/facebook/webhook", summary="Verificacion webhook Meta")
+async def fb_webhook_verify(
+    hub_mode: str = Query("", alias="hub.mode"),
+    hub_verify_token: str = Query("", alias="hub.verify_token"),
+    hub_challenge: str = Query("", alias="hub.challenge"),
+) -> PlainTextResponse:
+    from fastapi import HTTPException
+    expected = _social_settings.FACEBOOK_WEBHOOK_VERIFY_TOKEN
+    if hub_mode == "subscribe" and expected and hub_verify_token == expected:
+        return PlainTextResponse(content=hub_challenge, status_code=200)
+    raise HTTPException(status_code=403, detail="Verificacion de webhook invalida")
+
+
+@router_admin.post("/facebook/webhook", summary="Recepcion de eventos de webhook Meta")
+async def fb_webhook_event(request: Request) -> dict:
+    payload = await request.json()
+    entries = len(payload.get("entry", [])) if isinstance(payload, dict) else 0
+    return {"received": True, "entries": entries}
