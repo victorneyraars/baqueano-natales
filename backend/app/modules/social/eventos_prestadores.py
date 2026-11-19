@@ -5,13 +5,14 @@ agregado), este modulo arma el copy y encola publicaciones para que el
 worker las publique en las redes configuradas.
 
 Reglas:
-- Respeta ConfigSocial: auto_publish + publicar_en_facebook/instagram.
+- Respeta ConfigSocial (override por prestador -> global):
+  auto_publish, destino (central/propio/ambos) y flags por red.
 - Best-effort: NUNCA rompe el flujo del caller. Cualquier error se
   loggea y se sigue.
 - Instagram requiere imagen. Si no hay foto, no se encola para IG.
-- Solo publica en la cuenta CENTRAL de Baqueano.
 """
 import logging
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,7 @@ from app.core.config import settings
 from app.modules.social import services as social_services
 from app.modules.social.models import (
     CuentaSocial,
+    DestinoPublicacion,
     PropietarioTipo,
     Red,
 )
@@ -45,26 +47,72 @@ def _url_absoluta(url: str | None) -> str | None:
     return f"{base}/{url.lstrip('/')}"
 
 
-async def _obtener_cuenta_central_facebook(
+async def _resolver_config_prestador(
     db: AsyncSession,
-) -> CuentaSocial | None:
-    stmt = (
-        select(CuentaSocial)
-        .where(
-            CuentaSocial.red == Red.FACEBOOK,
-            CuentaSocial.propietario_tipo == PropietarioTipo.BAQUEANO,
-            CuentaSocial.propietario_id.is_(None),
-            CuentaSocial.activo.is_(True),
+    prestador_id: UUID | None,
+):
+    """Obtiene la config del prestador si existe, o la config global."""
+    if prestador_id is not None:
+        cfg_propia = await social_services.obtener_config(
+            db,
+            propietario_tipo=PropietarioTipo.PRESTADOR,
+            propietario_id=prestador_id,
         )
-        .limit(1)
-    )
-    return (await db.execute(stmt)).scalar_one_or_none()
+        if cfg_propia is not None:
+            return cfg_propia
+    return await social_services.obtener_config(db)
 
 
-async def _encolar_para_ambas_redes(
+async def _obtener_cuentas_destino(
     db: AsyncSession,
     *,
-    cuenta: CuentaSocial,
+    red: Red,
+    destino: DestinoPublicacion,
+    prestador_id: UUID | None,
+) -> list[CuentaSocial]:
+    """Devuelve las cuentas activas a publicar para una red según DestinoPublicacion."""
+    cuentas: list[CuentaSocial] = []
+
+    if destino in (DestinoPublicacion.CENTRAL, DestinoPublicacion.AMBOS):
+        stmt_central = (
+            select(CuentaSocial)
+            .where(
+                CuentaSocial.red == red,
+                CuentaSocial.propietario_tipo == PropietarioTipo.BAQUEANO,
+                CuentaSocial.propietario_id.is_(None),
+                CuentaSocial.activo.is_(True),
+            )
+            .limit(1)
+        )
+        central = (await db.execute(stmt_central)).scalar_one_or_none()
+        if central is not None:
+            cuentas.append(central)
+
+    if (
+        prestador_id is not None
+        and destino in (DestinoPublicacion.PROPIO, DestinoPublicacion.AMBOS)
+    ):
+        stmt_propia = (
+            select(CuentaSocial)
+            .where(
+                CuentaSocial.red == red,
+                CuentaSocial.propietario_tipo == PropietarioTipo.PRESTADOR,
+                CuentaSocial.propietario_id == prestador_id,
+                CuentaSocial.activo.is_(True),
+            )
+            .limit(1)
+        )
+        propia = (await db.execute(stmt_propia)).scalar_one_or_none()
+        if propia is not None:
+            cuentas.append(propia)
+
+    return cuentas
+
+
+async def _encolar_para_redes_configuradas(
+    db: AsyncSession,
+    *,
+    prestador_id: UUID | None,
     recurso_tipo: str,
     recurso_id,
     mensaje: str,
@@ -73,93 +121,73 @@ async def _encolar_para_ambas_redes(
 ) -> int:
     encoladas = 0
     delay = 0
+    destino = getattr(config, "destino", DestinoPublicacion.AMBOS)
 
-    if config.publicar_en_facebook:
-        try:
-            contenido: dict = {"message": mensaje}
-            if image_url:
-                contenido["image_urls"] = [image_url]
-            await social_services.encolar_publicacion(
-                db,
-                PublicacionSocialCreate(
-                    cuenta_id=cuenta.id,
-                    recurso_tipo=recurso_tipo,
-                    recurso_id=recurso_id,
-                    red=Red.FACEBOOK,
-                    contenido=contenido,
-                ),
-                delay_segundos=delay,
-            )
-            delay += 60
-            encoladas += 1
-            logger.info(
-                "Social: encolada publicacion FB para %s/%s",
-                recurso_tipo, recurso_id,
-            )
-        except Exception as e:
-            logger.warning("Social: fallo encolando FB: %s", e)
+    redes_activas: list[tuple[Red, bool]] = [
+        (Red.FACEBOOK, bool(config.publicar_en_facebook)),
+        (Red.INSTAGRAM, bool(config.publicar_en_instagram and image_url)),
+        (Red.GOOGLE_BUSINESS, bool(config.publicar_en_google)),
+    ]
 
-    if config.publicar_en_instagram and image_url:
-        try:
-            await social_services.encolar_publicacion(
-                db,
-                PublicacionSocialCreate(
-                    cuenta_id=cuenta.id,
-                    recurso_tipo=recurso_tipo,
-                    recurso_id=recurso_id,
-                    red=Red.INSTAGRAM,
-                    contenido={
-                        "message": mensaje,
-                        "image_urls": [image_url],
-                    },
-                ),
-                delay_segundos=delay,
-            )
-            delay += 60
-            encoladas += 1
+    for red, habilitada in redes_activas:
+        if not habilitada:
+            continue
+        cuentas = await _obtener_cuentas_destino(
+            db,
+            red=red,
+            destino=destino,
+            prestador_id=prestador_id,
+        )
+        if not cuentas:
             logger.info(
-                "Social: encolada publicacion IG para %s/%s",
-                recurso_tipo, recurso_id,
+                "Social: sin cuentas activas para red=%s destino=%s prestador=%s",
+                red.value,
+                destino.value if hasattr(destino, "value") else destino,
+                prestador_id,
             )
-        except Exception as e:
-            logger.warning("Social: fallo encolando IG: %s", e)
+            continue
 
-    # Google Business Profile (opcional, gateado por flag)
-    if config.publicar_en_google:
-        try:
-            contenido_gbp: dict = {"message": mensaje}
-            if image_url:
-                contenido_gbp["image_urls"] = [image_url]
-            await social_services.encolar_publicacion(
-                db,
-                PublicacionSocialCreate(
-                    cuenta_id=cuenta.id,
-                    recurso_tipo=recurso_tipo,
-                    recurso_id=recurso_id,
-                    red=Red.GOOGLE_BUSINESS,
-                    contenido=contenido_gbp,
-                ),
-                delay_segundos=delay,
-            )
-            encoladas += 1
-            logger.info(
-                "Social: encolada publicacion GBP para %s/%s",
-                recurso_tipo, recurso_id,
-            )
-        except Exception as e:
-            logger.warning("Social: fallo encolando GBP: %s", e)
+        for cuenta in cuentas:
+            try:
+                contenido: dict = {"message": mensaje}
+                if image_url:
+                    contenido["image_urls"] = [image_url]
+                await social_services.encolar_publicacion(
+                    db,
+                    PublicacionSocialCreate(
+                        cuenta_id=cuenta.id,
+                        recurso_tipo=recurso_tipo,
+                        recurso_id=recurso_id,
+                        red=red,
+                        contenido=contenido,
+                    ),
+                    delay_segundos=delay,
+                )
+                delay += 60
+                encoladas += 1
+                logger.info(
+                    "Social: encolada publicacion %s en cuenta=%s (%s) para %s/%s",
+                    red.value,
+                    cuenta.id,
+                    cuenta.propietario_tipo.value,
+                    recurso_tipo,
+                    recurso_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Social: fallo encolando %s en cuenta=%s: %s",
+                    red.value,
+                    cuenta.id,
+                    e,
+                )
 
     return encoladas
 
 
 async def encolar_prestador_nuevo(db: AsyncSession, prestador) -> None:
     try:
-        config = await social_services.obtener_config(db)
+        config = await _resolver_config_prestador(db, getattr(prestador, "id", None))
         if config is None or not config.auto_publish:
-            return
-        cuenta = await _obtener_cuenta_central_facebook(db)
-        if cuenta is None:
-            logger.info("Social: no hay cuenta central FB activa")
             return
 
         cat = prestador.categoria.nombre if prestador.categoria else ""
@@ -181,9 +209,9 @@ async def encolar_prestador_nuevo(db: AsyncSession, prestador) -> None:
             prestador.foto_portada_url or prestador.foto_url
         )
 
-        await _encolar_para_ambas_redes(
+        await _encolar_para_redes_configuradas(
             db,
-            cuenta=cuenta,
+            prestador_id=prestador.id,
             recurso_tipo="prestador",
             recurso_id=prestador.id,
             mensaje=mensaje,
@@ -202,13 +230,10 @@ async def encolar_servicio_nuevo(
     forzar: bool = False,
 ) -> int:
     try:
-        config = await social_services.obtener_config(db)
+        config = await _resolver_config_prestador(db, getattr(prestador, "id", None))
         if config is None:
             return 0
         if not forzar and not config.auto_publish:
-            return 0
-        cuenta = await _obtener_cuenta_central_facebook(db)
-        if cuenta is None:
             return 0
 
         web = settings.PUBLIC_WEB_URL.rstrip("/")
@@ -241,9 +266,9 @@ async def encolar_servicio_nuevo(
             or getattr(prestador, "foto_url", None)
         )
 
-        return await _encolar_para_ambas_redes(
+        return await _encolar_para_redes_configuradas(
             db,
-            cuenta=cuenta,
+            prestador_id=prestador.id,
             recurso_tipo="prestador_servicio",
             recurso_id=servicio.id,
             mensaje=mensaje,

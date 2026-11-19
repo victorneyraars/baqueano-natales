@@ -193,6 +193,35 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
     }
   }
 
+  Future<void> _guardarTokenDirecto() async {
+    final raw = _tokenRefCtrl.text.trim();
+    if (raw.isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      await ref.read(socialRepositoryProvider).setupAdminTokenDirecto(raw);
+      ref.invalidate(adminTokenStatusProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Admin token guardado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _guardar() async {
     final tokenRef = _tokenRefCtrl.text.trim();
     if (tokenRef.isEmpty) return;
@@ -357,6 +386,12 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
                       )
                     : const Icon(Icons.check),
                 label: const Text('Guardar'),
+              ),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                onPressed: _loading ? null : _guardarTokenDirecto,
+                icon: const Icon(Icons.key),
+                label: const Text('Access Token directo'),
               ),
             ],
           ),

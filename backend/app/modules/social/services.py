@@ -278,6 +278,47 @@ async def obtener_config(
     return (await db.execute(stmt_global)).scalar_one_or_none()
 
 
+async def obtener_o_crear_config(
+    db: AsyncSession,
+    *,
+    propietario_tipo: PropietarioTipo | None = None,
+    propietario_id: UUID | None = None,
+) -> ConfigSocial:
+    """Devuelve la config del propietario (creándola desde global/defaults si no existe) o la global."""
+    if propietario_tipo is None or propietario_id is None:
+        return await obtener_o_crear_config_global(db)
+
+    stmt = select(ConfigSocial).where(
+        ConfigSocial.propietario_tipo == propietario_tipo,
+        ConfigSocial.propietario_id == propietario_id,
+    )
+    cfg = (await db.execute(stmt)).scalar_one_or_none()
+    if cfg is not None:
+        return cfg
+
+    global_cfg = await obtener_config(db)
+    base = (
+        {
+            "auto_publish": global_cfg.auto_publish,
+            "destino": global_cfg.destino,
+            "publicar_en_facebook": global_cfg.publicar_en_facebook,
+            "publicar_en_instagram": global_cfg.publicar_en_instagram,
+            "publicar_en_google": global_cfg.publicar_en_google,
+        }
+        if global_cfg is not None
+        else _defaults_config()
+    )
+    cfg = ConfigSocial(
+        propietario_tipo=propietario_tipo,
+        propietario_id=propietario_id,
+        **base,
+    )
+    db.add(cfg)
+    await db.flush()
+    await db.refresh(cfg)
+    return cfg
+
+
 async def obtener_o_crear_config_global(
     db: AsyncSession,
 ) -> ConfigSocial:
@@ -910,6 +951,31 @@ async def guardar_admin_token(db: AsyncSession, token_ref: str) -> ConfigSocial:
     cfg = await obtener_o_crear_config_global(db)
     cfg.facebook_admin_token = crypto.cifrar(user_token)
     from datetime import datetime, timezone
+    cfg.facebook_admin_token_updated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(cfg)
+    return cfg
+
+
+async def guardar_admin_token_directo(
+    db: AsyncSession,
+    raw_token: str,
+) -> ConfigSocial:
+    """Extiende un User Access Token de Meta a ~60 dias, lo valida y lo guarda cifrado."""
+    token_limpio = (raw_token or "").strip()
+    if not token_limpio:
+        raise ValueError("access_token vacio")
+
+    from app.modules.social import facebook_service
+    long_token, err_ext = await facebook_service.extender_token(token_limpio)
+    token_final = long_token if (long_token and not err_ext) else token_limpio
+
+    _paginas, err = await facebook_service.listar_paginas(token_final)
+    if err:
+        raise ValueError(f"Token invalido: {err.message}")
+
+    cfg = await obtener_o_crear_config_global(db)
+    cfg.facebook_admin_token = crypto.cifrar(token_final)
     cfg.facebook_admin_token_updated_at = datetime.now(timezone.utc)
     await db.flush()
     await db.refresh(cfg)

@@ -187,31 +187,53 @@ async def desactivar_cuenta(
 @router_admin.get(
     "/config",
     response_model=ConfigSocialResponse,
-    summary="Leer la configuración global de publicación",
+    summary="Leer la configuración de publicación (global o por propietario)",
     description=(
-        "Devuelve la config global. Si no existe, la crea con defaults "
-        "y la devuelve (así el panel siempre tiene algo editable)."
+        "Devuelve la config global si no se pasan propietario_tipo/propietario_id, "
+        "o la config individual del prestador/comercio (creandola desde defaults si no existe)."
     ),
 )
 async def obtener_config(
     db: DbSession,
     _admin: AdminUser,
+    propietario_tipo: PropietarioTipo | None = Query(default=None),
+    propietario_id: UUID | None = Query(default=None),
 ) -> ConfigSocialResponse:
-    cfg = await services.obtener_o_crear_config_global(db)
+    if (propietario_tipo is None) != (propietario_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe enviar ambos propietario_tipo y propietario_id, o ninguno.",
+        )
+    cfg = await services.obtener_o_crear_config(
+        db,
+        propietario_tipo=propietario_tipo,
+        propietario_id=propietario_id,
+    )
     return ConfigSocialResponse.model_validate(cfg)
 
 
 @router_admin.patch(
     "/config",
     response_model=ConfigSocialResponse,
-    summary="Actualizar la configuración global",
+    summary="Actualizar la configuración de publicación (global o por propietario)",
 )
 async def actualizar_config(
     datos: ConfigSocialUpdate,
     db: DbSession,
     _admin: AdminUser,
+    propietario_tipo: PropietarioTipo | None = Query(default=None),
+    propietario_id: UUID | None = Query(default=None),
 ) -> ConfigSocialResponse:
-    cfg = await services.obtener_o_crear_config_global(db)
+    if (propietario_tipo is None) != (propietario_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe enviar ambos propietario_tipo y propietario_id, o ninguno.",
+        )
+    cfg = await services.obtener_o_crear_config(
+        db,
+        propietario_tipo=propietario_tipo,
+        propietario_id=propietario_id,
+    )
     cfg = await services.actualizar_config(db, cfg, datos)
     await db.refresh(cfg)
     return ConfigSocialResponse.model_validate(cfg)
@@ -555,6 +577,31 @@ async def facebook_admin_token_setup(
         cfg = await social_services.guardar_admin_token(db, data.token_ref)
     except ValueError as e:
         from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+    await db.commit()
+    await db.refresh(cfg)
+    return FacebookAdminTokenStatus(
+        has_token=True,
+        updated_at=cfg.facebook_admin_token_updated_at,
+    )
+
+
+@router_admin.post(
+    "/facebook/admin-token/setup-token",
+    response_model=FacebookAdminTokenStatus,
+    summary="Configurar admin token de Facebook con access_token directo",
+)
+async def facebook_admin_token_setup_directo(
+    payload: dict,
+    db: DbSession,
+    _admin: AdminUser,
+) -> FacebookAdminTokenStatus:
+    raw_token = str(payload.get("access_token") or "")
+    try:
+        cfg = await services.guardar_admin_token_directo(db, raw_token)
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         )

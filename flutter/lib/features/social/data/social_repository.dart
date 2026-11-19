@@ -142,9 +142,18 @@ class SocialRepository {
   }
 
   /// Obtiene la config global.
-  Future<ConfigSocial> obtenerConfig() async {
+  Future<ConfigSocial> obtenerConfig({
+    String? propietarioTipo,
+    String? propietarioId,
+  }) async {
     try {
-      final resp = await _dio.get('$_base/config');
+      final qp = (propietarioTipo != null && propietarioId != null)
+          ? {
+              'propietario_tipo': propietarioTipo,
+              'propietario_id': propietarioId,
+            }
+          : null;
+      final resp = await _dio.get('$_base/config', queryParameters: qp);
       return ConfigSocial.fromJson(resp.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
@@ -245,6 +254,8 @@ class SocialRepository {
     bool? publicarEnFacebook,
     bool? publicarEnInstagram,
     bool? publicarEnGoogle,
+    String? propietarioTipo,
+    String? propietarioId,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -254,7 +265,17 @@ class SocialRepository {
         'publicar_en_instagram': ?publicarEnInstagram,
         'publicar_en_google': ?publicarEnGoogle,
       };
-      final resp = await _dio.patch('$_base/config', data: body);
+      final qp = (propietarioTipo != null && propietarioId != null)
+          ? {
+              'propietario_tipo': propietarioTipo,
+              'propietario_id': propietarioId,
+            }
+          : null;
+      final resp = await _dio.patch(
+        '$_base/config',
+        queryParameters: qp,
+        data: body,
+      );
       return ConfigSocial.fromJson(resp.data as Map<String, dynamic>);
     } on ApiException {
       rethrow;
@@ -342,6 +363,23 @@ class SocialRepository {
   }
 
   /// Guarda el admin token (setup inicial).
+  Future<AdminTokenStatus> setupAdminTokenDirecto(String accessToken) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/admin/social/facebook/admin-token/setup-token',
+        data: {'access_token': accessToken.trim()},
+      );
+      return AdminTokenStatus.fromJson(res.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   Future<AdminTokenStatus> setupAdminToken(String tokenRef) async {
     try {
       final res = await _dio.post(

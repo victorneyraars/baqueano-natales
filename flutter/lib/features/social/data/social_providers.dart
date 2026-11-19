@@ -38,6 +38,31 @@ final configSocialProvider = FutureProvider<ConfigSocial>((ref) async {
   return repo.obtenerConfig();
 });
 
+class ConfigPropietarioFiltro {
+  const ConfigPropietarioFiltro({this.propietarioTipo, this.propietarioId});
+  final String? propietarioTipo;
+  final String? propietarioId;
+  @override
+  bool operator ==(Object other) =>
+      other is ConfigPropietarioFiltro &&
+      other.propietarioTipo == propietarioTipo &&
+      other.propietarioId == propietarioId;
+  @override
+  int get hashCode => Object.hash(propietarioTipo, propietarioId);
+}
+
+final configPorPropietarioProvider =
+    FutureProvider.family<ConfigSocial, ConfigPropietarioFiltro>((
+      ref,
+      filtro,
+    ) async {
+      final repo = ref.watch(socialRepositoryProvider);
+      return repo.obtenerConfig(
+        propietarioTipo: filtro.propietarioTipo,
+        propietarioId: filtro.propietarioId,
+      );
+    });
+
 // =========================================================
 // Cuentas filtradas por red (family)
 // =========================================================
@@ -124,6 +149,8 @@ final actualizarConfigProvider =
         String? destino,
         bool? publicarEnFacebook,
         bool? publicarEnInstagram,
+        String? propietarioTipo,
+        String? propietarioId,
       })
     >((ref) {
       return ({
@@ -131,6 +158,8 @@ final actualizarConfigProvider =
         String? destino,
         bool? publicarEnFacebook,
         bool? publicarEnInstagram,
+        String? propietarioTipo,
+        String? propietarioId,
       }) async {
         final repo = ref.read(socialRepositoryProvider);
         final result = await repo.actualizarConfig(
@@ -138,8 +167,11 @@ final actualizarConfigProvider =
           destino: destino,
           publicarEnFacebook: publicarEnFacebook,
           publicarEnInstagram: publicarEnInstagram,
+          propietarioTipo: propietarioTipo,
+          propietarioId: propietarioId,
         );
         ref.invalidate(configSocialProvider);
+        ref.invalidate(configPorPropietarioProvider);
         return result;
       };
     });

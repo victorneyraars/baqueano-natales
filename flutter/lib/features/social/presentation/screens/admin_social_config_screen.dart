@@ -1,6 +1,7 @@
-/// Pantalla admin: configuracion global de publicacion en redes.
+/// Pantalla admin: configuracion global o por prestador de publicacion en redes.
 ///
 /// Permite:
+/// - Alternar entre configuracion global y configuracion individual por prestador
 /// - Activar/desactivar la publicacion automatica
 /// - Elegir destino (central / propio / ambos)
 /// - Activar/desactivar publicacion en Facebook / Instagram
@@ -19,12 +20,62 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/social/data/social_providers.dart';
 import 'package:baqueano_natales/features/social/data/social_repository.dart';
 
-class AdminSocialConfigScreen extends ConsumerWidget {
+const String _kSeAlquilaMaridoId = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+
+class AdminSocialConfigScreen extends ConsumerStatefulWidget {
   const AdminSocialConfigScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(configSocialProvider);
+  ConsumerState<AdminSocialConfigScreen> createState() =>
+      _AdminSocialConfigScreenState();
+}
+
+class _AdminSocialConfigScreenState
+    extends ConsumerState<AdminSocialConfigScreen> {
+  String _alcance = 'global';
+  final _idCtrl = TextEditingController();
+  String? _idActivo;
+
+  @override
+  void dispose() {
+    _idCtrl.dispose();
+    super.dispose();
+  }
+
+  ConfigPropietarioFiltro get _filtroActual {
+    final esPrest = _alcance == 'prestador';
+    return ConfigPropietarioFiltro(
+      propietarioTipo: esPrest ? 'prestador' : null,
+      propietarioId: esPrest ? _idActivo : null,
+    );
+  }
+
+  void _aplicarIdPrestador(String rawId) {
+    final limpio = rawId.trim();
+    if (limpio.isEmpty) {
+      setState(() => _idActivo = null);
+      return;
+    }
+    _idCtrl.text = limpio;
+    setState(() => _idActivo = limpio);
+  }
+
+  void _recargar() {
+    ref.invalidate(configSocialProvider);
+    final esPrest = _alcance != 'prestador' || _idActivo != null;
+    if (esPrest) {
+      ref.invalidate(configPorPropietarioProvider(_filtroActual));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final esPrest = _alcance == 'prestador';
+    final puedeConsultar =
+        !esPrest || (_idActivo != null && _idActivo!.isNotEmpty);
+    final providerAsync = puedeConsultar
+        ? ref.watch(configPorPropietarioProvider(_filtroActual))
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,17 +84,115 @@ class AdminSocialConfigScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Recargar',
-            onPressed: () => ref.invalidate(configSocialProvider),
+            onPressed: _recargar,
           ),
         ],
       ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          error: e,
-          onRetry: () => ref.invalidate(configSocialProvider),
-        ),
-        data: (cfg) => _ConfigForm(initial: cfg),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment<String>(
+                          value: 'global',
+                          label: Text('Global (Baqueano)'),
+                          icon: Icon(Icons.public),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'prestador',
+                          label: Text('Por prestador'),
+                          icon: Icon(Icons.storefront),
+                        ),
+                      ],
+                      selected: {_alcance},
+                      onSelectionChanged: (seleccion) {
+                        final nuevo = seleccion.first;
+                        setState(() {
+                          _alcance = nuevo;
+                          if (nuevo == 'prestador' &&
+                              (_idActivo == null || _idActivo!.isEmpty)) {
+                            _idCtrl.text = _kSeAlquilaMaridoId;
+                            _idActivo = _kSeAlquilaMaridoId;
+                          }
+                        });
+                      },
+                    ),
+                    if (esPrest) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _idCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'UUID del prestador',
+                                hintText: _kSeAlquilaMaridoId,
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              onSubmitted: _aplicarIdPrestador,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () => _aplicarIdPrestador(_idCtrl.text),
+                            child: const Text('Cargar'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ActionChip(
+                            label: const Text('Se Alquila Marido'),
+                            onPressed: () =>
+                                _aplicarIdPrestador(_kSeAlquilaMaridoId),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: !puedeConsultar
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Ingresa el UUID del prestador y presiona Cargar para editar su configuracion.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : providerAsync!.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => _ErrorView(error: e, onRetry: _recargar),
+                    data: (cfg) => _ConfigForm(
+                      key: ValueKey(
+                        '${_alcance}_${_idActivo ?? 'global'}_${cfg.autoPublish}_${cfg.destino}_${cfg.publicarEnFacebook}_${cfg.publicarEnInstagram}',
+                      ),
+                      initial: cfg,
+                      propietarioTipo: esPrest ? 'prestador' : null,
+                      propietarioId: esPrest ? _idActivo : null,
+                      tituloAlcance: esPrest
+                          ? 'Prestador: $_idActivo'
+                          : 'Configuracion global',
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -53,9 +202,18 @@ class AdminSocialConfigScreen extends ConsumerWidget {
 // Form con estado local (para trackear cambios sin guardar)
 // ---------------------------------------------------------
 class _ConfigForm extends ConsumerStatefulWidget {
-  const _ConfigForm({required this.initial});
+  const _ConfigForm({
+    super.key,
+    required this.initial,
+    required this.propietarioTipo,
+    required this.propietarioId,
+    required this.tituloAlcance,
+  });
 
   final ConfigSocial initial;
+  final String? propietarioTipo;
+  final String? propietarioId;
+  final String tituloAlcance;
 
   @override
   ConsumerState<_ConfigForm> createState() => _ConfigFormState();
@@ -93,11 +251,15 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
         destino: _destino,
         publicarEnFacebook: _enFacebook,
         publicarEnInstagram: _enInstagram,
+        propietarioTipo: widget.propietarioTipo,
+        propietarioId: widget.propietarioId,
       );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Configuracion guardada')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Configuracion guardada (${widget.tituloAlcance})'),
+          ),
+        );
       }
     } on ApiException catch (e) {
       if (mounted) {
@@ -144,6 +306,14 @@ class _ConfigFormState extends ConsumerState<_ConfigForm> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Text(
+          widget.tituloAlcance,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+
         // --- Seccion: Publicacion automatica ---
         const _SectionTitle(title: 'Publicacion automatica'),
         Card(
