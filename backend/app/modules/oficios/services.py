@@ -1679,6 +1679,7 @@ async def completar_turno_y_crear_orden(
             )
         except Exception as e:
             logger.warning(f"No se pudo encolar orden {orden.numero} en redes: {e}")
+        await db.commit()
     await db.refresh(orden)
     await _notificar_cambio_turno(db, turno, EstadoTurno.COMPLETADO)
     return turno, orden
