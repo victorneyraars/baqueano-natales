@@ -34,3 +34,6 @@ def setup_logging() -> None:
     # Bajar verbosidad de uvicorn
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+    # Evitar loguear URLs con query params sensibles (access_token)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
