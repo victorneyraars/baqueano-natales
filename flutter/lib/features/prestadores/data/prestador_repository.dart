@@ -371,6 +371,26 @@ class PrestadorRepository {
     }
   }
 
+  /// Encola un servicio existente para publicación en redes sociales.
+  Future<Map<String, dynamic>> publicarServicioEnRedes({
+    required String prestadorId,
+    required String servicioId,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/api/v1/mis-prestadores/$prestadorId/servicios/$servicioId/publicar-redes',
+      );
+      return Map<String, dynamic>.from(res.data as Map);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   // =========================================================
   // Fotos (dueño)
   // =========================================================

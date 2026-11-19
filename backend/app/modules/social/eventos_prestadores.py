@@ -70,7 +70,10 @@ async def _encolar_para_ambas_redes(
     mensaje: str,
     image_url: str | None,
     config,
-) -> None:
+) -> int:
+    encoladas = 0
+    delay = 0
+
     if config.publicar_en_facebook:
         try:
             contenido: dict = {"message": mensaje}
@@ -85,7 +88,10 @@ async def _encolar_para_ambas_redes(
                     red=Red.FACEBOOK,
                     contenido=contenido,
                 ),
+                delay_segundos=delay,
             )
+            delay += 60
+            encoladas += 1
             logger.info(
                 "Social: encolada publicacion FB para %s/%s",
                 recurso_tipo, recurso_id,
@@ -107,7 +113,10 @@ async def _encolar_para_ambas_redes(
                         "image_urls": [image_url],
                     },
                 ),
+                delay_segundos=delay,
             )
+            delay += 60
+            encoladas += 1
             logger.info(
                 "Social: encolada publicacion IG para %s/%s",
                 recurso_tipo, recurso_id,
@@ -130,13 +139,17 @@ async def _encolar_para_ambas_redes(
                     red=Red.GOOGLE_BUSINESS,
                     contenido=contenido_gbp,
                 ),
+                delay_segundos=delay,
             )
+            encoladas += 1
             logger.info(
                 "Social: encolada publicacion GBP para %s/%s",
                 recurso_tipo, recurso_id,
             )
         except Exception as e:
             logger.warning("Social: fallo encolando GBP: %s", e)
+
+    return encoladas
 
 
 async def encolar_prestador_nuevo(db: AsyncSession, prestador) -> None:
@@ -182,18 +195,29 @@ async def encolar_prestador_nuevo(db: AsyncSession, prestador) -> None:
 
 
 async def encolar_servicio_nuevo(
-    db: AsyncSession, prestador, servicio,
-) -> None:
+    db: AsyncSession,
+    prestador,
+    servicio,
+    *,
+    forzar: bool = False,
+) -> int:
     try:
         config = await social_services.obtener_config(db)
-        if config is None or not config.auto_publish:
-            return
+        if config is None:
+            return 0
+        if not forzar and not config.auto_publish:
+            return 0
         cuenta = await _obtener_cuenta_central_facebook(db)
         if cuenta is None:
-            return
+            return 0
 
         web = settings.PUBLIC_WEB_URL.rstrip("/")
-        lineas = [f"{prestador.nombre} agrego:", "", servicio.nombre]
+        encabezado = (
+            f"{prestador.nombre} — Servicio disponible"
+            if forzar
+            else f"{prestador.nombre} agrego:"
+        )
+        lineas = [encabezado, "", servicio.nombre]
         if servicio.categoria_servicio:
             lineas.append(f"({servicio.categoria_servicio})")
 
@@ -212,9 +236,12 @@ async def encolar_servicio_nuevo(
         lineas.append(f"Pedilo en: {web}/prestadores/{prestador.slug}")
         mensaje = "\n".join(lineas)
 
-        image_url = _url_absoluta(prestador.foto_portada_url)
+        image_url = _url_absoluta(
+            getattr(prestador, "foto_portada_url", None)
+            or getattr(prestador, "foto_url", None)
+        )
 
-        await _encolar_para_ambas_redes(
+        return await _encolar_para_ambas_redes(
             db,
             cuenta=cuenta,
             recurso_tipo="prestador_servicio",
@@ -225,3 +252,4 @@ async def encolar_servicio_nuevo(
         )
     except Exception as e:
         logger.warning("Social: error encolando servicio nuevo: %s", e)
+        return 0

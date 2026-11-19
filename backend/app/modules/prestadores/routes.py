@@ -510,6 +510,38 @@ async def eliminar_servicio_mi_prestador(
     await services.eliminar_servicio(db, srv)
 
 
+@router_propietario.post(
+    "/{prestador_id}/servicios/{servicio_id}/publicar-redes",
+    summary="Publicar servicio en redes sociales",
+)
+async def publicar_servicio_en_redes(
+    prestador: PrestadorPropietario,
+    servicio_id: UUID,
+    db: DbSession,
+) -> dict:
+    from fastapi import HTTPException
+
+    srv = await services.obtener_servicio(db, servicio_id)
+    if srv.prestador_id != prestador.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio no encontrado para este prestador",
+        )
+    encoladas = await social_eventos.encolar_servicio_nuevo(
+        db, prestador, srv, forzar=True
+    )
+    await db.commit()
+    return {
+        "servicio_id": str(srv.id),
+        "encoladas": encoladas,
+        "detalle": (
+            "Publicación encolada para redes sociales"
+            if encoladas > 0
+            else "No hay cuentas o redes activas configuradas para publicar"
+        ),
+    }
+
+
 # ---------------------------------------------------------
 # Fotos de trabajos (dueño)
 # ---------------------------------------------------------

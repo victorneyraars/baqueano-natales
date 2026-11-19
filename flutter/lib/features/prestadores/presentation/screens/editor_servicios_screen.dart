@@ -91,6 +91,8 @@ class _Contenido extends StatelessWidget {
             servicio: srv,
             onEditar: () => _abrirFormulario(context, ref, prestador, srv),
             onEliminar: () => _confirmarEliminar(context, ref, prestador, srv),
+            onPublicarRedes: () =>
+                _publicarServicioRedes(context, ref, prestador, srv),
           );
         },
       ),
@@ -103,11 +105,13 @@ class _ServicioCard extends StatelessWidget {
     required this.servicio,
     required this.onEditar,
     required this.onEliminar,
+    required this.onPublicarRedes,
   });
 
   final PrestadorServicio servicio;
   final VoidCallback onEditar;
   final VoidCallback onEliminar;
+  final VoidCallback onPublicarRedes;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +208,15 @@ class _ServicioCard extends StatelessWidget {
                     color: Colors.green.shade700,
                   ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onPublicarRedes,
+                icon: const Icon(Icons.campaign_outlined, size: 18),
+                label: const Text('Publicar en redes'),
+              ),
             ),
           ],
         ),
@@ -781,5 +794,63 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
         ),
       ),
     );
+  }
+}
+
+Future<void> _publicarServicioRedes(
+  BuildContext context,
+  WidgetRef ref,
+  Prestador prestador,
+  PrestadorServicio servicio,
+) async {
+  final confirmar = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Publicar servicio en redes'),
+      content: Text(
+        '¿Enviar "${servicio.nombre}" a la cola de publicación de la página? '
+        'Luego podrás compartirlo manualmente en grupos locales.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Publicar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmar != true || !context.mounted) return;
+
+  try {
+    final res = await ref
+        .read(prestadorRepositoryProvider)
+        .publicarServicioEnRedes(
+          prestadorId: prestador.id,
+          servicioId: servicio.id,
+        );
+    if (!context.mounted) return;
+    final encoladas = (res['encoladas'] as num?)?.toInt() ?? 0;
+    final detalle = res['detalle'] as String? ?? 'Listo';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          encoladas > 0
+              ? '$detalle ($encoladas en cola). Podrás compartirlo en grupos desde la página.'
+              : detalle,
+        ),
+      ),
+    );
+  } on ApiException catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(e.message)));
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('No se pudo encolar: $e')));
   }
 }
