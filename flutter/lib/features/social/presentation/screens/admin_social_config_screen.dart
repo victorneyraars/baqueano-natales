@@ -17,7 +17,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
+import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
+import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/social/data/social_providers.dart';
+import 'package:baqueano_natales/features/social/domain/cuenta_social.dart';
 import 'package:baqueano_natales/features/social/data/social_repository.dart';
 
 const String _kSeAlquilaMaridoId = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
@@ -71,6 +74,31 @@ class _AdminSocialConfigScreenState
   @override
   Widget build(BuildContext context) {
     final esPrest = _alcance == 'prestador';
+    final prestadoresAsync = ref.watch(
+      adminPrestadoresProvider(
+        const AdminPrestadoresParams(incluirInactivos: true),
+      ),
+    );
+    final cuentasAsync = ref.watch(cuentasSocialesProvider);
+    final prestadores =
+        prestadoresAsync.asData?.value.items ?? const <Prestador>[];
+    final cuentas = cuentasAsync.asData?.value.items ?? const <CuentaSocial>[];
+    final cuentasSel = _idActivo == null
+        ? const <CuentaSocial>[]
+        : cuentas
+              .where(
+                (c) =>
+                    c.propietarioTipo.name == 'prestador' &&
+                    c.propietarioId == _idActivo,
+              )
+              .toList();
+    Prestador? selPrest;
+    for (final pr in prestadores) {
+      if (pr.id == _idActivo) {
+        selPrest = pr;
+        break;
+      }
+    }
     final puedeConsultar =
         !esPrest || (_idActivo != null && _idActivo!.isNotEmpty);
     final providerAsync = puedeConsultar
@@ -126,6 +154,38 @@ class _AdminSocialConfigScreenState
                     ),
                     if (esPrest) ...[
                       const SizedBox(height: 12),
+                      if (prestadores.isNotEmpty) ...[
+                        DropdownButtonFormField<String>(
+                          initialValue:
+                              prestadores.any((pr) => pr.id == _idActivo)
+                              ? _idActivo
+                              : null,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Prestador',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          items: prestadores.map((pr) {
+                            final tieneRed = cuentas.any(
+                              (c) =>
+                                  c.propietarioTipo.name == 'prestador' &&
+                                  c.propietarioId == pr.id,
+                            );
+                            return DropdownMenuItem<String>(
+                              value: pr.id,
+                              child: Text(
+                                '${pr.nombre} (${tieneRed ? 'con red' : 'sin red'})',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            if (v != null) _aplicarIdPrestador(v);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       Row(
                         children: [
                           Expanded(
@@ -164,6 +224,30 @@ class _AdminSocialConfigScreenState
               ),
             ),
           ),
+          if (esPrest && _idActivo != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Card(
+                child: ListTile(
+                  leading: Icon(
+                    cuentasSel.isNotEmpty
+                        ? Icons.check_circle
+                        : Icons.info_outline,
+                  ),
+                  title: Text(
+                    selPrest?.nombre ??
+                        (_idActivo == _kSeAlquilaMaridoId
+                            ? 'Se Alquila Marido'
+                            : 'Prestador'),
+                  ),
+                  subtitle: Text(
+                    cuentasSel.isEmpty
+                        ? 'Sin cuenta social propia conectada'
+                        : 'Cuenta propia: ${cuentasSel.map((c) => c.nombreVisible).join(', ')}',
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: !puedeConsultar
                 ? const Center(
