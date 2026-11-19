@@ -60,7 +60,29 @@ async def _obtener_cuenta_activa(
         condiciones.append(CuentaSocial.propietario_id == propietario_id)
 
     stmt = select(CuentaSocial).where(*condiciones).limit(1)
-    return (await db.execute(stmt)).scalar_one_or_none()
+    cuenta = (await db.execute(stmt)).scalar_one_or_none()
+    if cuenta is not None:
+        return cuenta
+
+    # Fallback para Instagram: reutiliza la cuenta Facebook activa vinculada
+    if red == Red.INSTAGRAM:
+        fb_condiciones = [
+            CuentaSocial.red == Red.FACEBOOK,
+            CuentaSocial.propietario_tipo == propietario_tipo,
+            CuentaSocial.activo.is_(True),
+        ]
+        if propietario_id is None:
+            fb_condiciones.append(CuentaSocial.propietario_id.is_(None))
+        else:
+            fb_condiciones.append(CuentaSocial.propietario_id == propietario_id)
+        fb_stmt = select(CuentaSocial).where(*fb_condiciones).limit(1)
+        fb_cuenta = (await db.execute(fb_stmt)).scalar_one_or_none()
+        if fb_cuenta is not None:
+            meta = fb_cuenta.metadata_extra or {}
+            if meta.get("instagram_business_account_id"):
+                return fb_cuenta
+
+    return None
 
 
 def _construir_mensaje_orden(orden, prestador=None) -> str:
@@ -108,8 +130,15 @@ async def encolar_orden_completada(
             )
             return
 
-        mensaje = _construir_mensaje_orden(orden, prestador)
         prestador_id = getattr(orden, "prestador_id", None)
+        if prestador is None and prestador_id:
+            try:
+                from app.modules.prestadores.models import Prestador
+                p_stmt = select(Prestador).where(Prestador.id == prestador_id).limit(1)
+                prestador = (await db.execute(p_stmt)).scalar_one_or_none()
+            except Exception:
+                prestador = None
+        mensaje = _construir_mensaje_orden(orden, prestador)
         image_url = _url_absoluta(
             getattr(prestador, "foto_portada_url", None)
             or getattr(prestador, "foto_url", None)

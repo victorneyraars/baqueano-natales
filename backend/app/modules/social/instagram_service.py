@@ -105,14 +105,38 @@ async def _crear_container(
 async def _publicar_container(
     ig_user_id: str, page_token: str, creation_id: str, max_reintentos: int,
 ) -> tuple[str | None, FacebookError | None]:
-    """POST /{ig-user-id}/media_publish con reintentos cortos."""
-    # Espera inicial: IG suele tardar 2-5s en procesar la imagen
-    esperas = [2, 4, 8][:max_reintentos]
+    """Espera a que el container este listo y ejecuta POST /{ig-user-id}/media_publish."""
+    esperas = [2, 3, 5][:max(1, max_reintentos)]
+    ultimo_err: FacebookError | None = None
 
-    for i, espera in enumerate(esperas):
-        await asyncio.sleep(espera)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for i, espera in enumerate(esperas):
+            await asyncio.sleep(espera)
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Consultar estado del container antes de publicar
+            try:
+                st_resp = await client.get(
+                    _graph_url(creation_id),
+                    params={"fields": "status_code", "access_token": page_token},
+                )
+                if st_resp.status_code == 200:
+                    status_code = (st_resp.json().get("status_code") or "").upper()
+                    if status_code == "ERROR":
+                        return None, FacebookError(
+                            message=f"Container {creation_id} fallo en Meta (status_code=ERROR)"
+                        )
+                    if status_code and status_code != "FINISHED":
+                        ultimo_err = FacebookError(
+                            message=f"Container {creation_id} en estado {status_code}"
+                        )
+                        logger.info(
+                            "IG: container %s en estado %s (intento %d/%d)",
+                            creation_id, status_code, i + 1, len(esperas),
+                        )
+                        continue
+            except httpx.HTTPError:
+                pass
+
             try:
                 resp = await client.post(
                     _graph_url(f"{ig_user_id}/media_publish"),
@@ -124,24 +148,24 @@ async def _publicar_container(
             except httpx.HTTPError as e:
                 return None, FacebookError(message=f"Error de red: {e}")
 
-        if resp.status_code == 200:
-            media_id = resp.json().get("id")
-            if media_id:
-                return media_id, None
-            return None, FacebookError(message="Respuesta sin media_id")
+            if resp.status_code in (200, 201):
+                media_id = resp.json().get("id")
+                if media_id:
+                    return media_id, None
+                return None, FacebookError(message="Respuesta sin media_id")
 
-        # Error de "container no listo" -> reintentar
-        err = _parse_error(resp)
-        if "not available" in err.message.lower() or "not ready" in err.message.lower():
-            logger.info(
-                "IG: container %s no listo (intento %d/%d), reintentando",
-                creation_id, i + 1, max_reintentos,
-            )
-            continue
+            err = _parse_error(resp)
+            ultimo_err = err
+            msg_low = (err.message or "").lower()
+            if "not available" in msg_low or "not ready" in msg_low or "in progress" in msg_low:
+                logger.info(
+                    "IG: container %s no listo (intento %d/%d), reintentando",
+                    creation_id, i + 1, len(esperas),
+                )
+                continue
 
-        # Error real -> no reintentar
-        return None, err
+            return None, err
 
-    return None, FacebookError(
-        message=f"Container {creation_id} no estuvo listo tras {max_reintentos} intentos"
+    return None, ultimo_err or FacebookError(
+        message=f"Container {creation_id} no estuvo listo tras {len(esperas)} intentos"
     )
