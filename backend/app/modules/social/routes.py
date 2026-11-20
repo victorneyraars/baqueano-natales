@@ -729,6 +729,12 @@ def _fb_http_error(err: _fb.FacebookError | None) -> None:
         )
 
 
+class _CrearPostFacebookRequest(BaseModel):
+    mensaje: str = ""
+    link: str | None = None
+    image_url: str | None = None
+
+
 @router_admin.get("/cuentas/{cuenta_id}/facebook/posts", summary="Listar posts de la pagina")
 async def fb_listar_posts(
     cuenta_id: str,
@@ -740,6 +746,25 @@ async def fb_listar_posts(
     items, err = await _fb.listar_posts_pagina(page_id, token, limit=limit)
     _fb_http_error(err)
     return {"items": items}
+
+
+@router_admin.post("/cuentas/{cuenta_id}/facebook/posts", summary="Publicar post directo en la pagina")
+async def fb_crear_post(
+    cuenta_id: str,
+    data: _CrearPostFacebookRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    post_id, err = await _fb.publicar_post_en_pagina(
+        page_id,
+        token,
+        mensaje=data.mensaje,
+        image_url=data.image_url,
+        link=data.link,
+    )
+    _fb_http_error(err)
+    return {"ok": True, "id": post_id}
 
 
 @router_admin.post("/facebook/posts/{post_id}/editar", summary="Editar texto de un post")
@@ -894,6 +919,18 @@ async def fb_suscribir_webhook(
     info, err = await _fb.suscribir_webhooks_pagina(page_id, token)
     _fb_http_error(err)
     return {"ok": info.get("ok", True), **info}
+
+
+@router_admin.delete("/cuentas/{cuenta_id}/facebook/suscribir-webhook", summary="Desuscribir pagina de webhooks")
+async def fb_desuscribir_webhook(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    ok, err = await _fb.desuscribir_webhooks_pagina(page_id, token)
+    _fb_http_error(err)
+    return {"ok": ok}
 
 
 class _ActualizarConfigPaginaRequest(BaseModel):

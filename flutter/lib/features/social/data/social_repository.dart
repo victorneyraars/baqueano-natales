@@ -636,4 +636,31 @@ class SocialRepository {
     }
     return const {'ok': true};
   }
+
+  Future<Map<String, dynamic>> crearPostFacebook({
+    required String cuentaId,
+    required String mensaje,
+    String? link,
+    String? imageUrl,
+  }) async {
+    final payload = <String, dynamic>{'mensaje': mensaje};
+    if (link != null && link.isNotEmpty) payload['link'] = link;
+    if (imageUrl != null && imageUrl.isNotEmpty)
+      payload['image_url'] = imageUrl;
+    final res = await _dio.post(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/posts',
+      data: payload,
+    );
+    final raw = res.data;
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return const {'ok': true};
+  }
+
+  Future<bool> desuscribirWebhookFacebook(String cuentaId) async {
+    final res = await _dio.delete(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/suscribir-webhook',
+    );
+    return ((res.data as Map)['ok'] as bool?) ?? true;
+  }
 }

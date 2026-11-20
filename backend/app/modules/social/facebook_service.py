@@ -669,3 +669,21 @@ async def actualizar_configuracion_pagina(
     if resp.status_code != 200:
         return False, _parse_error(resp)
     return bool(resp.json().get("success", True)), None
+
+
+async def desuscribir_webhooks_pagina(
+    page_id: str,
+    page_token: str,
+) -> tuple[bool, FacebookError | None]:
+    """Elimina la suscripcion de webhooks de la pagina para nuestra app."""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.delete(
+                _graph_url(f"{page_id}/subscribed_apps"),
+                params={"access_token": page_token},
+            )
+        except httpx.HTTPError as e:
+            return False, FacebookError(message=f"Error de red: {e}")
+    if resp.status_code != 200:
+        return False, _parse_error(resp)
+    return bool(resp.json().get("success", True)), None

@@ -22,6 +22,7 @@ class _AdminFacebookGestionScreenState
   bool _loadingConfig = false;
   bool _subscribingWebhook = false;
   bool _savingConfig = false;
+  bool _publishingPost = false;
 
   List _posts = const [];
   List _conversaciones = const [];
@@ -29,13 +30,15 @@ class _AdminFacebookGestionScreenState
   Map<String, dynamic> _configData = const {};
   bool _messagingMissing = false;
   String? _errorMsg;
+  String _inboxPlatform = 'messenger';
+  String _insightsPeriod = 'day';
 
   final _aboutCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
   bool _autoPublish = false;
 
-  static const Map<String, String> _categoriasEs = {
+  static const Map<String, dynamic> _categoriasEs = {
     'product/service': 'Producto / servicio',
     'real estate': 'Bienes raíces',
     'local business': 'Negocio local',
@@ -46,11 +49,15 @@ class _AdminFacebookGestionScreenState
     'consultant': 'Consultoría',
   };
 
-  static const Map<String, String> _metricasEs = {
-    'daily post engagements': 'Interacciones diarias con publicaciones',
-    'page_post_engagements': 'Interacciones diarias con publicaciones',
-    'daily total views count per page': 'Visitas diarias de la página',
-    'page_views_total': 'Visitas diarias de la página',
+  static const Map<String, dynamic> _metricasEs = {
+    'daily post engagements': 'Interacciones con publicaciones',
+    'weekly post engagements': 'Interacciones con publicaciones (7 días)',
+    '28 days post engagements': 'Interacciones con publicaciones (28 días)',
+    'page_post_engagements': 'Interacciones con publicaciones',
+    'daily total views count per page': 'Visitas de la página',
+    'weekly total views count per page': 'Visitas de la página (7 días)',
+    '28 days total views count per page': 'Visitas de la página (28 días)',
+    'page_views_total': 'Visitas de la página',
     'lifetime total follows': 'Seguidores totales',
     'page_follows': 'Seguidores totales',
   };
@@ -132,7 +139,10 @@ class _AdminFacebookGestionScreenState
     try {
       final items = await ref
           .read(socialRepositoryProvider)
-          .listarConversacionesFacebook(widget.cuenta.id);
+          .listarConversacionesFacebook(
+            widget.cuenta.id,
+            platform: _inboxPlatform,
+          );
       if (mounted) {
         setState(() => _conversaciones = items);
       }
@@ -144,6 +154,7 @@ class _AdminFacebookGestionScreenState
             msg.contains('No tenés permisos');
         setState(() {
           _messagingMissing = faltaMessaging;
+          _conversaciones = const [];
           if (!faltaMessaging) {
             _errorMsg = msg;
           }
@@ -163,7 +174,7 @@ class _AdminFacebookGestionScreenState
     try {
       final items = await ref
           .read(socialRepositoryProvider)
-          .obtenerInsightsFacebook(widget.cuenta.id);
+          .obtenerInsightsFacebook(widget.cuenta.id, period: _insightsPeriod);
       if (mounted) {
         setState(() => _insights = items);
       }
@@ -259,6 +270,113 @@ class _AdminFacebookGestionScreenState
     } finally {
       if (mounted) {
         setState(() => _subscribingWebhook = false);
+      }
+    }
+  }
+
+  Future<void> _desuscribirWebhook() async {
+    setState(() => _subscribingWebhook = true);
+    try {
+      await ref
+          .read(socialRepositoryProvider)
+          .desuscribirWebhookFacebook(widget.cuenta.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Webhooks de página desuscritos')),
+      );
+      await _cargarConfiguracion();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al desuscribir: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _subscribingWebhook = false);
+      }
+    }
+  }
+
+  Future<void> _crearNuevoPost() async {
+    final msgCtrl = TextEditingController();
+    final linkCtrl = TextEditingController();
+    final imgCtrl = TextEditingController();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva publicación en Facebook'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: msgCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Texto de la publicación',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: linkCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Enlace (opcional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: imgCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'URL de imagen pública (opcional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Publicar'),
+          ),
+        ],
+      ),
+    );
+    final mensaje = msgCtrl.text.trim();
+    final link = linkCtrl.text.trim();
+    final img = imgCtrl.text.trim();
+    msgCtrl.dispose();
+    linkCtrl.dispose();
+    imgCtrl.dispose();
+
+    if (confirmar != true || (mensaje.isEmpty && img.isEmpty)) return;
+    setState(() => _publishingPost = true);
+    try {
+      await ref
+          .read(socialRepositoryProvider)
+          .crearPostFacebook(
+            cuentaId: widget.cuenta.id,
+            mensaje: mensaje,
+            link: link.isEmpty ? null : link,
+            imageUrl: img.isEmpty ? null : img,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Publicación enviada a Facebook')),
+      );
+      await _cargarPosts();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al publicar: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _publishingPost = false);
       }
     }
   }
@@ -392,99 +510,142 @@ class _AdminFacebookGestionScreenState
   }
 
   Widget _buildPosts() {
-    if (_loadingPosts) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_posts.isEmpty) {
-      return const Center(child: Text('Sin publicaciones'));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: _posts.length,
-      itemBuilder: (_, i) {
-        final p = _posts[i] as Map;
-        return Card(
-          child: ListTile(
-            title: Text(
-              p['message']?.toString() ?? '(Sin texto)',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(p['created_time']?.toString() ?? ''),
-            trailing: PopupMenuButton<String>(
-              onSelected: (v) {
-                if (v == 'comments') _abrirComentarios(p);
-                if (v == 'edit') _editarPost(p);
-                if (v == 'delete') _eliminarPost(p);
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'comments', child: Text('Comentarios')),
-                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-              ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _publishingPost ? null : _crearNuevoPost,
+              icon: const Icon(Icons.add),
+              label: Text(
+                _publishingPost ? 'Publicando...' : 'Nueva publicación',
+              ),
             ),
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: _loadingPosts
+              ? const Center(child: CircularProgressIndicator())
+              : _posts.isEmpty
+              ? const Center(child: Text('Sin publicaciones'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _posts.length,
+                  itemBuilder: (_, i) {
+                    final p = _posts[i] as Map;
+                    return Card(
+                      child: ListTile(
+                        title: Text(
+                          p['message']?.toString() ?? '(Sin texto)',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(p['created_time']?.toString() ?? ''),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (v) {
+                            if (v == 'comments') _abrirComentarios(p);
+                            if (v == 'edit') _editarPost(p);
+                            if (v == 'delete') _eliminarPost(p);
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'comments',
+                              child: Text('Comentarios'),
+                            ),
+                            PopupMenuItem(value: 'edit', child: Text('Editar')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Eliminar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
   Widget _buildInbox() {
-    if (_loadingConvs) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_messagingMissing) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.info_outline),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Inbox de Messenger pendiente de permiso pages_messaging',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Meta requiere el permiso pages_messaging y el rol adecuado en la página para listar y responder conversaciones de Messenger. '
-                  'Los permisos de publicación, métricas y administración de página ya están activos.',
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _cargarConversaciones,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar Inbox'),
-                ),
-              ],
-            ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'messenger', label: Text('Messenger')),
+              ButtonSegment(value: 'instagram', label: Text('Instagram')),
+            ],
+            selected: {_inboxPlatform},
+            onSelectionChanged: (sel) {
+              setState(() => _inboxPlatform = sel.first);
+              _cargarConversaciones();
+            },
           ),
         ),
-      );
-    }
-    if (_conversaciones.isEmpty) {
-      return const Center(child: Text('Sin conversaciones'));
-    }
-    return ListView.builder(
-      itemCount: _conversaciones.length,
-      itemBuilder: (_, i) {
-        final c = _conversaciones[i] as Map;
-        return ListTile(
-          title: Text(c['snippet']?.toString() ?? 'Conversación', maxLines: 2),
-          subtitle: Text(c['updated_time']?.toString() ?? ''),
-          onTap: () => _abrirConversacion(c),
-        );
-      },
+        Expanded(
+          child: _loadingConvs
+              ? const Center(child: CircularProgressIndicator())
+              : _messagingMissing
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.info_outline),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Inbox pendiente de permiso de mensajería',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Meta requiere el permiso pages_messaging y el rol adecuado en la página para listar y responder conversaciones. '
+                            'Los permisos de publicación, métricas y administración de página ya están activos.',
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _cargarConversaciones,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar Inbox'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : _conversaciones.isEmpty
+              ? const Center(child: Text('Sin conversaciones'))
+              : ListView.builder(
+                  itemCount: _conversaciones.length,
+                  itemBuilder: (_, i) {
+                    final c = _conversaciones[i] as Map;
+                    return ListTile(
+                      title: Text(
+                        c['snippet']?.toString() ?? 'Conversación',
+                        maxLines: 2,
+                      ),
+                      subtitle: Text(c['updated_time']?.toString() ?? ''),
+                      onTap: () => _abrirConversacion(c),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -492,6 +653,19 @@ class _AdminFacebookGestionScreenState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'day', label: Text('Hoy')),
+            ButtonSegment(value: 'week', label: Text('7 días')),
+            ButtonSegment(value: 'days_28', label: Text('28 días')),
+          ],
+          selected: {_insightsPeriod},
+          onSelectionChanged: (sel) {
+            setState(() => _insightsPeriod = sel.first);
+            _cargarInsights();
+          },
+        ),
+        const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: _subscribingWebhook ? null : _suscribirWebhook,
           icon: const Icon(Icons.sync),
@@ -528,6 +702,13 @@ class _AdminFacebookGestionScreenState
         .map((e) => e.toString())
         .toList();
     final hasMessaging = (_configData['has_pages_messaging'] as bool?) ?? false;
+
+    final camposSuscritos = subs
+        .whereType<Map>()
+        .expand((app) => (app['subscribed_fields'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .toSet()
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -630,7 +811,7 @@ class _AdminFacebookGestionScreenState
                 Text(
                   subs.isEmpty
                       ? 'Webhooks: Sin suscripciones activas en la página'
-                      : 'Webhooks suscritos: ${subs.length} app(s)',
+                      : 'Webhooks suscritos: ${subs.length} app(s) (${camposSuscritos.isEmpty ? 'feed' : camposSuscritos.join(', ')})',
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -643,10 +824,24 @@ class _AdminFacebookGestionScreenState
                   children: granted.map((p) => Chip(label: Text(p))).toList(),
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _subscribingWebhook ? null : _suscribirWebhook,
-                  icon: const Icon(Icons.sync),
-                  label: const Text('Suscribir / actualizar webhooks'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _subscribingWebhook ? null : _suscribirWebhook,
+                      icon: const Icon(Icons.sync),
+                      label: const Text('Suscribir / actualizar webhooks'),
+                    ),
+                    if (subs.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: _subscribingWebhook
+                            ? null
+                            : _desuscribirWebhook,
+                        icon: const Icon(Icons.link_off),
+                        label: const Text('Desuscribir webhooks'),
+                      ),
+                  ],
                 ),
               ],
             ),
