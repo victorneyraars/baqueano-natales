@@ -35,6 +35,46 @@ class _AdminFacebookGestionScreenState
   final _websiteCtrl = TextEditingController();
   bool _autoPublish = false;
 
+  static const Map<String, String> _categoriasEs = {
+    'product/service': 'Producto / servicio',
+    'real estate': 'Bienes raíces',
+    'local business': 'Negocio local',
+    'home improvement': 'Mejoras del hogar',
+    'automotive': 'Automotor',
+    'professional services': 'Servicios profesionales',
+    'contractor': 'Contratista',
+    'consultant': 'Consultoría',
+  };
+
+  static const Map<String, String> _metricasEs = {
+    'daily post engagements': 'Interacciones diarias con publicaciones',
+    'page_post_engagements': 'Interacciones diarias con publicaciones',
+    'daily total views count per page': 'Visitas diarias de la página',
+    'page_views_total': 'Visitas diarias de la página',
+    'lifetime total follows': 'Seguidores totales',
+    'page_follows': 'Seguidores totales',
+  };
+
+  String _traducirCategoria(dynamic raw) {
+    final val = raw?.toString().trim() ?? '';
+    if (val.isEmpty) return '-';
+    return _categoriasEs[val.toLowerCase()] ?? val;
+  }
+
+  String _traducirMetrica(Map m) {
+    final title = m['title']?.toString().trim() ?? '';
+    final name = m['name']?.toString().trim() ?? '';
+    if (title.isNotEmpty) {
+      final hit = _metricasEs[title.toLowerCase()];
+      if (hit != null) return hit;
+    }
+    if (name.isNotEmpty) {
+      final hit = _metricasEs[name.toLowerCase()];
+      if (hit != null) return hit;
+    }
+    return title.isNotEmpty ? title : (name.isNotEmpty ? name : 'Métrica');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -178,13 +218,13 @@ class _AdminFacebookGestionScreenState
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configuracion de pagina guardada')),
+        const SnackBar(content: Text('Configuración de página guardada')),
       );
       await _cargarConfiguracion();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar configuracion: $e')),
+        SnackBar(content: Text('No se pudo guardar la configuración: $e')),
       );
     } finally {
       if (mounted) {
@@ -206,8 +246,8 @@ class _AdminFacebookGestionScreenState
         SnackBar(
           content: Text(
             partial
-                ? 'Webhook suscrito en ($fields). Mensajeria requiere pages_messaging en Meta.'
-                : 'Webhook de pagina suscrito ($fields)',
+                ? 'Webhook suscrito en ($fields). Mensajería requiere pages_messaging en Meta.'
+                : 'Webhook de página suscrito ($fields)',
           ),
         ),
       );
@@ -215,7 +255,7 @@ class _AdminFacebookGestionScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error webhook: $e')));
+          .showSnackBar(SnackBar(content: Text('Error de webhook: $e')));
     } finally {
       if (mounted) {
         setState(() => _subscribingWebhook = false);
@@ -230,7 +270,7 @@ class _AdminFacebookGestionScreenState
     final nuevo = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Editar publicacion'),
+        title: const Text('Editar publicación'),
         content: TextField(controller: ctrl, maxLines: 4),
         actions: [
           TextButton(
@@ -282,7 +322,7 @@ class _AdminFacebookGestionScreenState
     final parts = conv['participants'];
     final list = (parts is Map ? parts['data'] : null) as List? ?? const [];
     String? recipientId;
-    String titulo = 'Conversacion';
+    String titulo = 'Conversación';
     for (final p in list) {
       if (p is Map) {
         final pid = p['id']?.toString();
@@ -318,7 +358,7 @@ class _AdminFacebookGestionScreenState
           tabs: const [
             Tab(text: 'Posts'),
             Tab(text: 'Inbox'),
-            Tab(text: 'Metricas'),
+            Tab(text: 'Métricas'),
             Tab(text: 'Config'),
           ],
         ),
@@ -417,8 +457,8 @@ class _AdminFacebookGestionScreenState
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Meta requiere el permiso pages_messaging y el rol adecuado en la pagina para listar y responder conversaciones de Messenger. '
-                  'Los permisos de publicacion, metricas y administracion de pagina ya estan activos.',
+                  'Meta requiere el permiso pages_messaging y el rol adecuado en la página para listar y responder conversaciones de Messenger. '
+                  'Los permisos de publicación, métricas y administración de página ya están activos.',
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -440,7 +480,7 @@ class _AdminFacebookGestionScreenState
       itemBuilder: (_, i) {
         final c = _conversaciones[i] as Map;
         return ListTile(
-          title: Text(c['snippet']?.toString() ?? 'Conversacion', maxLines: 2),
+          title: Text(c['snippet']?.toString() ?? 'Conversación', maxLines: 2),
           subtitle: Text(c['updated_time']?.toString() ?? ''),
           onTap: () => _abrirConversacion(c),
         );
@@ -455,7 +495,7 @@ class _AdminFacebookGestionScreenState
         FilledButton.icon(
           onPressed: _subscribingWebhook ? null : _suscribirWebhook,
           icon: const Icon(Icons.sync),
-          label: const Text('Suscribir pagina a Webhooks'),
+          label: const Text('Suscribir página a Webhooks'),
         ),
         const SizedBox(height: 12),
         if (_loadingInsights)
@@ -469,9 +509,7 @@ class _AdminFacebookGestionScreenState
                 : '-';
             return Card(
               child: ListTile(
-                title: Text(
-                  m['title']?.toString() ?? m['name']?.toString() ?? 'Metrica',
-                ),
+                title: Text(_traducirMetrica(m)),
                 trailing: Text(last),
               ),
             );
@@ -501,13 +539,13 @@ class _AdminFacebookGestionScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Datos de la pagina',
+                  'Datos de la página',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Text('ID Meta: ${page['id'] ?? widget.cuenta.externalId}'),
                 Text('Nombre: ${page['name'] ?? widget.cuenta.nombreVisible}'),
-                Text('Categoria: ${page['category'] ?? '-'}'),
+                Text('Categoría: ${_traducirCategoria(page['category'])}'),
                 Text(
                   'Seguidores: ${page['followers_count'] ?? 0} | Fans: ${page['fan_count'] ?? 0}',
                 ),
@@ -527,15 +565,15 @@ class _AdminFacebookGestionScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Informacion y publicacion',
+                  'Información y publicación',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Publicacion automatica'),
+                  title: const Text('Publicación automática'),
                   subtitle: const Text(
-                    'Enviar publicaciones automaticas desde Baqueano',
+                    'Enviar publicaciones automáticas desde Baqueano',
                   ),
                   value: _autoPublish,
                   onChanged: (v) => setState(() => _autoPublish = v),
@@ -545,7 +583,7 @@ class _AdminFacebookGestionScreenState
                   controller: _aboutCtrl,
                   maxLines: 2,
                   decoration: const InputDecoration(
-                    labelText: 'Descripcion / Acerca de',
+                    labelText: 'Descripción / Acerca de',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -553,7 +591,7 @@ class _AdminFacebookGestionScreenState
                 TextField(
                   controller: _phoneCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Telefono',
+                    labelText: 'Teléfono',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -570,7 +608,7 @@ class _AdminFacebookGestionScreenState
                   onPressed: _savingConfig ? null : _guardarConfiguracion,
                   icon: const Icon(Icons.save),
                   label: Text(
-                    _savingConfig ? 'Guardando...' : 'Guardar configuracion',
+                    _savingConfig ? 'Guardando...' : 'Guardar configuración',
                   ),
                 ),
               ],
@@ -591,7 +629,7 @@ class _AdminFacebookGestionScreenState
                 const SizedBox(height: 8),
                 Text(
                   subs.isEmpty
-                      ? 'Webhooks: Sin suscripciones activas en la pagina'
+                      ? 'Webhooks: Sin suscripciones activas en la página'
                       : 'Webhooks suscritos: ${subs.length} app(s)',
                 ),
                 const SizedBox(height: 6),
