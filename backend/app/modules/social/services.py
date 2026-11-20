@@ -698,7 +698,7 @@ async def conectar_cuenta_facebook(
             access_token=token_cifrado,
             token_type="page",
             expires_at=expira,
-            scope="pages_manage_posts,pages_read_engagement",
+            scope="pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights",
         )
         db.add(token_obj)
 
@@ -1128,13 +1128,13 @@ async def conectar_cuenta_admin(
     token = existing_token.scalar_one_or_none()
     if token:
         token.access_token = crypto.cifrar(pagina.access_token)
-        token.scope = "pages_manage_posts,pages_read_engagement"
+        token.scope = "pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights"
     else:
         token = TokenSocial(
             cuenta_id=cuenta.id,
             access_token=crypto.cifrar(pagina.access_token),
             token_type="Bearer",
-            scope="pages_manage_posts,pages_read_engagement",
+            scope="pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights",
         )
         db.add(token)
 
