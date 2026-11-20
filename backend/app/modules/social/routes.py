@@ -714,8 +714,17 @@ async def _resolver_pagina_y_token(db: DbSession, cuenta_id: str) -> tuple[str, 
 def _fb_http_error(err: _fb.FacebookError | None) -> None:
     from fastapi import HTTPException
     if err is not None:
+        http_status = (
+            status.HTTP_401_UNAUTHORIZED
+            if err.code == 190
+            else (
+                err.http_status
+                if isinstance(err.http_status, int) and 400 <= err.http_status < 500
+                else status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        )
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=http_status,
             detail=err.to_dict(),
         )
 

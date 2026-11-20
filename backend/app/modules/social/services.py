@@ -952,6 +952,25 @@ async def guardar_admin_token(db: AsyncSession, token_ref: str) -> ConfigSocial:
     cfg.facebook_admin_token = crypto.cifrar(user_token)
     from datetime import datetime, timezone
     cfg.facebook_admin_token_updated_at = datetime.now(timezone.utc)
+
+    # Refrescar page access tokens de cuentas de Facebook ya conectadas
+    paginas_por_id = {p.id: p for p in paginas if p.access_token}
+    if paginas_por_id:
+        stmt_cuentas = select(CuentaSocial).where(
+            CuentaSocial.platform == "facebook",
+            CuentaSocial.activo.is_(True),
+            CuentaSocial.external_id.in_(list(paginas_por_id.keys())),
+        )
+        res_cuentas = await db.execute(stmt_cuentas)
+        for cuenta in res_cuentas.scalars().all():
+            p_fb = paginas_por_id.get(cuenta.external_id)
+            if p_fb and p_fb.access_token:
+                await guardar_token(
+                    db,
+                    cuenta,
+                    TokenSocialGuardar(access_token=p_fb.access_token),
+                )
+
     await db.flush()
     await db.refresh(cfg)
     return cfg
