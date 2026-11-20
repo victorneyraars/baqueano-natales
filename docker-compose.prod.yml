@@ -45,3 +45,7 @@ services:
 volumes:
   media_data_prod:
     driver: local
+networks:
+  baqueano_net:
+    external: true
+    name: baqueano-natales_baqueano_net
