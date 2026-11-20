@@ -41,17 +41,13 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (status) {
-          if (status.hasToken && _forzarSetup) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _forzarSetup) {
-                setState(() => _forzarSetup = false);
-              }
-            });
-          }
           if (!status.hasToken || _forzarSetup) {
-            return const _SetupAdminTokenView();
+            return const _SetupAdminTokenView(
+              key: ValueKey('setup_admin_token_view'),
+            );
           }
           return _ListaPaginasView(
+            key: const ValueKey('lista_paginas_view'),
             seleccionadas: _seleccionadas,
             onToggle: (id) {
               setState(() {
@@ -129,7 +125,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
 // Setup inicial (cuando NO hay admin token)
 // =========================================================
 class _SetupAdminTokenView extends ConsumerStatefulWidget {
-  const _SetupAdminTokenView();
+  const _SetupAdminTokenView({super.key});
 
   @override
   ConsumerState<_SetupAdminTokenView> createState() =>
@@ -246,6 +242,11 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
       final repo = ref.read(socialRepositoryProvider);
       await repo.setupAdminToken(tokenRef);
       _deepLinkProcessed = true;
+      if (mounted) {
+        final parent = context
+            .findAncestorStateOfType<_AgregarCuentaScreenState>();
+        parent?.setState(() => parent._forzarSetup = false);
+      }
       ref.invalidate(adminTokenStatusProvider);
       ref.invalidate(paginasAdminProvider);
       // El widget _AgregarCuentaScreenState escucha este provider
@@ -424,6 +425,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
 // =========================================================
 class _ListaPaginasView extends ConsumerWidget {
   const _ListaPaginasView({
+    super.key,
     required this.seleccionadas,
     required this.onToggle,
     this.onRenovarToken,
