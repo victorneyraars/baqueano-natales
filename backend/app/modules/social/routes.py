@@ -891,9 +891,73 @@ async def fb_suscribir_webhook(
     _admin: AdminUser,
 ) -> dict:
     page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
-    ok, err = await _fb.suscribir_webhooks_pagina(page_id, token)
+    info, err = await _fb.suscribir_webhooks_pagina(page_id, token)
     _fb_http_error(err)
-    return {"ok": ok}
+    return {"ok": info.get("ok", True), **info}
+
+
+class _ActualizarConfigPaginaRequest(BaseModel):
+    about: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    auto_publish: bool | None = None
+
+
+@router_admin.get("/cuentas/{cuenta_id}/facebook/configuracion", summary="Configuracion de la pagina")
+async def fb_obtener_configuracion(
+    cuenta_id: str,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    import uuid as _uuid
+    from app.modules.social import services as _svc
+    cuenta = await _svc.obtener_cuenta(db, _uuid.UUID(cuenta_id))
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+    admin_token = await _svc.obtener_admin_token(db)
+    cfg_data, err = await _fb.obtener_configuracion_pagina(
+        page_id, token, admin_token=admin_token
+    )
+    _fb_http_error(err)
+    return {
+        "cuenta_id": str(cuenta.id),
+        "external_id": cuenta.external_id,
+        "auto_publish": bool(cuenta.auto_publish),
+        **cfg_data,
+    }
+
+
+@router_admin.patch("/cuentas/{cuenta_id}/facebook/configuracion", summary="Actualizar configuracion de la pagina")
+async def fb_actualizar_configuracion(
+    cuenta_id: str,
+    data: _ActualizarConfigPaginaRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    import uuid as _uuid
+    from app.modules.social import services as _svc
+    cuenta = await _svc.obtener_cuenta(db, _uuid.UUID(cuenta_id))
+    page_id, token = await _resolver_pagina_y_token(db, cuenta_id)
+
+    if data.auto_publish is not None:
+        cuenta.auto_publish = data.auto_publish
+        await db.flush()
+        await db.commit()
+
+    has_page_updates = any(
+        val is not None for val in (data.about, data.phone, data.website)
+    )
+    if has_page_updates:
+        ok, err = await _fb.actualizar_configuracion_pagina(
+            page_id,
+            token,
+            about=data.about,
+            phone=data.phone,
+            website=data.website,
+        )
+        _fb_http_error(err)
+        return {"ok": ok, "auto_publish": bool(cuenta.auto_publish)}
+
+    return {"ok": True, "auto_publish": bool(cuenta.auto_publish)}
 
 
 @router_admin.get("/facebook/webhook", summary="Verificacion webhook Meta")

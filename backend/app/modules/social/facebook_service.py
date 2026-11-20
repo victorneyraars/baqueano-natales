@@ -538,14 +538,132 @@ async def suscribir_webhooks_pagina(
     page_id: str,
     page_token: str,
     fields: str = "feed,messages,messaging_postbacks,message_reads",
-) -> tuple[bool, FacebookError | None]:
-    """Suscribe la pagina para enviar webhooks de feed y mensajes a nuestra app."""
-    payload = {"subscribed_fields": fields, "access_token": page_token}
+) -> tuple[dict, FacebookError | None]:
+    """Suscribe la pagina a webhooks; si falta pages_messaging, suscribe feed."""
     async with httpx.AsyncClient(timeout=20.0) as client:
         try:
             resp = await client.post(
-                _graph_url(f"{page_id}/subscribed_apps"), data=payload
+                _graph_url(f"{page_id}/subscribed_apps"),
+                data={"subscribed_fields": fields, "access_token": page_token},
             )
+        except httpx.HTTPError as e:
+            return {"ok": False}, FacebookError(message=f"Error de red: {e}")
+
+        if resp.status_code == 200:
+            return {
+                "ok": bool(resp.json().get("success", True)),
+                "subscribed_fields": fields.split(","),
+                "partial_messaging": False,
+            }, None
+
+        err = _parse_error(resp)
+        if "pages_messaging" in (err.message or "") and fields != "feed":
+            try:
+                resp_fb = await client.post(
+                    _graph_url(f"{page_id}/subscribed_apps"),
+                    data={"subscribed_fields": "feed", "access_token": page_token},
+                )
+            except httpx.HTTPError as e:
+                return {"ok": False}, FacebookError(message=f"Error de red: {e}")
+            if resp_fb.status_code == 200:
+                return {
+                    "ok": bool(resp_fb.json().get("success", True)),
+                    "subscribed_fields": ["feed"],
+                    "partial_messaging": True,
+                }, None
+            return {"ok": False}, _parse_error(resp_fb)
+
+        return {"ok": False}, err
+
+
+async def obtener_configuracion_pagina(
+    page_id: str,
+    page_token: str,
+    admin_token: str | None = None,
+) -> tuple[dict, FacebookError | None]:
+    """Obtiene detalles de la pagina, webhooks suscritos y permisos en Meta."""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp_page = await client.get(
+                _graph_url(page_id),
+                params={
+                    "fields": (
+                        "id,name,about,category,phone,emails,website,"
+                        "link,fan_count,followers_count,is_published"
+                    ),
+                    "access_token": page_token,
+                },
+            )
+        except httpx.HTTPError as e:
+            return {}, FacebookError(message=f"Error de red: {e}")
+
+        if resp_page.status_code != 200:
+            return {}, _parse_error(resp_page)
+
+        page_data = resp_page.json()
+        subscribed_apps: list[dict] = []
+        try:
+            resp_subs = await client.get(
+                _graph_url(f"{page_id}/subscribed_apps"),
+                params={"access_token": page_token},
+            )
+            if resp_subs.status_code == 200:
+                subscribed_apps = resp_subs.json().get("data", [])
+        except httpx.HTTPError:
+            subscribed_apps = []
+
+        granted_permissions: list[str] = []
+        declined_permissions: list[str] = []
+        token_perm = admin_token or page_token
+        try:
+            resp_perm = await client.get(
+                _graph_url("me/permissions"),
+                params={"access_token": token_perm},
+            )
+            if resp_perm.status_code == 200:
+                for item in resp_perm.json().get("data", []):
+                    perm = item.get("permission")
+                    st = item.get("status")
+                    if perm and st == "granted":
+                        granted_permissions.append(perm)
+                    elif perm:
+                        declined_permissions.append(perm)
+        except httpx.HTTPError:
+            pass
+
+        return {
+            "page": page_data,
+            "subscribed_apps": subscribed_apps,
+            "granted_permissions": sorted(granted_permissions),
+            "declined_permissions": sorted(declined_permissions),
+            "has_pages_messaging": "pages_messaging" in granted_permissions,
+            "editable_fields": ["about", "phone", "website"],
+        }, None
+
+
+async def actualizar_configuracion_pagina(
+    page_id: str,
+    page_token: str,
+    *,
+    about: str | None = None,
+    phone: str | None = None,
+    website: str | None = None,
+) -> tuple[bool, FacebookError | None]:
+    """Actualiza campos editables de configuracion de la pagina en Graph API."""
+    payload: dict[str, str] = {"access_token": page_token}
+    if about is not None:
+        payload["about"] = about
+    if phone is not None:
+        payload["phone"] = phone
+    if website is not None:
+        payload["website"] = website
+
+    if len(payload) == 1:
+        return True, None
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            resp = await client.post(_graph_url(page_id), data=payload)
         except httpx.HTTPError as e:
             return False, FacebookError(message=f"Error de red: {e}")
     if resp.status_code != 200:

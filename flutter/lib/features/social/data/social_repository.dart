@@ -581,10 +581,59 @@ class SocialRepository {
     return ((res.data as Map)['items'] as List?) ?? const [];
   }
 
-  Future<bool> suscribirWebhookFacebook(String cuentaId) async {
+  Future<Map<String, dynamic>> suscribirWebhookFacebook(String cuentaId) async {
     final res = await _dio.post(
       '/api/v1/admin/social/cuentas/$cuentaId/facebook/suscribir-webhook',
     );
-    return ((res.data as Map)['ok'] as bool?) ?? true;
+    final raw = res.data;
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {'ok': true};
+  }
+
+  Future<Map<String, dynamic>> obtenerConfiguracionFacebook(
+    String cuentaId,
+  ) async {
+    final res = await _dio.get(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/configuracion',
+    );
+    final raw = res.data;
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  Future<Map<String, dynamic>> actualizarConfiguracionFacebook({
+    required String cuentaId,
+    String? about,
+    String? phone,
+    String? website,
+    bool? autoPublish,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (about != null) payload['about'] = about;
+    if (phone != null) payload['phone'] = phone;
+    if (website != null) payload['website'] = website;
+    if (autoPublish != null) payload['auto_publish'] = autoPublish;
+    final res = await _dio.patch(
+      '/api/v1/admin/social/cuentas/$cuentaId/facebook/configuracion',
+      data: payload,
+    );
+    final raw = res.data;
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {'ok': true};
   }
 }

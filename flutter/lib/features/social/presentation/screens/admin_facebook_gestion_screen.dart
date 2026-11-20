@@ -19,22 +19,36 @@ class _AdminFacebookGestionScreenState
   bool _loadingPosts = false;
   bool _loadingConvs = false;
   bool _loadingInsights = false;
+  bool _loadingConfig = false;
   bool _subscribingWebhook = false;
+  bool _savingConfig = false;
+
   List _posts = const [];
   List _conversaciones = const [];
   List _insights = const [];
+  Map<String, dynamic> _configData = const {};
+  bool _messagingMissing = false;
   String? _errorMsg;
+
+  final _aboutCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _websiteCtrl = TextEditingController();
+  bool _autoPublish = false;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _autoPublish = widget.cuenta.autoPublish;
+    _tabs = TabController(length: 4, vsync: this);
     _cargarTodo();
   }
 
   @override
   void dispose() {
     _tabs.dispose();
+    _aboutCtrl.dispose();
+    _phoneCtrl.dispose();
+    _websiteCtrl.dispose();
     super.dispose();
   }
 
@@ -43,6 +57,7 @@ class _AdminFacebookGestionScreenState
       _cargarPosts(),
       _cargarConversaciones(),
       _cargarInsights(),
+      _cargarConfiguracion(),
     ]);
   }
 
@@ -72,7 +87,7 @@ class _AdminFacebookGestionScreenState
   Future<void> _cargarConversaciones() async {
     setState(() {
       _loadingConvs = true;
-      _errorMsg = null;
+      _messagingMissing = false;
     });
     try {
       final items = await ref
@@ -82,8 +97,17 @@ class _AdminFacebookGestionScreenState
         setState(() => _conversaciones = items);
       }
     } catch (e) {
+      final msg = e.toString();
       if (mounted) {
-        setState(() => _errorMsg = e.toString());
+        final faltaMessaging =
+            msg.contains('pages_messaging') ||
+            msg.contains('No tenés permisos');
+        setState(() {
+          _messagingMissing = faltaMessaging;
+          if (!faltaMessaging) {
+            _errorMsg = msg;
+          }
+        });
       }
     } finally {
       if (mounted) {
@@ -95,7 +119,6 @@ class _AdminFacebookGestionScreenState
   Future<void> _cargarInsights() async {
     setState(() {
       _loadingInsights = true;
-      _errorMsg = null;
     });
     try {
       final items = await ref
@@ -115,22 +138,82 @@ class _AdminFacebookGestionScreenState
     }
   }
 
-  Future<void> _suscribirWebhook() async {
-    setState(() => _subscribingWebhook = true);
+  Future<void> _cargarConfiguracion() async {
+    setState(() => _loadingConfig = true);
+    try {
+      final cfg = await ref
+          .read(socialRepositoryProvider)
+          .obtenerConfiguracionFacebook(widget.cuenta.id);
+      if (!mounted) return;
+      final page = (cfg['page'] as Map?) ?? const {};
+      _aboutCtrl.text = page['about']?.toString() ?? '';
+      _phoneCtrl.text = page['phone']?.toString() ?? '';
+      _websiteCtrl.text = page['website']?.toString() ?? '';
+      setState(() {
+        _configData = cfg;
+        _autoPublish = (cfg['auto_publish'] as bool?) ?? _autoPublish;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMsg = e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingConfig = false);
+      }
+    }
+  }
+
+  Future<void> _guardarConfiguracion() async {
+    setState(() => _savingConfig = true);
     try {
       await ref
           .read(socialRepositoryProvider)
-          .suscribirWebhookFacebook(widget.cuenta.id);
-      if (!mounted) {
-        return;
-      }
+          .actualizarConfiguracionFacebook(
+            cuentaId: widget.cuenta.id,
+            about: _aboutCtrl.text.trim(),
+            phone: _phoneCtrl.text.trim(),
+            website: _websiteCtrl.text.trim(),
+            autoPublish: _autoPublish,
+          );
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Webhook de pagina suscrito')),
+        const SnackBar(content: Text('Configuracion de pagina guardada')),
       );
+      await _cargarConfiguracion();
     } catch (e) {
-      if (!mounted) {
-        return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar configuracion: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingConfig = false);
       }
+    }
+  }
+
+  Future<void> _suscribirWebhook() async {
+    setState(() => _subscribingWebhook = true);
+    try {
+      final res = await ref
+          .read(socialRepositoryProvider)
+          .suscribirWebhookFacebook(widget.cuenta.id);
+      if (!mounted) return;
+      final partial = (res['partial_messaging'] as bool?) ?? false;
+      final fields = (res['subscribed_fields'] as List?)?.join(', ') ?? 'feed';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            partial
+                ? 'Webhook suscrito en ($fields). Mensajeria requiere pages_messaging en Meta.'
+                : 'Webhook de pagina suscrito ($fields)',
+          ),
+        ),
+      );
+      await _cargarConfiguracion();
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error webhook: $e')));
     } finally {
@@ -142,9 +225,7 @@ class _AdminFacebookGestionScreenState
 
   Future<void> _editarPost(Map post) async {
     final postId = post['id']?.toString() ?? '';
-    if (postId.isEmpty) {
-      return;
-    }
+    if (postId.isEmpty) return;
     final ctrl = TextEditingController(text: post['message']?.toString() ?? '');
     final nuevo = await showDialog<String>(
       context: context,
@@ -164,9 +245,7 @@ class _AdminFacebookGestionScreenState
       ),
     );
     ctrl.dispose();
-    if (nuevo == null || nuevo.isEmpty) {
-      return;
-    }
+    if (nuevo == null || nuevo.isEmpty) return;
     await ref
         .read(socialRepositoryProvider)
         .editarPostFacebook(
@@ -179,9 +258,7 @@ class _AdminFacebookGestionScreenState
 
   Future<void> _eliminarPost(Map post) async {
     final postId = post['id']?.toString() ?? '';
-    if (postId.isEmpty) {
-      return;
-    }
+    if (postId.isEmpty) return;
     await ref
         .read(socialRepositoryProvider)
         .eliminarPostFacebook(cuentaId: widget.cuenta.id, postId: postId);
@@ -190,9 +267,7 @@ class _AdminFacebookGestionScreenState
 
   void _abrirComentarios(Map post) {
     final objectId = post['id']?.toString() ?? '';
-    if (objectId.isEmpty) {
-      return;
-    }
+    if (objectId.isEmpty) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -203,9 +278,7 @@ class _AdminFacebookGestionScreenState
 
   void _abrirConversacion(Map conv) {
     final convId = conv['id']?.toString() ?? '';
-    if (convId.isEmpty) {
-      return;
-    }
+    if (convId.isEmpty) return;
     final parts = conv['participants'];
     final list = (parts is Map ? parts['data'] : null) as List? ?? const [];
     String? recipientId;
@@ -246,6 +319,7 @@ class _AdminFacebookGestionScreenState
             Tab(text: 'Posts'),
             Tab(text: 'Inbox'),
             Tab(text: 'Metricas'),
+            Tab(text: 'Config'),
           ],
         ),
       ),
@@ -264,7 +338,12 @@ class _AdminFacebookGestionScreenState
           Expanded(
             child: TabBarView(
               controller: _tabs,
-              children: [_buildPosts(), _buildInbox(), _buildMetricas()],
+              children: [
+                _buildPosts(),
+                _buildInbox(),
+                _buildMetricas(),
+                _buildConfig(),
+              ],
             ),
           ),
         ],
@@ -294,15 +373,9 @@ class _AdminFacebookGestionScreenState
             subtitle: Text(p['created_time']?.toString() ?? ''),
             trailing: PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'comments') {
-                  _abrirComentarios(p);
-                }
-                if (v == 'edit') {
-                  _editarPost(p);
-                }
-                if (v == 'delete') {
-                  _eliminarPost(p);
-                }
+                if (v == 'comments') _abrirComentarios(p);
+                if (v == 'edit') _editarPost(p);
+                if (v == 'delete') _eliminarPost(p);
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'comments', child: Text('Comentarios')),
@@ -319,6 +392,45 @@ class _AdminFacebookGestionScreenState
   Widget _buildInbox() {
     if (_loadingConvs) {
       return const Center(child: CircularProgressIndicator());
+    }
+    if (_messagingMissing) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.info_outline),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Inbox de Messenger pendiente de permiso pages_messaging',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Meta requiere el permiso pages_messaging y el rol adecuado en la pagina para listar y responder conversaciones de Messenger. '
+                  'Los permisos de publicacion, metricas y administracion de pagina ya estan activos.',
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _cargarConversaciones,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar Inbox'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
     if (_conversaciones.isEmpty) {
       return const Center(child: Text('Sin conversaciones'));
@@ -364,6 +476,144 @@ class _AdminFacebookGestionScreenState
               ),
             );
           }),
+      ],
+    );
+  }
+
+  Widget _buildConfig() {
+    if (_loadingConfig && _configData.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final page = (_configData['page'] as Map?) ?? const {};
+    final subs = (_configData['subscribed_apps'] as List?) ?? const [];
+    final granted = ((_configData['granted_permissions'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .toList();
+    final hasMessaging = (_configData['has_pages_messaging'] as bool?) ?? false;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Datos de la pagina',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text('ID Meta: ${page['id'] ?? widget.cuenta.externalId}'),
+                Text('Nombre: ${page['name'] ?? widget.cuenta.nombreVisible}'),
+                Text('Categoria: ${page['category'] ?? '-'}'),
+                Text(
+                  'Seguidores: ${page['followers_count'] ?? 0} | Fans: ${page['fan_count'] ?? 0}',
+                ),
+                Text(
+                  'Estado: ${(page['is_published'] as bool? ?? true) ? 'Publicada' : 'No publicada'}',
+                ),
+                if (page['link'] != null) Text('Enlace: ${page['link']}'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Informacion y publicacion',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Publicacion automatica'),
+                  subtitle: const Text(
+                    'Enviar publicaciones automaticas desde Baqueano',
+                  ),
+                  value: _autoPublish,
+                  onChanged: (v) => setState(() => _autoPublish = v),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _aboutCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripcion / Acerca de',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _phoneCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Telefono',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _websiteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Sitio web',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _savingConfig ? null : _guardarConfiguracion,
+                  icon: const Icon(Icons.save),
+                  label: Text(
+                    _savingConfig ? 'Guardando...' : 'Guardar configuracion',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Webhooks y permisos Meta',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subs.isEmpty
+                      ? 'Webhooks: Sin suscripciones activas en la pagina'
+                      : 'Webhooks suscritos: ${subs.length} app(s)',
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  hasMessaging ? 'Messenger (pages_messaging): Activo' : 'Messenger (pages_messaging): Pendiente de habilitar en Meta Developers',
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: granted.map((p) => Chip(label: Text(p))).toList(),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _subscribingWebhook ? null : _suscribirWebhook,
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Suscribir / actualizar webhooks'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -416,9 +666,7 @@ class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
 
   Future<void> _enviar() async {
     final txt = _ctrl.text.trim();
-    if (txt.isEmpty) {
-      return;
-    }
+    if (txt.isEmpty) return;
     await ref
         .read(socialRepositoryProvider)
         .responderComentarioFacebook(
@@ -574,9 +822,7 @@ class _ConversacionSheetState extends ConsumerState<_ConversacionSheet> {
   Future<void> _enviar() async {
     final txt = _ctrl.text.trim();
     final dest = widget.recipientId;
-    if (txt.isEmpty || dest == null || dest.isEmpty) {
-      return;
-    }
+    if (txt.isEmpty || dest == null || dest.isEmpty) return;
     await ref
         .read(socialRepositoryProvider)
         .enviarMensajeFacebook(
