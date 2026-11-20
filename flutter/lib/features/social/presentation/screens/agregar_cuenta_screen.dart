@@ -30,6 +30,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   final Set<String> _seleccionadas = {};
   String _propietarioTipo = 'baqueano';
   String? _prestadorId;
+  bool _forzarSetup = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (status) {
-          if (!status.hasToken) {
+          if (!status.hasToken || _forzarSetup) {
             return const _SetupAdminTokenView();
           }
           return _ListaPaginasView(
@@ -54,6 +55,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
                 }
               });
             },
+            onRenovarToken: () => setState(() => _forzarSetup = true),
             propietarioTipo: _propietarioTipo,
             prestadorId: _prestadorId,
             onPropietarioChanged: (tipo, id) {
@@ -408,6 +410,7 @@ class _ListaPaginasView extends ConsumerWidget {
   const _ListaPaginasView({
     required this.seleccionadas,
     required this.onToggle,
+    this.onRenovarToken,
     required this.propietarioTipo,
     required this.prestadorId,
     required this.onPropietarioChanged,
@@ -415,6 +418,7 @@ class _ListaPaginasView extends ConsumerWidget {
 
   final Set<String> seleccionadas;
   final void Function(String id) onToggle;
+  final VoidCallback? onRenovarToken;
   final String propietarioTipo;
   final String? prestadorId;
   final void Function(String tipo, String? id) onPropietarioChanged;
@@ -433,9 +437,19 @@ class _ListaPaginasView extends ConsumerWidget {
               const SizedBox(height: 8),
               Text('$e', textAlign: TextAlign.center),
               const SizedBox(height: 8),
-              FilledButton(
-                onPressed: () => ref.invalidate(paginasAdminProvider),
-                child: const Text('Reintentar'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilledButton(
+                    onPressed: () => ref.invalidate(paginasAdminProvider),
+                    child: const Text('Reintentar'),
+                  ),
+                  if (onRenovarToken != null)
+                    OutlinedButton(
+                      onPressed: onRenovarToken,
+                      child: const Text('Renovar token'),
+                    ),
+                ],
               ),
             ],
           ),

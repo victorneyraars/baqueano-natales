@@ -518,7 +518,7 @@ async def obtener_insights_pagina(
 ) -> tuple[list[dict], FacebookError | None]:
     """Consulta metricas/insights de la pagina."""
     params = {
-        "metric": "page_impressions,page_post_engagements,page_views_total,page_follows",
+        "metric": "page_post_engagements,page_views_total,page_follows",
         "period": period,
         "access_token": page_token,
     }
