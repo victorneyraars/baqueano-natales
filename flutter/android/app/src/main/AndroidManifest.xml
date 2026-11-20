@@ -85,5 +85,6 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />
         </intent>
+        <package android:name="com.android.chrome" />
     </queries>
 </manifest>

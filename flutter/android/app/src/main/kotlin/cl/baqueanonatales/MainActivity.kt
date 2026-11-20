@@ -54,29 +54,31 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun abrirUrlSeguro(url: String, result: MethodChannel.Result) {
+        val uri = Uri.parse(url)
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
             // 1. Intentar forzar Google Chrome (Solución Motorola)
-            intent.setPackage("com.android.chrome")
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
+            val chromeIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                setPackage("com.android.chrome")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                startActivity(chromeIntent)
                 result.success(true)
                 return
+            } catch (_: android.content.ActivityNotFoundException) {
+                // Chrome no disponible; continuar al navegador por defecto
             }
 
-            // 2. Si Chrome no está instalado, usar el navegador por defecto
-            intent.setPackage(null)
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-                result.success(true)
-                return
+            // 2. Usar el navegador por defecto / selector del sistema
+            val defaultIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-
+            startActivity(defaultIntent)
+            result.success(true)
+        } catch (_: android.content.ActivityNotFoundException) {
             result.error("NO_BROWSER", "No se encontró ningún navegador instalado", null)
         } catch (e: Exception) {
-            result.error("INTENT_ERROR", "Error crítico: \${e.message}", null)
+            result.error("INTENT_ERROR", "Error crítico: ${e.message}", null)
         }
     }
 }
