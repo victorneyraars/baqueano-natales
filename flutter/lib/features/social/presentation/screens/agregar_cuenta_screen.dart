@@ -41,6 +41,13 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (status) {
+          if (status.hasToken && _forzarSetup) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _forzarSetup) {
+                setState(() => _forzarSetup = false);
+              }
+            });
+          }
           if (!status.hasToken || _forzarSetup) {
             return const _SetupAdminTokenView();
           }
@@ -135,6 +142,8 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   String? _oauthUrl;
   StreamSubscription<Uri>? _deepLinkSub;
   bool _deepLinkProcessed = false;
+  bool _savingFromDeepLink = false;
+  DateTime? _oauthRequestedAt;
 
   @override
   void initState() {
@@ -143,30 +152,33 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   }
 
   void _setupDeepLinkListener() {
-    // Escuchar links entrantes mientras la app esta en foreground.
     _deepLinkSub = DeepLinkService.instance.stream.listen(_handleDeepLink);
-    // Tambien chequear si la app arranco desde un deep link.
     DeepLinkService.instance.getInitial().then((uri) {
-      if (uri != null && mounted) _handleDeepLink(uri);
+      if (uri == null || !mounted) return;
+      if (_oauthRequestedAt != null &&
+          DateTime.now().difference(_oauthRequestedAt!).inMinutes > 15) {
+        return;
+      }
+      _handleDeepLink(uri);
     });
   }
 
   void _handleDeepLink(Uri uri) {
-    // Protección contra doble disparo (stream + getInitial + Intent duplicado)
-    if (_deepLinkProcessed) return;
+    if (_deepLinkProcessed || _savingFromDeepLink) return;
     final tokenRef = DeepLinkService.extractFacebookTokenRef(uri);
     if (tokenRef == null || tokenRef.isEmpty) return;
     if (!mounted) return;
-    _deepLinkProcessed = true;
-    // Auto-completar el token y guardar automaticamente
+    _savingFromDeepLink = true;
     _tokenRefCtrl.text = tokenRef;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Token recibido automaticamente'),
+        content: Text('Token recibido automaticamente, guardando...'),
         duration: Duration(seconds: 1),
       ),
     );
-    _guardar();
+    _guardar().whenComplete(() {
+      _savingFromDeepLink = false;
+    });
   }
 
   @override
@@ -177,6 +189,8 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   }
 
   Future<void> _generarUrl() async {
+    _deepLinkProcessed = false;
+    _oauthRequestedAt = DateTime.now();
     setState(() => _loading = true);
     try {
       final repo = ref.read(socialRepositoryProvider);
@@ -231,7 +245,9 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
     try {
       final repo = ref.read(socialRepositoryProvider);
       await repo.setupAdminToken(tokenRef);
+      _deepLinkProcessed = true;
       ref.invalidate(adminTokenStatusProvider);
+      ref.invalidate(paginasAdminProvider);
       // El widget _AgregarCuentaScreenState escucha este provider
       // y cambia automaticamente a la lista de paginas.
       if (mounted) {
