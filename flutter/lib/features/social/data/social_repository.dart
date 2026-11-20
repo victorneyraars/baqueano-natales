@@ -619,10 +619,18 @@ class SocialRepository {
     bool? autoPublish,
   }) async {
     final payload = <String, dynamic>{};
-    if (about != null) payload['about'] = about;
-    if (phone != null) payload['phone'] = phone;
-    if (website != null) payload['website'] = website;
-    if (autoPublish != null) payload['auto_publish'] = autoPublish;
+    if (about != null) {
+      payload['about'] = about;
+    }
+    if (phone != null) {
+      payload['phone'] = phone;
+    }
+    if (website != null) {
+      payload['website'] = website;
+    }
+    if (autoPublish != null) {
+      payload['auto_publish'] = autoPublish;
+    }
     final res = await _dio.patch(
       '/api/v1/admin/social/cuentas/$cuentaId/facebook/configuracion',
       data: payload,
@@ -644,16 +652,23 @@ class SocialRepository {
     String? imageUrl,
   }) async {
     final payload = <String, dynamic>{'mensaje': mensaje};
-    if (link != null && link.isNotEmpty) payload['link'] = link;
-    if (imageUrl != null && imageUrl.isNotEmpty)
+    if (link != null && link.isNotEmpty) {
+      payload['link'] = link;
+    }
+    if (imageUrl != null && imageUrl.isNotEmpty) {
       payload['image_url'] = imageUrl;
+    }
     final res = await _dio.post(
       '/api/v1/admin/social/cuentas/$cuentaId/facebook/posts',
       data: payload,
     );
     final raw = res.data;
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
     return const {'ok': true};
   }
 
