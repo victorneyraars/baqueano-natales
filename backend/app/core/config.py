@@ -141,7 +141,7 @@ class Settings(BaseSettings):
     FACEBOOK_OAUTH_SCOPES: str = (
         "pages_show_list,pages_read_engagement,pages_manage_posts,"
         "pages_manage_engagement,pages_read_user_content,"
-        "pages_messaging,pages_manage_metadata,read_insights,"
+        "pages_manage_metadata,read_insights,"
         "instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_messages"
     )
     FACEBOOK_WEBHOOK_VERIFY_TOKEN: str = ""
