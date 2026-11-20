@@ -113,6 +113,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: authChangeNotifier,
     debugLogDiagnostics: true,
     redirect: (context, state) async {
+      if (state.uri.scheme == 'baqueano' && state.uri.host == 'oauth') {
+        return '/admin/social/cuentas';
+      }
       final authState = ref.read(authNotifierProvider);
       final location = state.matchedLocation;
       final homePath = _homePathForFlavor();
@@ -717,29 +720,39 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Error')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Ruta no encontrada: ${state.uri}',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go('/splash'),
-                child: const Text('Volver al inicio'),
-              ),
-            ],
+    errorBuilder: (context, state) {
+      if (state.uri.scheme == 'baqueano') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.go('/admin/social/cuentas');
+          }
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Ruta no encontrada: ${state.uri}',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/splash'),
+                  child: const Text('Volver al inicio'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
 });
