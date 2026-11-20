@@ -600,22 +600,29 @@ class _AdminFacebookGestionScreenState
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.info_outline),
-                              SizedBox(width: 8),
+                              const Icon(Icons.info_outline),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Inbox pendiente de permiso de mensajería',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  _inboxPlatform == 'instagram'
+                                      ? 'Instagram no vinculado o sin mensajes activos'
+                                      : 'Inbox pendiente de permiso de mensajería',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Meta requiere el permiso pages_messaging y el rol adecuado en la página para listar y responder conversaciones. '
-                            'Los permisos de publicación, métricas y administración de página ya están activos.',
+                          Text(
+                            _inboxPlatform == 'instagram'
+                                ? 'Esta página aún no tiene una cuenta de Instagram vinculada o habilitada para mensajes. '
+                                      'Los permisos de publicación, métricas y administración de página ya están activos.'
+                                : 'Meta requiere el permiso pages_messaging y el rol adecuado en la página para listar y responder conversaciones. '
+                                      'Los permisos de publicación, métricas y administración de página ya están activos.',
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
