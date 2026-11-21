@@ -60,7 +60,7 @@ class _SelectorNombreServicioScreenState
   final List<String> _nombresPersonalizados = <String>[];
   String _terminoBusqueda = '';
   bool _cargando = true;
-  late String? _seleccionado;
+  String? _seleccionado;
 
   @override
   void initState() {
@@ -179,16 +179,23 @@ class _SelectorNombreServicioScreenState
     await _guardarPersonalizados();
   }
 
-  Future<void> _mostrarDialogoAgregarNombre() async {
+  Future<void> _mostrarDialogoNombre({String? nombreEditar}) async {
+    final esEdicion = nombreEditar != null;
     final ctrl = TextEditingController(
-      text: _terminoBusqueda.length >= 3 ? _terminoBusqueda : '',
+      text: esEdicion
+          ? nombreEditar
+          : (_terminoBusqueda.length >= 3 ? _terminoBusqueda : ''),
     );
     final formKey = GlobalKey<FormState>();
 
-    final nuevoNombre = await showDialog<String>(
+    final resultado = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Agregar nombre de servicio'),
+        title: Text(
+          esEdicion
+              ? 'Editar nombre de servicio'
+              : 'Agregar nombre de servicio',
+        ),
         content: Form(
           key: formKey,
           child: TextFormField(
@@ -219,7 +226,7 @@ class _SelectorNombreServicioScreenState
                 Navigator.of(ctx).pop(ctrl.text.trim());
               }
             },
-            child: const Text('Guardar en lista'),
+            child: Text(esEdicion ? 'Guardar cambios' : 'Guardar en lista'),
           ),
         ],
       ),
@@ -227,25 +234,58 @@ class _SelectorNombreServicioScreenState
 
     ctrl.dispose();
 
-    if (nuevoNombre == null || nuevoNombre.isEmpty) return;
+    if (resultado == null || resultado.isEmpty) return;
+
+    if (esEdicion) {
+      final oldKey = _normalizarTexto(nombreEditar);
+      final newKey = _normalizarTexto(resultado);
+      final duplicado = _todosLosNombres.any(
+        (n) => _normalizarTexto(n) == newKey && _normalizarTexto(n) != oldKey,
+      );
+      if (duplicado) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ese nombre ya existe en la lista')),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        final idx = _nombresPersonalizados.indexWhere(
+          (p) => _normalizarTexto(p) == oldKey,
+        );
+        if (idx != -1) {
+          _nombresPersonalizados[idx] = resultado;
+        }
+        if (_seleccionado != null &&
+            _normalizarTexto(_seleccionado!) == oldKey) {
+          _seleccionado = resultado;
+        }
+      });
+      await _guardarPersonalizados();
+      return;
+    }
 
     final existe = _todosLosNombres.any(
-      (n) => _normalizarTexto(n) == _normalizarTexto(nuevoNombre),
+      (n) => _normalizarTexto(n) == _normalizarTexto(resultado),
     );
 
     if (!existe) {
       setState(() {
-        _nombresPersonalizados.insert(0, nuevoNombre);
-        _seleccionado = nuevoNombre;
+        _nombresPersonalizados.insert(0, resultado);
+        _seleccionado = resultado;
       });
       await _guardarPersonalizados();
     } else {
-      setState(() => _seleccionado = nuevoNombre);
+      setState(() => _seleccionado = resultado);
     }
+  }
 
-    if (mounted) {
-      Navigator.of(context).pop(nuevoNombre);
-    }
+  void _confirmarSeleccion() {
+    final elegido = _seleccionado?.trim();
+    if (elegido == null || elegido.isEmpty) return;
+    Navigator.of(context).pop(elegido);
   }
 
   @override
@@ -254,11 +294,20 @@ class _SelectorNombreServicioScreenState
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nombres de servicio')),
+      appBar: AppBar(
+        title: const Text('Nombres de servicio'),
+        actions: [
+          TextButton.icon(
+            onPressed: _mostrarDialogoNombre,
+            icon: const Icon(Icons.add),
+            label: const Text('Nuevo'),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
             child: TextField(
               controller: _busquedaCtrl,
               textCapitalization: TextCapitalization.sentences,
@@ -275,6 +324,27 @@ class _SelectorNombreServicioScreenState
                 border: const OutlineInputBorder(),
                 isDense: true,
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Toca para marcar o doble toque para elegir al instante.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -300,7 +370,7 @@ class _SelectorNombreServicioScreenState
                           ),
                           const SizedBox(height: 12),
                           FilledButton.icon(
-                            onPressed: _mostrarDialogoAgregarNombre,
+                            onPressed: _mostrarDialogoNombre,
                             icon: const Icon(Icons.add),
                             label: const Text('Agregar a la lista'),
                           ),
@@ -309,7 +379,7 @@ class _SelectorNombreServicioScreenState
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
                     itemCount: opciones.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
@@ -320,37 +390,94 @@ class _SelectorNombreServicioScreenState
                           _normalizarTexto(_seleccionado!) ==
                               _normalizarTexto(nombre);
 
-                      return ListTile(
-                        leading: Icon(
-                          estaSeleccionado
-                              ? Icons.check_circle
-                              : (esPersonalizado
-                                    ? Icons.bookmark_added_outlined
-                                    : Icons.handyman_outlined),
+                      return GestureDetector(
+                        onDoubleTap: () {
+                          setState(() => _seleccionado = nombre);
+                          _confirmarSeleccion();
+                        },
+                        child: ListTile(
+                          leading: Icon(
+                            estaSeleccionado
+                                ? Icons.check_circle
+                                : (esPersonalizado
+                                      ? Icons.bookmark_added_outlined
+                                      : Icons.handyman_outlined),
+                            color: estaSeleccionado
+                                ? theme.colorScheme.primary
+                                : null,
+                          ),
+                          title: Text(
+                            nombre,
+                            style: estaSeleccionado
+                                ? const TextStyle(fontWeight: FontWeight.w600)
+                                : null,
+                          ),
+                          subtitle: Text(
+                            esPersonalizado ? 'Agregado por ti' : 'Sugerido',
+                          ),
+                          selected: estaSeleccionado,
+                          trailing: esPersonalizado
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Editar nombre',
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => _mostrarDialogoNombre(
+                                        nombreEditar: nombre,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Eliminar nombre',
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 20,
+                                      ),
+                                      onPressed: () =>
+                                          _eliminarPersonalizado(nombre),
+                                    ),
+                                  ],
+                                )
+                              : null,
+                          onTap: () => setState(() => _seleccionado = nombre),
                         ),
-                        title: Text(nombre),
-                        subtitle: Text(
-                          esPersonalizado ? 'Agregado por ti' : 'Sugerido',
-                        ),
-                        selected: estaSeleccionado,
-                        trailing: esPersonalizado
-                            ? IconButton(
-                                tooltip: 'Eliminar nombre personalizado',
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => _eliminarPersonalizado(nombre),
-                              )
-                            : null,
-                        onTap: () => Navigator.of(context).pop(nombre),
                       );
                     },
                   ),
           ),
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(top: BorderSide(color: theme.dividerColor)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _seleccionado != null
+                          ? _confirmarSeleccion
+                          : null,
+                      icon: const Icon(Icons.check),
+                      label: Text(
+                        _seleccionado != null
+                            ? 'Usar "${_seleccionado!}"'
+                            : 'Selecciona un nombre',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _mostrarDialogoAgregarNombre,
-        icon: const Icon(Icons.add),
-        label: const Text('Agregar nombre'),
       ),
     );
   }
