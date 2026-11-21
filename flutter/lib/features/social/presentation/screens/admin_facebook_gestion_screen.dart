@@ -870,6 +870,7 @@ class _ComentariosSheet extends ConsumerStatefulWidget {
 
 class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
   bool _loading = true;
+  bool _sending = false;
   List _items = const [];
   final _ctrl = TextEditingController();
 
@@ -905,17 +906,25 @@ class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
   }
 
   Future<void> _enviar() async {
+    if (_sending) return;
     final txt = _ctrl.text.trim();
     if (txt.isEmpty) return;
-    await ref
-        .read(socialRepositoryProvider)
-        .responderComentarioFacebook(
-          cuentaId: widget.cuentaId,
-          objectId: widget.objectId,
-          mensaje: txt,
-        );
+    setState(() => _sending = true);
     _ctrl.clear();
-    await _cargar();
+    try {
+      await ref
+          .read(socialRepositoryProvider)
+          .responderComentarioFacebook(
+            cuentaId: widget.cuentaId,
+            objectId: widget.objectId,
+            mensaje: txt,
+          );
+      await _cargar();
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      }
+    }
   }
 
   @override
@@ -997,7 +1006,16 @@ class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
                     decoration: const InputDecoration(hintText: 'Responder...'),
                   ),
                 ),
-                IconButton(onPressed: _enviar, icon: const Icon(Icons.send)),
+                IconButton(
+                  onPressed: _sending ? null : _enviar,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send),
+                ),
               ],
             ),
           ],
@@ -1025,6 +1043,7 @@ class _ConversacionSheet extends ConsumerStatefulWidget {
 
 class _ConversacionSheetState extends ConsumerState<_ConversacionSheet> {
   bool _loading = true;
+  bool _sending = false;
   List _mensajes = const [];
   final _ctrl = TextEditingController();
 
@@ -1060,18 +1079,26 @@ class _ConversacionSheetState extends ConsumerState<_ConversacionSheet> {
   }
 
   Future<void> _enviar() async {
+    if (_sending) return;
     final txt = _ctrl.text.trim();
     final dest = widget.recipientId;
     if (txt.isEmpty || dest == null || dest.isEmpty) return;
-    await ref
-        .read(socialRepositoryProvider)
-        .enviarMensajeFacebook(
-          cuentaId: widget.cuentaId,
-          recipientId: dest,
-          texto: txt,
-        );
+    setState(() => _sending = true);
     _ctrl.clear();
-    await _cargar();
+    try {
+      await ref
+          .read(socialRepositoryProvider)
+          .enviarMensajeFacebook(
+            cuentaId: widget.cuentaId,
+            recipientId: dest,
+            texto: txt,
+          );
+      await _cargar();
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      }
+    }
   }
 
   @override
@@ -1116,8 +1143,16 @@ class _ConversacionSheetState extends ConsumerState<_ConversacionSheet> {
                   ),
                 ),
                 IconButton(
-                  onPressed: widget.recipientId == null ? null : _enviar,
-                  icon: const Icon(Icons.send),
+                  onPressed: (_sending || widget.recipientId == null)
+                      ? null
+                      : _enviar,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send),
                 ),
               ],
             ),
