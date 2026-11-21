@@ -668,21 +668,44 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                     const SizedBox(height: 16),
 
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: TextFormField(
-                            controller: _precioDesdeCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Precio desde',
-                              hintText: '0',
-                              border: OutlineInputBorder(),
-                              prefixText: '\$ ',
-                            ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _precioDesdeCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Precio desde',
+                                  hintText: '20000',
+                                  border: OutlineInputBorder(),
+                                  prefixText: '\$ ',
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  for (final monto in [20000, 25000, 35000])
+                                    ActionChip(
+                                      label: Text(
+                                        '\$${monto.toString().replaceAllMapped(RegExp(r"\B(?=(\d{3})+(?!\d))"), (m) => ".")}',
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => setState(
+                                        () => _precioDesdeCtrl.text = '$monto',
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
-                            textInputAction: TextInputAction.next,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -706,7 +729,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Dejá los precios en blanco si preferís "Consultar"',
+                      'Deja los precios en blanco si prefieres "Consultar"',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -795,12 +818,21 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                     SwitchListTile(
                       title: const Text('Servicio destacado'),
                       subtitle: const Text(
-                        'Marcalo como tu servicio estrella (aparece primero)',
+                        'Márcalo como tu servicio estrella (aparece primero)',
                       ),
                       value: _destacado,
                       onChanged: (v) => setState(() => _destacado = v),
                       contentPadding: EdgeInsets.zero,
                     ),
+                    if (!_esEdicion) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Al agregar el servicio se encolará automáticamente para las redes configuradas si el envío automático está activo.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                   ],
                 ),
