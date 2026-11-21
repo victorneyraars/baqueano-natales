@@ -423,6 +423,14 @@ class _AdminFacebookGestionScreenState
     await _cargarPosts();
   }
 
+  String _formatearFecha(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final dt = DateTime.tryParse(raw.trim())?.toLocal();
+    if (dt == null) return raw.trim();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
   void _abrirComentarios(Map post) {
     final objectId = post['id']?.toString() ?? '';
     if (objectId.isEmpty) return;
@@ -543,7 +551,9 @@ class _AdminFacebookGestionScreenState
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        subtitle: Text(p['created_time']?.toString() ?? ''),
+                        subtitle: Text(
+                          _formatearFecha(p['created_time']?.toString()),
+                        ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (v) {
                             if (v == 'comments') _abrirComentarios(p);
@@ -989,9 +999,30 @@ class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
                         final c = _items[i] as Map;
                         final id = c['id']?.toString() ?? '';
                         final hidden = (c['is_hidden'] as bool?) ?? false;
+                        final fromObj = c['from'];
+                        String autorCom = 'Usuario';
+                        if (fromObj is Map) {
+                          final n = fromObj['name']?.toString().trim() ?? '';
+                          if (n.isNotEmpty) autorCom = n;
+                        }
+                        final msgCom = c['message']?.toString() ?? '';
                         return ListTile(
-                          title: Text(c['message']?.toString() ?? ''),
-                          subtitle: Text(hidden ? 'Oculto' : 'Visible'),
+                          title: Text(
+                            autorCom,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            hidden ? '$msgCom · (Oculto)' : msgCom,
+                          ),
+                          onTap: () {
+                            _ctrl.text = '@$autorCom ';
+                            _ctrl.selection = TextSelection.fromPosition(
+                              TextPosition(offset: _ctrl.text.length),
+                            );
+                          },
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -1034,6 +1065,48 @@ class _ComentariosSheetState extends ConsumerState<_ComentariosSheet> {
                       },
                     ),
             ),
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ActionChip(
+                      label: const Text('Cotización aceite'),
+                      onPressed: () {
+                        _ctrl.text = 'Hola! El cambio de aceite a domicilio en Puerto Natales va desde \$[BASE] (solo mano de obra; tú aportas aceite y filtro). Retiro de aceite usado opcional por \$[EXTRA]. ¿Qué marca, modelo, año y sector de Puerto Natales es?';
+                        _ctrl.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _ctrl.text.length),
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ActionChip(
+                      label: const Text('Pedir datos auto'),
+                      onPressed: () {
+                        _ctrl.text = 'Para confirmarte disponibilidad y detalle en Puerto Natales, indícame: 1) marca, modelo y año, 2) sector y 3) si necesitas retiro de aceite usado.';
+                        _ctrl.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _ctrl.text.length),
+                        );
+                      },
+                    ),
+                  ),
+                  ActionChip(
+                    label: const Text('Coordinar hora'),
+                    onPressed: () {
+                      _ctrl.text = 'Perfecto, revisemos horario. ¿Te acomoda hoy o mañana en la mañana/tarde en el sector indicado?';
+                      _ctrl.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _ctrl.text.length),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
