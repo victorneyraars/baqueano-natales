@@ -641,7 +641,9 @@ async def conectar_cuenta_facebook(
 
     pagina = facebook_service.buscar_pagina(paginas, page_id)
     if not pagina:
-        raise ValueError(f"La p?gina {page_id} no est? entre las del usuario")
+        pagina, derr = await facebook_service.obtener_pagina_directa(user_token, page_id)
+        if derr or not pagina:
+            raise ValueError(f"La p?gina {page_id} no est? entre las del usuario")
     if not pagina.access_token:
         raise ValueError("La p?gina no devolvi? access_token (?permisos?)")
 
@@ -1083,7 +1085,9 @@ async def conectar_cuenta_admin(
 
     pagina = facebook_service.buscar_pagina(paginas, page_id)
     if not pagina:
-        raise ValueError(f"La pagina {page_id} no esta entre las del admin")
+        pagina, derr = await facebook_service.obtener_pagina_directa(user_token, page_id)
+        if derr or not pagina:
+            raise ValueError(f"La pagina {page_id} no esta entre las del admin")
     if not pagina.access_token:
         raise ValueError("La pagina no devolvio access_token (permisos?)")
 

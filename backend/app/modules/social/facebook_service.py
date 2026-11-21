@@ -186,7 +186,7 @@ async def listar_paginas(
     """
     params = {
         "access_token": user_token,
-        "fields": "id,name,category,tasks,access_token",
+        "fields": "id,name,category,access_token",
     }
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
@@ -197,7 +197,21 @@ async def listar_paginas(
     if resp.status_code != 200:
         return [], _parse_error(resp)
 
-    data = resp.json().get("data", [])
+    payload_json = resp.json()
+    data = list(payload_json.get("data", []))
+    next_url = (payload_json.get("paging") or {}).get("next")
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        while next_url:
+            try:
+                p_resp = await client.get(next_url)
+            except httpx.HTTPError:
+                break
+            if p_resp.status_code != 200:
+                break
+            p_json = p_resp.json()
+            data.extend(p_json.get("data", []))
+            next_url = (p_json.get("paging") or {}).get("next")
+
     paginas = [
         PaginaFacebook(
             id=p["id"],
@@ -209,6 +223,36 @@ async def listar_paginas(
         for p in data
     ]
     return paginas, None
+
+
+async def obtener_pagina_directa(
+    user_token: str,
+    page_id: str,
+) -> tuple[Optional[PaginaFacebook], Optional[FacebookError]]:
+    """Consulta directamente /{page_id} cuando no figura en /me/accounts (ej. portafolio comercial)."""
+    params = {
+        "access_token": user_token,
+        "fields": "id,name,category,access_token",
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.get(_graph_url(page_id), params=params)
+        except httpx.HTTPError as e:
+            return None, FacebookError(message=f"Error de red: {e}")
+
+    if resp.status_code != 200:
+        return None, _parse_error(resp)
+
+    p = resp.json() or {}
+    if not p.get("id"):
+        return None, FacebookError(message="Respuesta sin id de pagina")
+    return PaginaFacebook(
+        id=str(p["id"]),
+        name=p.get("name", "(sin nombre)"),
+        category=p.get("category"),
+        access_token=p.get("access_token", ""),
+        tasks=p.get("tasks", []),
+    ), None
 
 
 # ---------------------------------------------------------------- verificaci?n
