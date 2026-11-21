@@ -459,6 +459,7 @@ class _AdminFacebookGestionScreenState
         conversationId: convId,
         recipientId: recipientId,
         titulo: titulo,
+        nombrePagina: widget.cuenta.nombreVisible,
       ),
     );
   }
@@ -641,12 +642,47 @@ class _AdminFacebookGestionScreenState
                   itemCount: _conversaciones.length,
                   itemBuilder: (_, i) {
                     final c = _conversaciones[i] as Map;
+                    final parts = c['participants'];
+                    final plist =
+                        (parts is Map ? parts['data'] : null) as List? ??
+                        const [];
+                    String autor = 'Conversación';
+                    for (final item in plist) {
+                      if (item is Map) {
+                        final pid = item['id']?.toString();
+                        if (pid != null && pid != widget.cuenta.externalId) {
+                          autor =
+                              item['name']?.toString().trim().isNotEmpty == true
+                              ? item['name'].toString().trim()
+                              : (item['username']
+                                            ?.toString()
+                                            .trim()
+                                            .isNotEmpty ==
+                                        true
+                                    ? item['username'].toString().trim()
+                                    : autor);
+                          break;
+                        }
+                      }
+                    }
+                    final snippet = c['snippet']?.toString().trim() ?? '';
+                    final updated = c['updated_time']?.toString().trim() ?? '';
+                    final sub = [
+                      if (snippet.isNotEmpty) snippet,
+                      if (updated.isNotEmpty) updated,
+                    ].join(' · ');
                     return ListTile(
                       title: Text(
-                        c['snippet']?.toString() ?? 'Conversación',
-                        maxLines: 2,
+                        autor,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: Text(c['updated_time']?.toString() ?? ''),
+                      subtitle: sub.isEmpty
+                          ? null
+                          : Text(
+                              sub,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                       onTap: () => _abrirConversacion(c),
                     );
                   },
@@ -1031,11 +1067,13 @@ class _ConversacionSheet extends ConsumerStatefulWidget {
     required this.conversationId,
     required this.recipientId,
     required this.titulo,
+    this.nombrePagina = '',
   });
   final String cuentaId;
   final String conversationId;
   final String? recipientId;
   final String titulo;
+  final String nombrePagina;
 
   @override
   ConsumerState<_ConversacionSheet> createState() => _ConversacionSheetState();
@@ -1124,12 +1162,49 @@ class _ConversacionSheetState extends ConsumerState<_ConversacionSheet> {
                   : ListView.builder(
                       reverse: true,
                       itemCount: _mensajes.length,
-                      itemBuilder: (_, i) => ListTile(
-                        title: Text(
-                          (_mensajes[i] as Map)['message']?.toString() ??
-                              '(Adjunto)',
-                        ),
-                      ),
+                      itemBuilder: (_, i) {
+                        final msg = _mensajes[i] as Map;
+                        final from = msg['from'];
+                        String remitente = widget.titulo;
+                        bool esPagina = false;
+                        if (from is Map) {
+                          final fid = from['id']?.toString();
+                          final fname = from['name']?.toString().trim() ?? '';
+                          final funame =
+                              from['username']?.toString().trim() ?? '';
+                          if (fname.isNotEmpty) {
+                            remitente = fname;
+                          } else if (funame.isNotEmpty) {
+                            remitente = funame;
+                          }
+                          if (fid != null &&
+                              fid.isNotEmpty &&
+                              fname.isEmpty &&
+                              funame.isEmpty) {
+                            remitente = fid;
+                          }
+                        }
+                        if (remitente.toLowerCase() ==
+                            widget.nombrePagina.toLowerCase()) {
+                          esPagina = true;
+                        }
+                        final texto = msg['message']?.toString().trim();
+                        final cuerpo = (texto != null && texto.isNotEmpty)
+                            ? texto
+                            : '(Adjunto)';
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            remitente,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: esPagina ? Colors.blueGrey : Colors.teal,
+                            ),
+                          ),
+                          subtitle: Text(cuerpo),
+                        );
+                      },
                     ),
             ),
             Row(
