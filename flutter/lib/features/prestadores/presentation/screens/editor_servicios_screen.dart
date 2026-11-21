@@ -714,36 +714,77 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                     const SizedBox(height: 16),
 
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: TextFormField(
-                            controller: _duracionCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Duración',
-                              hintText: '30',
-                              border: OutlineInputBorder(),
-                              suffixText: 'min',
-                            ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _duracionCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Duración',
+                                  hintText: '45',
+                                  border: OutlineInputBorder(),
+                                  suffixText: 'min',
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  for (final min in [30, 45, 60])
+                                    ActionChip(
+                                      label: Text('${min}m'),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => setState(
+                                        () => _duracionCtrl.text = '$min',
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
-                            textInputAction: TextInputAction.next,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: TextFormField(
-                            controller: _garantiaCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Garantía',
-                              hintText: '30',
-                              border: OutlineInputBorder(),
-                              suffixText: 'días',
-                            ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _garantiaCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Garantía',
+                                  hintText: '30',
+                                  border: OutlineInputBorder(),
+                                  suffixText: 'días',
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  for (final dias in [15, 30, 90])
+                                    ActionChip(
+                                      label: Text('${dias}d'),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => setState(
+                                        () => _garantiaCtrl.text = '$dias',
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         ),

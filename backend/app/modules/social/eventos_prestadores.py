@@ -253,6 +253,26 @@ async def encolar_servicio_nuevo(
         elif desde is not None:
             lineas.append(f"Desde {_precio_clp(desde)}")
 
+        duracion = getattr(servicio, "duracion_estimada_min", None)
+        garantia = getattr(servicio, "garantia_dias", None)
+        detalles: list[str] = []
+        if duracion is not None:
+            try:
+                m = int(duracion)
+                if m > 0:
+                    detalles.append(f"Duracion estimada: {m} min")
+            except (TypeError, ValueError):
+                pass
+        if garantia is not None:
+            try:
+                d = int(garantia)
+                if d > 0:
+                    detalles.append(f"Garantia: {d} dias")
+            except (TypeError, ValueError):
+                pass
+        if detalles:
+            lineas.append(" · ".join(detalles))
+
         if servicio.descripcion:
             lineas.append("")
             lineas.append(servicio.descripcion)
