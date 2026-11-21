@@ -535,7 +535,7 @@ class _ListaPaginasView extends ConsumerWidget {
               _PaginaTile(
                 pagina: p,
                 selected: seleccionadas.contains(p.id),
-                onTap: p.yaConectada ? null : () => onToggle(p.id),
+                onTap: () => onToggle(p.id),
               ),
           ],
         );
@@ -560,10 +560,10 @@ class _PaginaTile extends StatelessWidget {
     return Card(
       child: CheckboxListTile(
         value: selected,
-        onChanged: pagina.yaConectada ? null : (_) => onTap?.call(),
+        onChanged: (_) => onTap?.call(),
         title: Text(pagina.name),
         subtitle: pagina.yaConectada
-            ? const Text('Ya conectada')
+            ? const Text('Ya conectada · Seleccioná para reconectar')
             : (pagina.category != null ? Text(pagina.category!) : null),
         secondary: const Icon(Icons.facebook, color: Color(0xFF1877F2)),
       ),

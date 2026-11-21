@@ -9,6 +9,7 @@ library;
 import 'package:baqueano_natales/features/social/presentation/screens/agregar_cuenta_screen.dart';
 
 import 'package:flutter/material.dart';
+
 import 'package:baqueano_natales/features/social/presentation/screens/admin_facebook_gestion_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -259,6 +260,22 @@ class _CuentaCard extends ConsumerWidget {
                           size: 18,
                         ),
                         label: const Text('Gestionar pagina'),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => const AgregarCuentaScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Reconectar / actualizar permisos'),
                       ),
                     ),
                   ],
