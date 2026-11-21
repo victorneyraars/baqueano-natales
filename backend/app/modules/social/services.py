@@ -1153,6 +1153,31 @@ async def conectar_cuenta_admin(
         )
         db.add(token)
 
+    # Refrescar cache de Instagram Business vinculado a la pagina (si aplica)
+    try:
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=15.0) as _client:
+            _ig_resp = await _client.get(
+                facebook_service._graph_url(pagina.id),
+                params={
+                    "fields": "instagram_business_account{id,username}",
+                    "access_token": pagina.access_token,
+                },
+            )
+        if _ig_resp.status_code == 200:
+            _iga = (_ig_resp.json() or {}).get("instagram_business_account") or {}
+            _meta = dict(cuenta.metadata_extra or {})
+            if _iga.get("id"):
+                _meta["instagram_business_account_id"] = _iga.get("id")
+                if _iga.get("username"):
+                    _meta["instagram_username"] = _iga.get("username")
+            else:
+                _meta.pop("instagram_business_account_id", None)
+                _meta.pop("instagram_username", None)
+            cuenta.metadata_extra = _meta or None
+    except Exception:
+        pass
+
     await db.flush()
     await db.refresh(cuenta)
     return cuenta, nombre_final
