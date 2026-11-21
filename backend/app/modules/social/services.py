@@ -1122,19 +1122,26 @@ async def conectar_cuenta_admin(
 
     # Guardar token de la pagina cifrado
     from app.modules.social.models import TokenSocial
-    existing_token = await db.execute(
-        select(TokenSocial).where(TokenSocial.cuenta_id == cuenta.id)
+    existing_tokens = await db.execute(
+        select(TokenSocial)
+        .where(TokenSocial.cuenta_id == cuenta.id)
+        .order_by(TokenSocial.id.desc())
     )
-    token = existing_token.scalar_one_or_none()
-    if token:
-        token.access_token = crypto.cifrar(pagina.access_token)
-        token.scope = "pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights"
+    tokens_list = list(existing_tokens.scalars().all())
+    scope_str = "pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights"
+    cifrado = crypto.cifrar(pagina.access_token)
+    if tokens_list:
+        token = tokens_list[0]
+        token.access_token = cifrado
+        token.scope = scope_str
+        for extra_tok in tokens_list[1:]:
+            await db.delete(extra_tok)
     else:
         token = TokenSocial(
             cuenta_id=cuenta.id,
-            access_token=crypto.cifrar(pagina.access_token),
+            access_token=cifrado,
             token_type="Bearer",
-            scope="pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights",
+            scope=scope_str,
         )
         db.add(token)
 
