@@ -742,12 +742,15 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                                 runSpacing: 4,
                                 children: [
                                   for (final monto in [20000, 25000, 35000])
-                                    ActionChip(
+                                    ChoiceChip(
                                       label: Text(
                                         '\$${monto.toString().replaceAllMapped(RegExp(r"\B(?=(\d{3})+(?!\d))"), (m) => ".")}',
                                       ),
+                                      selected:
+                                          _precioDesdeCtrl.text.trim() ==
+                                          '$monto',
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: () => setState(
+                                      onSelected: (_) => setState(
                                         () => _precioDesdeCtrl.text = '$monto',
                                       ),
                                     ),
@@ -771,6 +774,18 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             textInputAction: TextInputAction.next,
+                            validator: (v) {
+                              final desde = _parseIntOrNull(
+                                _precioDesdeCtrl.text,
+                              );
+                              final hasta = _parseIntOrNull(v ?? '');
+                              if (desde != null &&
+                                  hasta != null &&
+                                  hasta < desde) {
+                                return 'Debe ser >= precio desde';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                       ],
@@ -811,10 +826,12 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                                 runSpacing: 4,
                                 children: [
                                   for (final min in [30, 45, 60])
-                                    ActionChip(
+                                    ChoiceChip(
                                       label: Text('${min}m'),
+                                      selected:
+                                          _duracionCtrl.text.trim() == '$min',
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: () => setState(
+                                      onSelected: (_) => setState(
                                         () => _duracionCtrl.text = '$min',
                                       ),
                                     ),
