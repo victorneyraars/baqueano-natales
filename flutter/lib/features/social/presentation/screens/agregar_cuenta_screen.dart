@@ -18,7 +18,9 @@ import 'package:baqueano_natales/features/social/domain/pagina_facebook.dart';
 /// 1. Si NO hay admin token → muestra setup (OAuth + pegar token_ref).
 /// 2. Si hay admin token → muestra lista de páginas con checkboxes.
 class AgregarCuentaScreen extends ConsumerStatefulWidget {
-  const AgregarCuentaScreen({super.key});
+  const AgregarCuentaScreen({super.key, this.iniciarSetup = false});
+
+  final bool iniciarSetup;
 
   @override
   ConsumerState<AgregarCuentaScreen> createState() =>
@@ -30,7 +32,13 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   final Set<String> _seleccionadas = {};
   String _propietarioTipo = 'baqueano';
   String? _prestadorId;
-  bool _forzarSetup = false;
+  late bool _forzarSetup;
+
+  @override
+  void initState() {
+    super.initState();
+    _forzarSetup = widget.iniciarSetup;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +526,20 @@ class _ListaPaginasView extends ConsumerWidget {
                         onPropietarioChanged(s.first, prestadorId);
                       },
                     ),
+
+                    if (onRenovarToken != null) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: onRenovarToken,
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text(
+                            'Renovar permisos Facebook (OAuth)',
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

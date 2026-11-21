@@ -270,7 +270,8 @@ class _CuentaCard extends ConsumerWidget {
                         onPressed: () {
                           Navigator.of(context).push<void>(
                             MaterialPageRoute(
-                              builder: (_) => const AgregarCuentaScreen(),
+                              builder: (_) =>
+                                  const AgregarCuentaScreen(iniciarSetup: true),
                             ),
                           );
                         },
