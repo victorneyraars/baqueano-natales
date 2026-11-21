@@ -18,6 +18,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/selector_nombre_servicio_screen.dart';
 
 class EditorServiciosScreen extends ConsumerWidget {
   const EditorServiciosScreen({super.key, required this.prestadorId});
@@ -610,15 +611,37 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                   children: [
                     TextFormField(
                       controller: _nombreCtrl,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Nombre del servicio *',
                         hintText: 'Ej: Cambio de aceite y filtro',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: 'Elegir o agregar nombre de servicio',
+                          icon: const Icon(
+                            Icons.arrow_drop_down_circle_outlined,
+                          ),
+                          onPressed: () async {
+                            final elegido = await Navigator.of(context)
+                                .push<String>(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SelectorNombreServicioScreen(
+                                          nombreInicial: _nombreCtrl.text,
+                                        ),
+                                  ),
+                                );
+                            if (elegido != null &&
+                                elegido.trim().isNotEmpty &&
+                                mounted) {
+                              setState(() => _nombreCtrl.text = elegido.trim());
+                            }
+                          },
+                        ),
                       ),
                       textInputAction: TextInputAction.next,
                       validator: (v) {
                         final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Ingresá el nombre';
+                        if (t.isEmpty) return 'Ingresa el nombre';
                         if (t.length < 3) return 'Mínimo 3 caracteres';
                         return null;
                       },
