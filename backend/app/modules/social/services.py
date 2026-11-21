@@ -682,23 +682,31 @@ async def conectar_cuenta_facebook(
 
     # 5. Guardar token cifrado (reemplaza el anterior si exist?a)
     ahora = datetime.now(timezone.utc)
-    token_row = await db.execute(
-        select(TokenSocial).where(TokenSocial.cuenta_id == cuenta.id)
-    )
-    token_obj = token_row.scalar_one_or_none()
+    scope_page = "pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights"
+    token_rows = (
+        await db.execute(
+            select(TokenSocial)
+            .where(TokenSocial.cuenta_id == cuenta.id)
+            .order_by(TokenSocial.id.desc())
+        )
+    ).scalars().all()
     token_cifrado = crypto.cifrar(pagina.access_token)
     expira = ahora + timedelta(days=60)
 
-    if token_obj:
+    if token_rows:
+        token_obj = token_rows[0]
         token_obj.access_token = token_cifrado
         token_obj.expires_at = expira
+        token_obj.scope = scope_page
+        for extra in token_rows[1:]:
+            await db.delete(extra)
     else:
         token_obj = TokenSocial(
             cuenta_id=cuenta.id,
             access_token=token_cifrado,
             token_type="page",
             expires_at=expira,
-            scope="pages_manage_posts,pages_read_engagement,pages_messaging,pages_manage_engagement,pages_manage_metadata,pages_read_user_content,pages_show_list,read_insights",
+            scope=scope_page,
         )
         db.add(token_obj)
 
@@ -957,7 +965,7 @@ async def guardar_admin_token(db: AsyncSession, token_ref: str) -> ConfigSocial:
     paginas_por_id = {p.id: p for p in paginas if p.access_token}
     if paginas_por_id:
         stmt_cuentas = select(CuentaSocial).where(
-            CuentaSocial.platform == "facebook",
+            CuentaSocial.red == RedSocial.facebook,
             CuentaSocial.activo.is_(True),
             CuentaSocial.external_id.in_(list(paginas_por_id.keys())),
         )
