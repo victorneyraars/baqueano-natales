@@ -100,12 +100,20 @@ def construir_url_autorizacion(state: str) -> str:
     """URL del di?logo OAuth para que el admin autorice la app."""
     if not settings.FACEBOOK_APP_ID:
         raise RuntimeError("FACEBOOK_APP_ID no configurado")
+    raw_scopes = [
+        s.strip()
+        for s in (settings.FACEBOOK_OAUTH_SCOPES or "").split(",")
+        if s.strip()
+    ]
+    if "pages_messaging" not in raw_scopes:
+        raw_scopes.append("pages_messaging")
     params = {
         "client_id": settings.FACEBOOK_APP_ID,
         "redirect_uri": settings.FACEBOOK_OAUTH_REDIRECT_URI,
         "state": state,
-        "scope": settings.FACEBOOK_OAUTH_SCOPES,
+        "scope": ",".join(raw_scopes),
         "response_type": "code",
+        "auth_type": "rerequest",
     }
     base = (
         f"https://www.facebook.com/{settings.FACEBOOK_GRAPH_API_VERSION}"
