@@ -17,14 +17,48 @@ class SelectorNombreServicioScreen extends StatefulWidget {
 class _SelectorNombreServicioScreenState
     extends State<SelectorNombreServicioScreen> {
   static const List<String> _nombresBase = <String>[
+    // Aceite, filtros y fluidos
     'Cambio de aceite y filtro a domicilio',
+    'Cambio de aceite de motor',
+    'Cambio de filtro de aire / habitáculo / combustible',
+    'Revisión y relleno de niveles y fluidos',
+    'Purga y cambio de líquido de frenos',
+    'Revisión y cambio de refrigerante',
+    // Frenos
     'Revisión y cambio de frenos',
+    'Cambio de pastillas de freno delanteras',
+    'Cambio de pastillas o balatas traseras',
+    'Rectificación o cambio de discos / tambores de freno',
+    'Regulación de freno de mano / estacionamiento',
+    // Eléctrico, carga y diagnóstico
     'Diagnóstico eléctrico / batería',
-    'Mantención preventiva',
+    'Escáner automotriz y diagnóstico de fallas',
+    'Prueba de alternador y sistema de carga',
+    'Cambio de batería a domicilio',
+    'Revisión y reparación de motor de partida',
+    'Revisión de luces, fusibles y relays',
+    // Suspensión, dirección y neumáticos
     'Revisión de suspensión y tren delantero',
+    'Cambio de amortiguadores y cazoletas',
+    'Cambio de terminales, rótulas o bandejas',
+    'Rotación e inspección de neumáticos',
+    // Motor y mantención general
+    'Mantención preventiva',
+    'Mantención por kilometraje',
+    'Revisión y cambio de correas / tensores',
+    'Cambio de bujías y cables / bobinas',
+    'Revisión precompra de vehículo',
+    'Asistencia y diagnóstico a domicilio',
+    // Hogar, instalaciones y reparaciones generales
+    'Instalaciones y reparaciones menores',
+    'Reparación de cerraduras, bisagras y herrajes',
+    'Instalación de luminarias, enchufes o soportes',
+    'Gasfitería básica y reparación de fugas',
   ];
 
+  final TextEditingController _busquedaCtrl = TextEditingController();
   final List<String> _nombresPersonalizados = <String>[];
+  String _terminoBusqueda = '';
   bool _cargando = true;
   late String? _seleccionado;
 
@@ -33,7 +67,35 @@ class _SelectorNombreServicioScreenState
     super.initState();
     final inicial = widget.nombreInicial?.trim();
     _seleccionado = (inicial != null && inicial.isNotEmpty) ? inicial : null;
+    _busquedaCtrl.addListener(() {
+      setState(() => _terminoBusqueda = _busquedaCtrl.text.trim());
+    });
     _cargarPersonalizados();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
+
+  String _normalizarTexto(String texto) {
+    const reemplazos = {
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'ñ': 'n',
+    };
+    final lower = texto.toLowerCase().trim();
+    final buf = StringBuffer();
+    for (final rune in lower.runes) {
+      final ch = String.fromCharCode(rune);
+      buf.write(reemplazos[ch] ?? ch);
+    }
+    return buf.toString();
   }
 
   Future<File> _archivoPersonalizados() async {
@@ -84,7 +146,7 @@ class _SelectorNombreServicioScreenState
     final vistos = <String>{};
     final resultado = <String>[];
     for (final item in [..._nombresPersonalizados, ..._nombresBase]) {
-      final key = item.toLowerCase();
+      final key = _normalizarTexto(item);
       if (vistos.add(key)) {
         resultado.add(item);
       }
@@ -92,8 +154,35 @@ class _SelectorNombreServicioScreenState
     return resultado;
   }
 
+  List<String> get _nombresFiltrados {
+    final todos = _todosLosNombres;
+    if (_terminoBusqueda.isEmpty) return todos;
+    final query = _normalizarTexto(_terminoBusqueda);
+    return todos
+        .where((item) => _normalizarTexto(item).contains(query))
+        .toList();
+  }
+
+  bool _esPersonalizado(String nombre) {
+    final target = _normalizarTexto(nombre);
+    return _nombresPersonalizados.any((p) => _normalizarTexto(p) == target);
+  }
+
+  Future<void> _eliminarPersonalizado(String nombre) async {
+    final target = _normalizarTexto(nombre);
+    setState(() {
+      _nombresPersonalizados.removeWhere((p) => _normalizarTexto(p) == target);
+      if (_seleccionado != null && _normalizarTexto(_seleccionado!) == target) {
+        _seleccionado = null;
+      }
+    });
+    await _guardarPersonalizados();
+  }
+
   Future<void> _mostrarDialogoAgregarNombre() async {
-    final ctrl = TextEditingController();
+    final ctrl = TextEditingController(
+      text: _terminoBusqueda.length >= 3 ? _terminoBusqueda : '',
+    );
     final formKey = GlobalKey<FormState>();
 
     final nuevoNombre = await showDialog<String>(
@@ -141,7 +230,7 @@ class _SelectorNombreServicioScreenState
     if (nuevoNombre == null || nuevoNombre.isEmpty) return;
 
     final existe = _todosLosNombres.any(
-      (n) => n.toLowerCase() == nuevoNombre.toLowerCase(),
+      (n) => _normalizarTexto(n) == _normalizarTexto(nuevoNombre),
     );
 
     if (!existe) {
@@ -161,50 +250,103 @@ class _SelectorNombreServicioScreenState
 
   @override
   Widget build(BuildContext context) {
-    final opciones = _todosLosNombres;
+    final opciones = _nombresFiltrados;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nombres de servicio'),
-        actions: [
-          TextButton.icon(
-            onPressed: _mostrarDialogoAgregarNombre,
-            icon: const Icon(Icons.add),
-            label: const Text('Agregar'),
+      appBar: AppBar(title: const Text('Nombres de servicio')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: TextField(
+              controller: _busquedaCtrl,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: 'Buscar servicio (ej: aceite, frenos, batería)...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _terminoBusqueda.isNotEmpty
+                    ? IconButton(
+                        tooltip: 'Limpiar búsqueda',
+                        icon: const Icon(Icons.clear),
+                        onPressed: _busquedaCtrl.clear,
+                      )
+                    : null,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _cargando
+                ? const Center(child: CircularProgressIndicator())
+                : opciones.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 40,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No encontramos coincidencias para "$_terminoBusqueda"',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: _mostrarDialogoAgregarNombre,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Agregar a la lista'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
+                    itemCount: opciones.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final nombre = opciones[index];
+                      final esPersonalizado = _esPersonalizado(nombre);
+                      final estaSeleccionado =
+                          _seleccionado != null &&
+                          _normalizarTexto(_seleccionado!) ==
+                              _normalizarTexto(nombre);
+
+                      return ListTile(
+                        leading: Icon(
+                          estaSeleccionado
+                              ? Icons.check_circle
+                              : (esPersonalizado
+                                    ? Icons.bookmark_added_outlined
+                                    : Icons.handyman_outlined),
+                        ),
+                        title: Text(nombre),
+                        subtitle: Text(
+                          esPersonalizado ? 'Agregado por ti' : 'Sugerido',
+                        ),
+                        selected: estaSeleccionado,
+                        trailing: esPersonalizado
+                            ? IconButton(
+                                tooltip: 'Eliminar nombre personalizado',
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => _eliminarPersonalizado(nombre),
+                              )
+                            : null,
+                        onTap: () => Navigator.of(context).pop(nombre),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: opciones.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final nombre = opciones[index];
-                final esPersonalizado = _nombresPersonalizados.any(
-                  (p) => p.toLowerCase() == nombre.toLowerCase(),
-                );
-                final estaSeleccionado =
-                    _seleccionado?.toLowerCase() == nombre.toLowerCase();
-
-                return ListTile(
-                  leading: Icon(
-                    estaSeleccionado
-                        ? Icons.check_circle
-                        : (esPersonalizado
-                              ? Icons.bookmark_added_outlined
-                              : Icons.handyman_outlined),
-                  ),
-                  title: Text(nombre),
-                  subtitle: esPersonalizado
-                      ? const Text('Agregado por ti')
-                      : const Text('Sugerido'),
-                  selected: estaSeleccionado,
-                  onTap: () => Navigator.of(context).pop(nombre),
-                );
-              },
-            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _mostrarDialogoAgregarNombre,
         icon: const Icon(Icons.add),
