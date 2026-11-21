@@ -195,6 +195,7 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
   Future<void> _generarUrl() async {
     _deepLinkProcessed = false;
     _oauthRequestedAt = DateTime.now();
+    _tokenRefCtrl.clear();
     setState(() => _loading = true);
     try {
       final repo = ref.read(socialRepositoryProvider);
@@ -229,10 +230,19 @@ class _SetupAdminTokenViewState extends ConsumerState<_SetupAdminTokenView> {
         );
       }
     } on ApiException catch (e) {
+      if (e.message.toLowerCase().contains('bad signature') ||
+          e.message.toLowerCase().contains('token invalido') ||
+          e.message.toLowerCase().contains('token inválido')) {
+        _tokenRefCtrl.clear();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.message}'),
+            content: Text(
+              e.message.toLowerCase().contains('bad signature')
+                  ? 'El token_ref ya fue usado o expiró. Generá un enlace nuevo en el paso 1.'
+                  : 'Error: ${e.message}',
+            ),
             backgroundColor: Colors.red,
           ),
         );

@@ -287,6 +287,21 @@ class SocialRepository {
     }
   }
 
+  /// Desactiva/quita una cuenta social (soft delete en backend).
+  Future<CuentaSocial> desactivarCuenta(String cuentaId) async {
+    try {
+      final resp = await _dio.delete('$_base/cuentas/$cuentaId');
+      return CuentaSocial.fromJson(resp.data as Map<String, dynamic>);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   /// Activa/desactiva publicacion automatica en una cuenta.
   Future<CuentaSocial> toggleAutoPublishCuenta({
     required String cuentaId,

@@ -189,3 +189,15 @@ final paginasAdminProvider = FutureProvider<List<PaginaFacebook>>((ref) async {
   final repo = ref.watch(socialRepositoryProvider);
   return repo.listarPaginasAdmin();
 });
+
+final desactivarCuentaProvider =
+    Provider<Future<CuentaSocial> Function(String)>((ref) {
+      return (String cuentaId) async {
+        final repo = ref.read(socialRepositoryProvider);
+        final cuenta = await repo.desactivarCuenta(cuentaId);
+        ref.invalidate(cuentasSocialesProvider);
+        ref.invalidate(cuentasSocialesPorRedProvider);
+        ref.invalidate(paginasAdminProvider);
+        return cuenta;
+      };
+    });

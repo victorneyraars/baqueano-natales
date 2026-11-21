@@ -267,19 +267,33 @@ class _CuentaCard extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: TextButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push<void>(
+                        onPressed: () async {
+                          await Navigator.of(context).push<void>(
                             MaterialPageRoute(
                               builder: (_) =>
                                   const AgregarCuentaScreen(iniciarSetup: true),
                             ),
                           );
+                          ref.invalidate(cuentasSocialesProvider);
+                          ref.invalidate(paginasAdminProvider);
                         },
                         icon: const Icon(Icons.refresh, size: 18),
                         label: const Text('Reconectar / actualizar permisos'),
                       ),
                     ),
                   ],
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
+                      onPressed: () => _confirmarQuitarCuenta(context, ref),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Quitar cuenta'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -287,6 +301,53 @@ class _CuentaCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarQuitarCuenta(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitar cuenta'),
+        content: Text(
+          '¿Querés desactivar y quitar "${cuenta.nombreVisible}" de la lista de cuentas activas?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(desactivarCuentaProvider)(cuenta.id);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Cuenta "${cuenta.nombreVisible}" quitada')),
+      );
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al quitar cuenta: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error inesperado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 
