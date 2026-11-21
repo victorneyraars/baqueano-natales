@@ -18,6 +18,7 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/prestadores/data/prestador_providers.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador.dart';
 import 'package:baqueano_natales/features/prestadores/domain/prestador_servicio.dart';
+import 'package:baqueano_natales/features/prestadores/presentation/screens/selector_categoria_servicio_screen.dart';
 import 'package:baqueano_natales/features/prestadores/presentation/screens/selector_nombre_servicio_screen.dart';
 
 class EditorServiciosScreen extends ConsumerWidget {
@@ -650,11 +651,35 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
 
                     TextFormField(
                       controller: _categoriaCtrl,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Categoría de servicio',
                         hintText: 'Ej: Mantenimiento, Frenos, Motor',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         helperText: 'Ayuda a agrupar servicios similares',
+                        suffixIcon: IconButton(
+                          tooltip: 'Elegir o agregar categoría de servicio',
+                          icon: const Icon(
+                            Icons.arrow_drop_down_circle_outlined,
+                          ),
+                          onPressed: () async {
+                            final elegida = await Navigator.of(context)
+                                .push<String>(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SelectorCategoriaServicioScreen(
+                                          categoriaInicial: _categoriaCtrl.text,
+                                        ),
+                                  ),
+                                );
+                            if (elegida != null &&
+                                elegida.trim().isNotEmpty &&
+                                mounted) {
+                              setState(
+                                () => _categoriaCtrl.text = elegida.trim(),
+                              );
+                            }
+                          },
+                        ),
                       ),
                       textInputAction: TextInputAction.next,
                     ),
