@@ -239,6 +239,9 @@ async def obtener_prestador_por_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prestador no encontrado",
         )
+    prestador.servicios = [
+        s for s in (prestador.servicios or []) if s.activo
+    ]
     return prestador
 
 
