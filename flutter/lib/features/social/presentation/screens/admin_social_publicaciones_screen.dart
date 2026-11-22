@@ -15,14 +15,6 @@ import 'package:baqueano_natales/features/social/data/social_providers.dart';
 import 'package:baqueano_natales/features/social/domain/cuenta_social.dart';
 import 'package:baqueano_natales/features/social/domain/publicacion_social.dart';
 
-const List<String> _gruposSugeridosNatales = <String>[
-  'FARAONICA PUERTO NATALES',
-  'SOLO AUTOS NATALES',
-  'CLASIFICADOS PUERTO NATALES',
-  'FARAONICA NATALES 2.0',
-  'Avisos Radio Faraonica FM',
-];
-
 class _CompartidoPendiente {
   const _CompartidoPendiente({
     required this.shareId,
@@ -347,29 +339,82 @@ class _AdminSocialPublicacionesScreenState
   }
 }
 
-class _SelectorGrupoSheet extends StatefulWidget {
+class _SelectorGrupoSheet extends ConsumerStatefulWidget {
   const _SelectorGrupoSheet({this.urlDefecto});
 
   final String? urlDefecto;
 
   @override
-  State<_SelectorGrupoSheet> createState() => _SelectorGrupoSheetState();
+  ConsumerState<_SelectorGrupoSheet> createState() =>
+      _SelectorGrupoSheetState();
 }
 
-class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
-  final TextEditingController _customCtrl = TextEditingController();
+class _SelectorGrupoSheetState extends ConsumerState<_SelectorGrupoSheet> {
+  final TextEditingController _destinoCtrl = TextEditingController();
+  final List<String> _destinos = <String>[];
   String? _elegido;
+  bool _cargando = true;
   bool _incluirEnlace = true;
 
   @override
+  void initState() {
+    super.initState();
+    _cargarDestinosPersistidos();
+  }
+
+  Future<void> _cargarDestinosPersistidos() async {
+    try {
+      final guardados = await ref
+          .read(socialRepositoryProvider)
+          .listarDestinosGuardados();
+      if (!mounted) return;
+      setState(() {
+        _destinos
+          ..clear()
+          ..addAll(guardados);
+        if (_elegido == null && _destinos.isNotEmpty) {
+          _elegido = _destinos.first;
+        }
+        _cargando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cargando = false);
+    }
+  }
+
+  void _agregarDestinoALista() {
+    final texto = _destinoCtrl.text.trim();
+    if (texto.isEmpty) return;
+    final existente = _destinos.firstWhere(
+      (d) => d.toLowerCase() == texto.toLowerCase(),
+      orElse: () => '',
+    );
+    setState(() {
+      if (existente.isNotEmpty) {
+        _elegido = existente;
+      } else {
+        _destinos.insert(0, texto);
+        _elegido = texto;
+      }
+      _destinoCtrl.clear();
+    });
+  }
+
+  @override
   void dispose() {
-    _customCtrl.dispose();
+    _destinoCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final filtro = _destinoCtrl.text.trim().toLowerCase();
+    final visibles = filtro.isEmpty
+        ? _destinos
+        : _destinos.where((d) => d.toLowerCase().contains(filtro)).toList();
+
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Column(
@@ -377,43 +422,95 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Seleccionar grupo destino',
+            'Portafolio de grupos y destinos',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
             _incluirEnlace
-                ? 'Se copiará el texto + enlace con UTM/share_id y se registrará el envío.'
-                : 'Se copiará el texto sin enlaces indicando buscar en la web y se registrará el envío.',
+                ? 'Se copiará el texto + enlace con UTM/share_id y se guardará en tu historial.'
+                : 'Se copiará el texto sin enlaces indicando buscar en la web y se guardará en tu historial.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _gruposSugeridosNatales.map((g) {
-              final sel = _elegido == g && _customCtrl.text.trim().isEmpty;
-              return ChoiceChip(
-                label: Text(g),
-                selected: sel,
-                onSelected: (_) {
-                  setState(() {
-                    _elegido = g;
-                    _customCtrl.clear();
-                  });
-                },
-              );
-            }).toList(),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _destinoCtrl,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    labelText: 'Agregar o filtrar grupo / destino',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _agregarDestinoALista(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: _destinoCtrl.text.trim().isEmpty
+                    ? null
+                    : _agregarDestinoALista,
+                child: const Text('Agregar'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _customCtrl,
-            decoration: const InputDecoration(
-              labelText: 'O escribe otro grupo / destino',
-              border: OutlineInputBorder(),
+          if (_cargando)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (visibles.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                filtro.isEmpty
+                    ? 'Aún no tienes destinos guardados. Escribe un grupo y pulsa Agregar o comparte para guardarlo en BD.'
+                    : 'Sin coincidencias en tu lista. Puedes usar o agregar ese destino.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: visibles.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final destino = visibles[index];
+                  final seleccionado = _elegido == destino;
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      seleccionado
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                    ),
+                    title: Text(destino),
+                    selected: seleccionado,
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'Quitar de la vista',
+                      onPressed: () {
+                        setState(() {
+                          _destinos.remove(destino);
+                          if (_elegido == destino) {
+                            _elegido = _destinos.isNotEmpty
+                                ? _destinos.first
+                                : null;
+                          }
+                        });
+                      },
+                    ),
+                    onTap: () => setState(() => _elegido = destino),
+                  );
+                },
+              ),
             ),
-            onChanged: (_) => setState(() {}),
-          ),
           const SizedBox(height: 8),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
@@ -437,27 +534,25 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: () {
-                  final custom = _customCtrl.text.trim();
+                  final escrito = _destinoCtrl.text.trim();
                   final grupoObjetivo =
-                      (custom.isNotEmpty ? custom : (_elegido ?? '')).trim();
+                      (escrito.isNotEmpty ? escrito : (_elegido ?? '')).trim();
                   if (grupoObjetivo.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Selecciona un grupo o escribe un destino.',
+                          'Selecciona un destino de la lista o escribe uno nuevo.',
                         ),
                       ),
                     );
                     return;
                   }
-                  if (grupoObjetivo.isNotEmpty) {
-                    Navigator.of(context).pop(
-                      _SeleccionCompartir(
-                        grupoNombre: grupoObjetivo,
-                        incluirEnlace: _incluirEnlace,
-                      ),
-                    );
-                  }
+                  Navigator.of(context).pop(
+                    _SeleccionCompartir(
+                      grupoNombre: grupoObjetivo,
+                      incluirEnlace: _incluirEnlace,
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.share, size: 18),
                 label: const Text('Copiar y compartir'),
