@@ -1,7 +1,7 @@
 /// Pantalla admin: cola de publicaciones en redes sociales.
 ///
 /// Lista las publicaciones con filtros por estado y red y permite compartir
-/// en grupos externos con trazabilidad de share_id + UTM y confirmación al volver.
+/// en grupos externos con trazabilidad de share_id + UTM o texto sin enlace.
 library;
 
 import 'package:flutter/material.dart';
@@ -35,6 +35,16 @@ class _CompartidoPendiente {
   final String grupoNombre;
   final String urlCompartida;
   final PublicacionesFiltro filtro;
+}
+
+class _SeleccionCompartir {
+  const _SeleccionCompartir({
+    required this.grupoNombre,
+    required this.incluirEnlace,
+  });
+
+  final String grupoNombre;
+  final bool incluirEnlace;
 }
 
 class AdminSocialPublicacionesScreen extends ConsumerStatefulWidget {
@@ -159,18 +169,17 @@ class _AdminSocialPublicacionesScreenState
     String? urlPublicacion,
     PublicacionesFiltro filtro,
   ) async {
-    final grupoSeleccionado = await showModalBottomSheet<String>(
+    final seleccion = await showModalBottomSheet<_SeleccionCompartir>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _SelectorGrupoSheet(urlDefecto: urlPublicacion),
     );
-    if (grupoSeleccionado == null ||
-        grupoSeleccionado.trim().isEmpty ||
-        !mounted) {
+    if (seleccion == null || seleccion.grupoNombre.trim().isEmpty || !mounted) {
       return;
     }
 
-    final grupoLimpio = grupoSeleccionado.trim();
+    final grupoLimpio = seleccion.grupoNombre.trim();
+    final incluirEnlace = seleccion.incluirEnlace;
     final urlBase =
         (pub.contenido['link']?.toString().trim().isNotEmpty == true)
         ? pub.contenido['link'].toString().trim()
@@ -206,7 +215,9 @@ class _AdminSocialPublicacionesScreenState
           (pub.contenido['message']?.toString().trim().isNotEmpty == true)
           ? pub.contenido['message'].toString().trim()
           : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
-      final textoParaPegar = '$mensajeRaw\n\n$urlConUtm';
+      final textoParaPegar = incluirEnlace
+          ? '$mensajeRaw\n\n$urlConUtm'
+          : '$mensajeRaw\n\nBúscanos en la web como Se Alquila Marido en Puerto Natales.';
 
       await Clipboard.setData(ClipboardData(text: textoParaPegar));
 
@@ -341,6 +352,7 @@ class _SelectorGrupoSheet extends StatefulWidget {
 class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
   final TextEditingController _customCtrl = TextEditingController();
   String? _elegido;
+  bool _incluirEnlace = true;
 
   @override
   void dispose() {
@@ -363,7 +375,9 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Se copiará el texto + enlace con UTM/share_id y se registrará el envío.',
+            _incluirEnlace
+                ? 'Se copiará el texto + enlace con UTM/share_id y se registrará el envío.'
+                : 'Se copiará el texto sin enlaces indicando buscar en la web y se registrará el envío.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -393,7 +407,19 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
             ),
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Incluir enlace web en el texto'),
+            subtitle: Text(
+              _incluirEnlace
+                  ? 'Agrega enlace con UTM y share_id'
+                  : 'Sin enlace; indica buscar en la web Se Alquila Marido',
+            ),
+            value: _incluirEnlace,
+            onChanged: (v) => setState(() => _incluirEnlace = v),
+          ),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -407,7 +433,12 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
                   final custom = _customCtrl.text.trim();
                   final finalGrupo = custom.isNotEmpty ? custom : _elegido;
                   if (finalGrupo != null && finalGrupo.isNotEmpty) {
-                    Navigator.of(context).pop(finalGrupo);
+                    Navigator.of(context).pop(
+                      _SeleccionCompartir(
+                        grupoNombre: finalGrupo,
+                        incluirEnlace: _incluirEnlace,
+                      ),
+                    );
                   }
                 },
                 icon: const Icon(Icons.share, size: 18),
