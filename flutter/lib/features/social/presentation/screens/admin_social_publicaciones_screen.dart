@@ -177,77 +177,84 @@ class _AdminSocialPublicacionesScreenState
     if (seleccion == null || seleccion.grupoNombre.trim().isEmpty || !mounted) {
       return;
     }
-
-    final grupoLimpio = seleccion.grupoNombre.trim();
-    final incluirEnlace = seleccion.incluirEnlace;
-    final urlBase =
-        (pub.contenido['link']?.toString().trim().isNotEmpty == true)
-        ? pub.contenido['link'].toString().trim()
-        : (urlPublicacion ?? 'https://sealquilamarido.com/mecanica');
-
     try {
-      final res = await ref
-          .read(socialRepositoryProvider)
-          .registrarCompartido(
-            grupoNombre: grupoLimpio,
-            publicacionId: pub.id,
-            red: pub.red.value,
-            urlBase: urlBase,
-          );
+      final grupoLimpio = seleccion.grupoNombre.trim();
+      final incluirEnlace = seleccion.incluirEnlace;
+      final urlBase =
+          (pub.contenido['link']?.toString().trim().isNotEmpty == true)
+          ? pub.contenido['link'].toString().trim()
+          : (urlPublicacion ?? 'https://sealquilamarido.com/mecanica');
 
-      final shareId = (res['share_id'] as String?) ?? '';
-      final urlConUtm = (res['url_compartida'] as String?) ?? urlBase;
-      final cooldownSeg =
-          (res['cooldown_segundos_restantes'] as num?)?.toInt() ?? 0;
+      try {
+        final res = await ref
+            .read(socialRepositoryProvider)
+            .registrarCompartido(
+              grupoNombre: grupoLimpio,
+              publicacionId: pub.id,
+              red: pub.red.value,
+              urlBase: urlBase,
+            );
 
-      if (cooldownSeg > 0 && mounted) {
-        final mins = (cooldownSeg / 60).ceil();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Aviso anti-spam: quedan ~$mins min desde el último compartido en grupos.',
+        final shareId = (res['share_id'] as String?) ?? '';
+        final urlConUtm = (res['url_compartida'] as String?) ?? urlBase;
+        final cooldownSeg =
+            (res['cooldown_segundos_restantes'] as num?)?.toInt() ?? 0;
+
+        if (cooldownSeg > 0 && mounted) {
+          final mins = (cooldownSeg / 60).ceil();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Aviso anti-spam: quedan ~$mins min desde el último compartido en grupos.',
+              ),
             ),
-          ),
-        );
-      }
-
-      final mensajeRaw =
-          (pub.contenido['message']?.toString().trim().isNotEmpty == true)
-          ? pub.contenido['message'].toString().trim()
-          : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
-      final textoParaPegar = incluirEnlace
-          ? '$mensajeRaw\n\n$urlConUtm'
-          : '$mensajeRaw\n\nBúscanos en la web como Se Alquila Marido en Puerto Natales.';
-
-      await Clipboard.setData(ClipboardData(text: textoParaPegar));
-
-      if (shareId.isNotEmpty) {
-        setState(() {
-          _pendiente = _CompartidoPendiente(
-            shareId: shareId,
-            grupoNombre: grupoLimpio,
-            urlCompartida: urlConUtm,
-            filtro: filtro,
           );
-        });
-      }
+        }
 
+        final mensajeRaw =
+            (pub.contenido['message']?.toString().trim().isNotEmpty == true)
+            ? pub.contenido['message'].toString().trim()
+            : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
+        final textoParaPegar = incluirEnlace
+            ? '$mensajeRaw\n\n$urlConUtm'
+            : '$mensajeRaw\n\nBúscanos en la web como Se Alquila Marido en Puerto Natales.';
+
+        await Clipboard.setData(ClipboardData(text: textoParaPegar));
+
+        if (shareId.isNotEmpty) {
+          setState(() {
+            _pendiente = _CompartidoPendiente(
+              shareId: shareId,
+              grupoNombre: grupoLimpio,
+              urlCompartida: urlConUtm,
+              filtro: filtro,
+            );
+          });
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Copiado al portapapeles · Ref: $shareId'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+
+        await SharePlus.instance.share(ShareParams(text: textoParaPegar));
+      } on ApiException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al registrar compartido: ${e.message}'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Copiado al portapapeles · Ref: $shareId'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-
-      await SharePlus.instance.share(ShareParams(text: textoParaPegar));
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al registrar compartido: ${e.message}'),
-          ),
+          SnackBar(content: Text('No se pudo completar compartir: $e')),
         );
       }
     }
@@ -431,11 +438,22 @@ class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
               FilledButton.icon(
                 onPressed: () {
                   final custom = _customCtrl.text.trim();
-                  final finalGrupo = custom.isNotEmpty ? custom : _elegido;
-                  if (finalGrupo != null && finalGrupo.isNotEmpty) {
+                  final grupoObjetivo =
+                      (custom.isNotEmpty ? custom : (_elegido ?? '')).trim();
+                  if (grupoObjetivo.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Selecciona un grupo o escribe un destino.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  if (grupoObjetivo.isNotEmpty) {
                     Navigator.of(context).pop(
                       _SeleccionCompartir(
-                        grupoNombre: finalGrupo,
+                        grupoNombre: grupoObjetivo,
                         incluirEnlace: _incluirEnlace,
                       ),
                     );
