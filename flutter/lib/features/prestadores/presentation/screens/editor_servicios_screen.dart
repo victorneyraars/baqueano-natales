@@ -216,6 +216,13 @@ class _ContenidoState extends State<_Contenido> {
               _ServicioCard(
                 servicio: srv,
                 onEditar: () => _abrirFormulario(context, ref, prestador, srv),
+                onDuplicar: () => _abrirFormulario(
+                  context,
+                  ref,
+                  prestador,
+                  null,
+                  plantillaCopia: srv,
+                ),
                 onEliminar: () =>
                     _confirmarEliminar(context, ref, prestador, srv),
                 onPublicarRedes: () =>
@@ -231,12 +238,14 @@ class _ServicioCard extends StatelessWidget {
   const _ServicioCard({
     required this.servicio,
     required this.onEditar,
+    required this.onDuplicar,
     required this.onEliminar,
     required this.onPublicarRedes,
   });
 
   final PrestadorServicio servicio;
   final VoidCallback onEditar;
+  final VoidCallback onDuplicar;
   final VoidCallback onEliminar;
   final VoidCallback onPublicarRedes;
 
@@ -281,6 +290,12 @@ class _ServicioCard extends StatelessWidget {
                   onPressed: onEditar,
                   visualDensity: VisualDensity.compact,
                   tooltip: 'Editar',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy_outlined, size: 20),
+                  onPressed: onDuplicar,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Duplicar',
                 ),
                 IconButton(
                   icon: Icon(
@@ -462,8 +477,9 @@ Future<void> _abrirFormulario(
   BuildContext context,
   WidgetRef ref,
   Prestador prestador,
-  PrestadorServicio? servicioExistente,
-) async {
+  PrestadorServicio? servicioExistente, {
+  PrestadorServicio? plantillaCopia,
+}) async {
   final esEdicion = servicioExistente != null;
 
   final guardado = await showModalBottomSheet<bool>(
@@ -473,6 +489,7 @@ Future<void> _abrirFormulario(
     builder: (ctx) => _FormularioServicioSheet(
       prestadorId: prestador.id,
       servicio: servicioExistente,
+      plantillaCopia: plantillaCopia,
       ref: ref,
     ),
   );
@@ -540,10 +557,12 @@ class _FormularioServicioSheet extends StatefulWidget {
     required this.prestadorId,
     required this.servicio,
     required this.ref,
+    this.plantillaCopia,
   });
 
   final String prestadorId;
   final PrestadorServicio? servicio;
+  final PrestadorServicio? plantillaCopia;
   final WidgetRef ref;
 
   @override
@@ -578,19 +597,65 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
     'Reparaciones',
   ];
 
+  static const _clausulasRapidas = <(String, String)>[
+    (
+      'Solo mano de obra',
+      'Servicio solo de mano de obra; insumos o repuestos a cargo del cliente.',
+    ),
+    (
+      'Retiro aceite \$5.000',
+      'Retiro y disposición responsable de aceite usado por \$5.000 adicionales.',
+    ),
+    (
+      'Estanqueidad y torque',
+      'Apriete controlado, revisión sin fugas y verificación final de niveles.',
+    ),
+    (
+      'Según acceso/diagnóstico',
+      'Tiempo y alcance sujetos a acceso físico y estado previo de piezas.',
+    ),
+  ];
+
+  void _aplicarPlantillaDescripcion() {
+    const plantilla =
+        '• Alcance / incluye: \n'
+        '• Ejecución y cuidado: \n'
+        '• Condiciones / extras: \n'
+        '• Garantía: ';
+    if (_descripcionCtrl.text.trim().isEmpty) {
+      setState(() => _descripcionCtrl.text = plantilla);
+      return;
+    }
+    if (!_descripcionCtrl.text.contains('• Alcance / incluye:')) {
+      setState(() {
+        _descripcionCtrl.text = '$plantilla\n${_descripcionCtrl.text.trim()}';
+      });
+    }
+  }
+
+  void _insertarClausula(String texto) {
+    final actual = _descripcionCtrl.text.trim();
+    if (actual.contains(texto)) return;
+    setState(() {
+      _descripcionCtrl.text = actual.isEmpty ? texto : '$actual $texto';
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    final s = widget.servicio;
+    final s = widget.servicio ?? widget.plantillaCopia;
     if (s != null) {
-      _nombreCtrl.text = s.nombre;
+      _nombreCtrl.text = widget.servicio != null
+          ? s.nombre
+          : '${s.nombre} (copia)';
       _descripcionCtrl.text = s.descripcion ?? '';
       _categoriaCtrl.text = s.categoriaServicio ?? '';
       _precioDesdeCtrl.text = s.precioDesdeClp?.toString() ?? '';
       _precioHastaCtrl.text = s.precioHastaClp?.toString() ?? '';
       _duracionCtrl.text = s.duracionEstimadaMin?.toString() ?? '';
       _garantiaCtrl.text = s.garantiaDias?.toString() ?? '';
-      _destacado = s.destacado;
+      _destacado = widget.servicio != null ? s.destacado : false;
     }
   }
 
@@ -828,15 +893,49 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                     ),
                     const SizedBox(height: 16),
 
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Detalle y condiciones estándar',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _aplicarPlantillaDescripcion,
+                          icon: const Icon(Icons.auto_fix_high, size: 16),
+                          label: const Text('Plantilla pro'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     TextFormField(
                       controller: _descripcionCtrl,
                       decoration: const InputDecoration(
                         labelText: 'Descripción',
-                        hintText: 'Qué incluye, detalles',
+                        hintText: 'Qué incluye, protocolo, extras y garantía',
                         border: OutlineInputBorder(),
                         alignLabelWithHint: true,
                       ),
-                      maxLines: 3,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (final item in _clausulasRapidas)
+                          ActionChip(
+                            label: Text('+ ${item.$1}'),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => _insertarClausula(item.$2),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
@@ -988,11 +1087,13 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                                 spacing: 4,
                                 runSpacing: 4,
                                 children: [
-                                  for (final dias in [15, 30, 90])
-                                    ActionChip(
+                                  for (final dias in [7, 15, 30, 90])
+                                    ChoiceChip(
                                       label: Text('${dias}d'),
+                                      selected:
+                                          _garantiaCtrl.text.trim() == '$dias',
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: () => setState(
+                                      onSelected: (_) => setState(
                                         () => _garantiaCtrl.text = '$dias',
                                       ),
                                     ),
