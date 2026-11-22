@@ -14,13 +14,14 @@ class ActiveModeNotifier extends Notifier<String> {
   String build() {
     Future.microtask(_loadSaved);
     final user = ref.read(authNotifierProvider).user;
-    return user?.role == 'prestador' ? 'prestador' : 'cliente';
+    final canBePrestador = user?.role == 'prestador' || user?.role == 'admin';
+    return canBePrestador ? 'prestador' : 'cliente';
   }
 
   Future<void> _loadSaved() async {
     final user = ref.read(authNotifierProvider).user;
     // Si NO es prestador, solo puede estar en 'cliente'. Ignorar saved.
-    if (user?.role != 'prestador') {
+    if (user?.role != 'prestador' && user?.role != 'admin') {
       if (state != 'cliente') {
         state = 'cliente';
       }
@@ -64,7 +65,7 @@ final hasDualRoleProvider = FutureProvider<bool>((ref) async {
   if (!auth.isAuthenticated) return false;
   final user = auth.user;
   if (user == null) return false;
-  if (user.role != 'prestador') return false;
+  if (user.role != 'prestador' && user.role != 'admin') return false;
 
   final misPrestadores = await ref.watch(misPrestadoresProvider.future);
   return misPrestadores.isNotEmpty;

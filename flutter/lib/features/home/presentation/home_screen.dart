@@ -51,7 +51,8 @@ class HomeScreen extends ConsumerWidget {
     final mode = ref.watch(activeModeProvider);
     final dual = ref.watch(hasDualRoleProvider).value ?? false;
     // Safeguard: si el usuario no es prestador, forzar modo cliente.
-    final effectiveMode = (user.role != 'prestador') ? 'cliente' : mode;
+    final canBePrestador = user.role == 'prestador' || user.role == 'admin';
+    final effectiveMode = !canBePrestador ? 'cliente' : mode;
 
     return Scaffold(
       appBar: AppBar(
