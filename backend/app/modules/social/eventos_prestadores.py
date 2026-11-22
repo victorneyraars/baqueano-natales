@@ -273,13 +273,15 @@ async def encolar_servicio_nuevo(
             lineas = [
                 primera_linea,
                 f"Puerto Natales · {prestador.nombre}",
-                "",
-                "• A domicilio en Puerto Natales (tú aportas aceite y filtro)",
-                "• Bandeja de contención, apriete controlado y revisión de nivel",
-                "• Retiro de aceite usado opcional (+$5.000)",
             ]
             if detalles:
                 lineas.append(" · ".join(detalles))
+            if servicio.descripcion:
+                lineas.append("")
+                for raw_line in servicio.descripcion.splitlines():
+                    limpia = raw_line.strip()
+                    if limpia:
+                        lineas.append(limpia)
             lineas.extend([
                 "",
                 "Solicítalo o revisa detalles aquí:",
