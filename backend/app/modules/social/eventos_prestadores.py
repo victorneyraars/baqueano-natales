@@ -327,7 +327,7 @@ async def encolar_servicio_nuevo(
             try:
                 from app.modules.social.grafica_servicio import (
                     generar_png_servicio_sealquilamarido,
-                    subir_grafica_servicio_r2,
+                    publicar_grafica_servicio,
                 )
 
                 d_min = None
@@ -349,7 +349,7 @@ async def encolar_servicio_nuevo(
                     duracion_min=d_min,
                     garantia_dias=g_dias,
                 )
-                image_url = subir_grafica_servicio_r2(servicio.id, png_bytes)
+                image_url = publicar_grafica_servicio(servicio.id, png_bytes)
             except Exception as e:
                 logger.warning("Social: error generando gráfica para servicio: %s", e)
 

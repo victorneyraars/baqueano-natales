@@ -6,6 +6,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+import os
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
@@ -244,6 +246,10 @@ app.include_router(ops_admin_router, prefix="/api/v1")
 # Analytics (Cloudflare Web Analytics)
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(revalidate_router, prefix="/api/v1")
+_static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+os.makedirs(_static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
 
 
 # ---------------------------------------------------------

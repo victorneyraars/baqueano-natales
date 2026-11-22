@@ -9,6 +9,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
+STATIC_SOCIAL_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "static", "social", "servicios")
+)
+
 
 def _cargar_fuente(tamano: int, negrita: bool = False):
     candidatos = (
@@ -43,7 +47,6 @@ def generar_png_servicio_sealquilamarido(
     img = Image.new("RGB", (w, h), "#0F172A")
     draw = ImageDraw.Draw(img)
 
-    # Franja superior y acentos visuales
     draw.rectangle([0, 0, w, 140], fill="#1E293B")
     draw.rectangle([0, 140, w, 150], fill="#F97316")
 
@@ -55,15 +58,12 @@ def generar_png_servicio_sealquilamarido(
     f_chip = _cargar_fuente(28, negrita=True)
     f_pie = _cargar_fuente(26, negrita=False)
 
-    # Marca y ciudad arriba
     draw.text((56, 34), "SE ALQUILA MARIDO", fill="#FFFFFF", font=f_marca)
     draw.text((56, 82), "Puerto Natales · Mecánica a domicilio", fill="#CBD5E1", font=f_sub)
 
-    # Pill destacado "A DOMICILIO"
     draw.rounded_rectangle([56, 190, 390, 250], radius=28, fill="#F97316")
     draw.text((84, 204), "A DOMICILIO", fill="#0F172A", font=f_badge)
 
-    # Título limpio del servicio
     titulo_limpio = re.sub(
         r"\s+de\s+motor(?=\s+a\s+domicilio|$)",
         "",
@@ -76,7 +76,6 @@ def generar_png_servicio_sealquilamarido(
         draw.text((56, y_actual), linea, fill="#F8FAFC", font=f_titulo)
         y_actual += 68
 
-    # Tarjeta destacada de precio
     y_card = max(y_actual + 28, 520)
     draw.rounded_rectangle(
         [56, y_card, w - 56, y_card + 165],
@@ -93,7 +92,6 @@ def generar_png_servicio_sealquilamarido(
         font=f_precio,
     )
 
-    # Chips de duración y garantía
     y_chips = y_card + 195
     x_chip = 56
     chips: list[str] = []
@@ -115,7 +113,6 @@ def generar_png_servicio_sealquilamarido(
         draw.text((x_chip + 22, y_chips + 13), chip, fill="#E2E8F0", font=f_chip)
         x_chip += ancho_chip + 18
 
-    # Pie con dominio de conversión
     draw.line([56, h - 115, w - 56, h - 115], fill="#334155", width=2)
     draw.text(
         (56, h - 85),
@@ -129,43 +126,51 @@ def generar_png_servicio_sealquilamarido(
     return buf.getvalue()
 
 
-def subir_grafica_servicio_r2(servicio_id, png_bytes: bytes) -> str | None:
-    """Sube la gráfica PNG a R2 y retorna su URL pública, o None si R2 no está configurado."""
+def publicar_grafica_servicio(servicio_id, png_bytes: bytes) -> str | None:
+    """Sube a R2 si está configurado; si no, guarda en /app/static y retorna ruta relativa /static/..."""
+    object_key = f"social/servicios/{servicio_id}.png"
+
     endpoint = os.getenv("R2_ENDPOINT_URL")
     access_key = os.getenv("R2_ACCESS_KEY_ID")
     secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
     bucket = os.getenv("R2_BUCKET_NAME")
     public_url = os.getenv("R2_PUBLIC_URL")
 
-    if not all([endpoint, access_key, secret_key, bucket, public_url]):
-        return None
-
-    object_key = f"social/servicios/{servicio_id}.png"
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=endpoint,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=Config(
-            signature_version="s3v4",
-            s3={
-                "addressing_style": "path",
-                "payload_signing_enabled": False,
-            },
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required",
-        ),
-        region_name="auto",
-    )
-    try:
-        s3.put_object(
-            Bucket=bucket,
-            Key=object_key,
-            Body=png_bytes,
-            ContentType="image/png",
-            CacheControl="public, max-age=3600",
+    if all([endpoint, access_key, secret_key, bucket, public_url]):
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            config=Config(
+                signature_version="s3v4",
+                s3={
+                    "addressing_style": "path",
+                    "payload_signing_enabled": False,
+                },
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+            region_name="auto",
         )
-        return f"{public_url.rstrip('/')}/{object_key}"
+        try:
+            s3.put_object(
+                Bucket=bucket,
+                Key=object_key,
+                Body=png_bytes,
+                ContentType="image/png",
+                CacheControl="public, max-age=3600",
+            )
+            return f"{public_url.rstrip('/')}/{object_key}"
+        except Exception as e:
+            logger.warning("Social: R2 no disponible, usando almacenamiento local /static: %s", e)
+
+    try:
+        os.makedirs(STATIC_SOCIAL_DIR, exist_ok=True)
+        out_path = os.path.join(STATIC_SOCIAL_DIR, f"{servicio_id}.png")
+        with open(out_path, "wb") as f:
+            f.write(png_bytes)
+        return f"/static/social/servicios/{servicio_id}.png"
     except Exception as e:
-        logger.warning("Social: no se pudo subir gráfica del servicio a R2: %s", e)
+        logger.warning("Social: no se pudo guardar gráfica en /static: %s", e)
         return None
