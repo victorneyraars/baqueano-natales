@@ -250,10 +250,21 @@ async def obtener_prestador_por_slug(
     slug: str,
 ) -> Prestador:
     """Obtiene un prestador verificado por slug (uso público)."""
-    stmt = _prestador_select_full().where(
-        Prestador.slug == slug,
-        Prestador.estado == EstadoPrestador.VERIFICADO,
-        Prestador.activo.is_(True),
+    from sqlalchemy.orm import with_loader_criteria
+
+    stmt = (
+        _prestador_select_full()
+        .options(
+            with_loader_criteria(
+                PrestadorServicio,
+                PrestadorServicio.activo.is_(True),
+            )
+        )
+        .where(
+            Prestador.slug == slug,
+            Prestador.estado == EstadoPrestador.VERIFICADO,
+            Prestador.activo.is_(True),
+        )
     )
     prestador = (await db.execute(stmt)).scalar_one_or_none()
     if prestador is None:
@@ -262,7 +273,6 @@ async def obtener_prestador_por_slug(
             detail="Prestador no encontrado",
         )
     return prestador
-
 
 async def listar_prestadores_mios(
     db: AsyncSession,
