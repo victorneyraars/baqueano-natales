@@ -11,6 +11,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/social/data/social_providers.dart';
@@ -308,6 +310,36 @@ class _PublicacionCard extends ConsumerStatefulWidget {
 class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
   bool _reencolando = false;
 
+  String? _resolverUrlPublicacion(PublicacionSocial pub) {
+    final rawPermalink = pub.contenido['permalink_url']?.toString().trim();
+    if (rawPermalink != null && rawPermalink.isNotEmpty) {
+      return rawPermalink;
+    }
+    final extId = pub.externalPostId?.trim();
+    if (extId == null || extId.isEmpty) return null;
+    if (pub.red == RedSocial.facebook) {
+      return 'https://www.facebook.com/$extId';
+    }
+    return null;
+  }
+
+  Future<void> _abrirEnFacebook(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir el enlace en Facebook.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _compartirEnlace(String url) async {
+    await SharePlus.instance.share(ShareParams(text: url));
+  }
+
   Future<void> _reencolar() async {
     setState(() => _reencolando = true);
     try {
@@ -455,6 +487,29 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
             if (pub.externalPostId != null) ...[
               const SizedBox(height: 6),
               _Meta(icon: Icons.link, text: 'ID: ${pub.externalPostId}'),
+            ],
+
+            if (pub.estado == EstadoPublicacion.publicado &&
+                _resolverUrlPublicacion(pub) != null) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _abrirEnFacebook(_resolverUrlPublicacion(pub)!),
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('Abrir en Facebook'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _compartirEnlace(_resolverUrlPublicacion(pub)!),
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('Compartir'),
+                  ),
+                ],
+              ),
             ],
 
             // Boton Reencolar (solo para estados que pueden reintentar)
