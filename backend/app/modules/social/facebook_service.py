@@ -306,17 +306,36 @@ async def publicar_post_en_pagina(
     if not mensaje and not image_url:
         return None, FacebookError(message="El post no tiene contenido")
 
+    import os
+    from urllib.parse import urlparse
+
+    files_payload: dict | None = None
+
     # Construir payload segun tipo
     if image_url:
         path = f"{page_id}/photos"
         payload: dict = {
-            "url": image_url,
             "access_token": page_token,
         }
         if mensaje:
             payload["caption"] = mensaje
         if link:
             payload["link"] = link
+
+        parsed_path = urlparse(image_url).path if "://" in image_url else image_url
+        local_png = None
+        if parsed_path.startswith("/static/social/servicios/"):
+            nombre_archivo = os.path.basename(parsed_path)
+            candidato = os.path.join("/tmp/baqueano_static/social/servicios", nombre_archivo)
+            if os.path.isfile(candidato):
+                local_png = candidato
+
+        if local_png:
+            with open(local_png, "rb") as f:
+                png_data = f.read()
+            files_payload = {"source": (os.path.basename(local_png), png_data, "image/png")}
+        else:
+            payload["url"] = image_url
     else:
         path = f"{page_id}/feed"
         payload = {
@@ -329,7 +348,10 @@ async def publicar_post_en_pagina(
     # POST a Graph API
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            resp = await client.post(_graph_url(path), data=payload)
+            if files_payload:
+                resp = await client.post(_graph_url(path), data=payload, files=files_payload)
+            else:
+                resp = await client.post(_graph_url(path), data=payload)
         except httpx.HTTPError as e:
             return None, FacebookError(message=f"Error de red: {e}")
 
