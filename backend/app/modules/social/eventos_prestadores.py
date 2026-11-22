@@ -266,9 +266,15 @@ async def encolar_servicio_nuevo(
                 pass
 
         if es_sealquilamarido:
-            titulo = (servicio.nombre or "").strip().rstrip(".")
+            titulo_limpio = (servicio.nombre or "").strip().rstrip(".")
+            titulo_gancho = re.sub(
+                r"\s+de\s+motor(?=\s+a\s+domicilio|$)",
+                "",
+                titulo_limpio,
+                flags=re.IGNORECASE,
+            )
             primera_linea = (
-                f"{titulo} — {texto_precio}" if texto_precio else titulo
+                f"{titulo_gancho} — {texto_precio}" if texto_precio else titulo_gancho
             )
             lineas = [
                 primera_linea,
@@ -280,12 +286,19 @@ async def encolar_servicio_nuevo(
                 lineas.append("")
                 for raw_line in servicio.descripcion.splitlines():
                     limpia = raw_line.strip()
-                    if limpia:
-                        lineas.append(limpia)
+                    if not limpia:
+                        continue
+                    limpia = re.sub(
+                        r"^(?:[•\-*]\s*)?(?:Alcance\s*/\s*incluye|Ejecuci[oó]n\s+y\s+cuidado|Condiciones\s*/\s*extras|Garant[ií]a)\s*:\s*",
+                        "• ",
+                        limpia,
+                        flags=re.IGNORECASE,
+                    )
+                    lineas.append(limpia)
             lineas.extend([
                 "",
                 "Solicítalo o revisa detalles aquí:",
-                "https://sealquilamarido.com/mecanica",
+                "https://sealquilamarido.com/mecanica?utm_source=facebook&utm_medium=social&utm_campaign=servicio_mecanica",
             ])
         else:
             encabezado = (
