@@ -349,7 +349,7 @@ async def encolar_servicio_nuevo(
                     duracion_min=d_min,
                     garantia_dias=g_dias,
                 )
-                image_url = publicar_grafica_servicio(servicio.id, png_bytes)
+                image_url = _url_absoluta(publicar_grafica_servicio(servicio.id, png_bytes))
             except Exception as e:
                 logger.warning("Social: error generando gráfica para servicio: %s", e)
 
