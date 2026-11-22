@@ -77,6 +77,7 @@ from app.modules.oficios.routes import (
 )
 from app.modules.social.routes import (
     router_admin as social_admin_router,
+    router_publico_compartidos as social_publico_compartidos_router,
 )
 from app.modules.rentacar.routes import (
     router_admin as rentacar_admin_router,
@@ -206,6 +207,7 @@ app.include_router(router_reviews_generic, prefix="/api/v1")
 
 # Social (redes: Facebook, Instagram, Google Business)
 app.include_router(social_admin_router, prefix="/api/v1")
+app.include_router(social_publico_compartidos_router, prefix="/api/v1")
 app.include_router(brand_propietario_router, prefix="/api/v1")
 app.include_router(brand_public_router, prefix="/api/v1")
 

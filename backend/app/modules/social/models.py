@@ -584,3 +584,87 @@ class ConfigSocial(TimestampMixin, Base):
             f"propietario_id={self.propietario_id}, "
             f"auto_publish={self.auto_publish})>"
         )
+
+class SocialShareTracking(Base):
+    """Trazabilidad individual de cada acción de compartir en grupos/redes."""
+
+    __tablename__ = "social_share_tracking"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    share_id: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    publicacion_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        nullable=True,
+        index=True,
+    )
+    red: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="facebook",
+        server_default="facebook",
+    )
+    grupo_nombre: Mapped[str] = mapped_column(
+        String(160),
+        nullable=False,
+    )
+    grupo_slug: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        index=True,
+    )
+    url_compartida: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    estado_reportado: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pendiente_confirmacion",
+        server_default="pendiente_confirmacion",
+    )
+    confirmado_en: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    visitas: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    clics_whatsapp: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    reservas_iniciadas: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    reservas_enviadas: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    ultima_interaccion_en: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    )

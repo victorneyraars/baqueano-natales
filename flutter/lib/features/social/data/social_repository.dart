@@ -693,4 +693,84 @@ class SocialRepository {
     );
     return ((res.data as Map)['ok'] as bool?) ?? true;
   }
+
+  // =========================================================
+  // Trazabilidad de compartidos por grupo
+  // =========================================================
+
+  Future<Map<String, dynamic>> registrarCompartido({
+    required String grupoNombre,
+    String? publicacionId,
+    String red = 'facebook',
+    String urlBase = 'https://sealquilamarido.com/mecanica',
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '$_base/compartidos',
+        data: {
+          'grupo_nombre': grupoNombre,
+          'publicacion_id': ?publicacionId,
+          'red': red,
+          'url_base': urlBase,
+        },
+      );
+      if (resp.data is Map<String, dynamic>) {
+        return resp.data as Map<String, dynamic>;
+      }
+      return Map<String, dynamic>.from(resp.data as Map);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> confirmarCompartido({
+    required String shareId,
+    required String estadoReportado,
+  }) async {
+    try {
+      final resp = await _dio.patch(
+        '$_base/compartidos/$shareId/confirmar',
+        data: {'estado_reportado': estadoReportado},
+      );
+      if (resp.data is Map<String, dynamic>) {
+        return resp.data as Map<String, dynamic>;
+      }
+      return Map<String, dynamic>.from(resp.data as Map);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> listarCompartidos({
+    String? publicacionId,
+    int limit = 30,
+  }) async {
+    try {
+      final resp = await _dio.get(
+        '$_base/compartidos',
+        queryParameters: {'publicacion_id': ?publicacionId, 'limit': limit},
+      );
+      if (resp.data is Map<String, dynamic>) {
+        return resp.data as Map<String, dynamic>;
+      }
+      return Map<String, dynamic>.from(resp.data as Map);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
 }

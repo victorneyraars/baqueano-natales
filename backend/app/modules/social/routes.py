@@ -1015,3 +1015,206 @@ async def fb_webhook_event(request: Request) -> dict:
     payload = await request.json()
     entries = len(payload.get("entry", [])) if isinstance(payload, dict) else 0
     return {"received": True, "entries": entries}
+
+
+# =========================================================
+# Trazabilidad de compartidos por grupo / envío individual
+# =========================================================
+import re as _re
+import secrets as _secrets
+from datetime import datetime as _dt, timezone as _tz
+from typing import Literal as _Literal
+from urllib.parse import parse_qsl as _parse_qsl, urlencode as _urlencode, urlsplit as _urlsplit, urlunsplit as _urlunsplit
+from sqlalchemy import desc as _desc, select as _select
+from app.modules.social.models import SocialShareTracking as _ShareTrack
+
+_COOLDOWN_SEGUNDOS = 1500  # 25 minutos entre compartidos en grupos externos
+
+
+def _slug_grupo(nombre: str) -> str:
+    limpio = _re.sub(r"[^a-z0-9]+", "_", nombre.strip().lower()).strip("_")
+    return (limpio[:90] or "grupo_externo")
+
+
+def _construir_url_utm(base_url: str, grupo_slug: str, share_id: str) -> str:
+    limpia = (base_url or "https://sealquilamarido.com/mecanica").strip()
+    if not limpia.startswith("http"):
+        limpia = "https://sealquilamarido.com/mecanica"
+    parts = _urlsplit(limpia)
+    params = dict(_parse_qsl(parts.query, keep_blank_values=True))
+    params["utm_source"] = "facebook"
+    params["utm_medium"] = "grupo"
+    params["utm_campaign"] = "natales_mecanica"
+    params["utm_content"] = grupo_slug
+    params["utm_term"] = share_id
+    return _urlunsplit((parts.scheme, parts.netloc, parts.path, _urlencode(params), parts.fragment))
+
+
+class _RegistrarCompartidoRequest(BaseModel):
+    publicacion_id: str | None = None
+    red: str = Field("facebook", max_length=32)
+    grupo_nombre: str = Field(..., min_length=2, max_length=160)
+    url_base: str = Field("https://sealquilamarido.com/mecanica", max_length=1000)
+
+
+class _ConfirmarCompartidoRequest(BaseModel):
+    estado_reportado: _Literal["publicado", "pendiente_aprobacion", "cancelado"]
+
+
+class _EventoCompartidoRequest(BaseModel):
+    share_id: str | None = Field(default=None, max_length=64)
+    utm_content: str | None = Field(default=None, max_length=120)
+    evento: _Literal["visita", "clic_whatsapp", "reserva_abierta", "reserva_enviada"]
+
+
+def _serializar_share(row: _ShareTrack) -> dict:
+    return {
+        "id": str(row.id),
+        "share_id": row.share_id,
+        "publicacion_id": str(row.publicacion_id) if row.publicacion_id else None,
+        "red": row.red,
+        "grupo_nombre": row.grupo_nombre,
+        "grupo_slug": row.grupo_slug,
+        "url_compartida": row.url_compartida,
+        "estado_reportado": row.estado_reportado,
+        "confirmado_en": row.confirmado_en.isoformat() if row.confirmado_en else None,
+        "visitas": row.visitas,
+        "clics_whatsapp": row.clics_whatsapp,
+        "reservas_iniciadas": row.reservas_iniciadas,
+        "reservas_enviadas": row.reservas_enviadas,
+        "ultima_interaccion_en": row.ultima_interaccion_en.isoformat() if row.ultima_interaccion_en else None,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
+
+
+@router_admin.get("/compartidos", summary="Listar trazabilidad de compartidos")
+async def listar_compartidos(
+    db: DbSession,
+    _admin: AdminUser,
+    publicacion_id: str | None = Query(default=None),
+    grupo_slug: str | None = Query(default=None),
+    limit: int = Query(50, ge=1, le=200),
+) -> dict:
+    stmt = _select(_ShareTrack).order_by(_desc(_ShareTrack.created_at)).limit(limit)
+    if publicacion_id:
+        try:
+            stmt = stmt.where(_ShareTrack.publicacion_id == UUID(publicacion_id))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="publicacion_id invalido")
+    if grupo_slug:
+        stmt = stmt.where(_ShareTrack.grupo_slug == grupo_slug.strip().lower())
+
+    res = await db.execute(stmt)
+    rows = list(res.scalars().all())
+
+    ultimo_stmt = _select(_ShareTrack).order_by(_desc(_ShareTrack.created_at)).limit(1)
+    ultimo = (await db.execute(ultimo_stmt)).scalar_one_or_none()
+    segundos_restantes = 0
+    if ultimo and ultimo.created_at:
+        transcurridos = int((_dt.now(_tz.utc) - ultimo.created_at).total_seconds())
+        if transcurridos < _COOLDOWN_SEGUNDOS:
+            segundos_restantes = _COOLDOWN_SEGUNDOS - transcurridos
+
+    return {
+        "items": [_serializar_share(r) for r in rows],
+        "cooldown_segundos_restantes": segundos_restantes,
+    }
+
+
+@router_admin.post("/compartidos", status_code=status.HTTP_201_CREATED, summary="Registrar inicio de compartir con trazabilidad")
+async def registrar_compartido(
+    data: _RegistrarCompartidoRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    pub_uuid: UUID | None = None
+    if data.publicacion_id:
+        try:
+            pub_uuid = UUID(data.publicacion_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="publicacion_id invalido")
+
+    ahora = _dt.now(_tz.utc)
+    ultimo = (await db.execute(_select(_ShareTrack).order_by(_desc(_ShareTrack.created_at)).limit(1))).scalar_one_or_none()
+    segundos_restantes = 0
+    if ultimo and ultimo.created_at:
+        transcurridos = int((ahora - ultimo.created_at).total_seconds())
+        if transcurridos < _COOLDOWN_SEGUNDOS:
+            segundos_restantes = _COOLDOWN_SEGUNDOS - transcurridos
+
+    sufijo = _secrets.token_hex(2).upper()
+    share_id = f"sh_{ahora.strftime('%Y%m%d_%H%M%S')}_{sufijo}"
+    grupo_nombre = data.grupo_nombre.strip()
+    grupo_slug = _slug_grupo(grupo_nombre)
+    url_utm = _construir_url_utm(data.url_base, grupo_slug, share_id)
+
+    row = _ShareTrack(
+        share_id=share_id,
+        publicacion_id=pub_uuid,
+        red=(data.red or "facebook").strip().lower(),
+        grupo_nombre=grupo_nombre,
+        grupo_slug=grupo_slug,
+        url_compartida=url_utm,
+        estado_reportado="pendiente_confirmacion",
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    payload = _serializar_share(row)
+    payload["cooldown_segundos_restantes"] = segundos_restantes
+    return payload
+
+
+@router_admin.patch("/compartidos/{share_id}/confirmar", summary="Confirmar resultado del compartir al volver de la red")
+async def confirmar_compartido(
+    share_id: str,
+    data: _ConfirmarCompartidoRequest,
+    db: DbSession,
+    _admin: AdminUser,
+) -> dict:
+    row = (await db.execute(_select(_ShareTrack).where(_ShareTrack.share_id == share_id.strip()))).scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Registro de compartido no encontrado")
+    row.estado_reportado = data.estado_reportado
+    row.confirmado_en = _dt.now(_tz.utc)
+    await db.commit()
+    await db.refresh(row)
+    return _serializar_share(row)
+
+
+router_publico_compartidos = APIRouter(prefix="/social", tags=["social-public"])
+
+
+@router_publico_compartidos.post("/compartidos/evento", summary="Registrar interacción en landing asociada a un share_id")
+async def registrar_evento_compartido(
+    data: _EventoCompartidoRequest,
+    db: DbSession,
+) -> dict:
+    row: _ShareTrack | None = None
+    if data.share_id:
+        row = (await db.execute(_select(_ShareTrack).where(_ShareTrack.share_id == data.share_id.strip()))).scalar_one_or_none()
+    if not row and data.utm_content:
+        row = (
+            await db.execute(
+                _select(_ShareTrack)
+                .where(_ShareTrack.grupo_slug == data.utm_content.strip().lower())
+                .order_by(_desc(_ShareTrack.created_at))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+    if not row:
+        return {"ok": True, "matched": False}
+
+    if data.evento == "visita":
+        row.visitas = (row.visitas or 0) + 1
+    elif data.evento == "clic_whatsapp":
+        row.clics_whatsapp = (row.clics_whatsapp or 0) + 1
+    elif data.evento == "reserva_abierta":
+        row.reservas_iniciadas = (row.reservas_iniciadas or 0) + 1
+    elif data.evento == "reserva_enviada":
+        row.reservas_enviadas = (row.reservas_enviadas or 0) + 1
+
+    row.ultima_interaccion_en = _dt.now(_tz.utc)
+    await db.commit()
+    return {"ok": True, "matched": True, "share_id": row.share_id}

@@ -1,15 +1,11 @@
 /// Pantalla admin: cola de publicaciones en redes sociales.
 ///
-/// Lista las publicaciones con filtros por estado y red. Muestra:
-/// - Red (Facebook / Instagram)
-/// - Estado (pendiente / publicado / fallado / agotado)
-/// - Preview del mensaje
-/// - Intentos + proximo intento + error
-///
-/// Endpoints: GET /api/v1/admin/social/publicaciones
+/// Lista las publicaciones con filtros por estado y red y permite compartir
+/// en grupos externos con trazabilidad de share_id + UTM y confirmación al volver.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,6 +14,28 @@ import 'package:baqueano_natales/core/network/api_exceptions.dart';
 import 'package:baqueano_natales/features/social/data/social_providers.dart';
 import 'package:baqueano_natales/features/social/domain/cuenta_social.dart';
 import 'package:baqueano_natales/features/social/domain/publicacion_social.dart';
+
+const List<String> _gruposSugeridosNatales = <String>[
+  'FARAONICA PUERTO NATALES',
+  'SOLO AUTOS NATALES',
+  'CLASIFICADOS PUERTO NATALES',
+  'FARAONICA NATALES 2.0',
+  'Avisos Radio Faraonica FM',
+];
+
+class _CompartidoPendiente {
+  const _CompartidoPendiente({
+    required this.shareId,
+    required this.grupoNombre,
+    required this.urlCompartida,
+    required this.filtro,
+  });
+
+  final String shareId;
+  final String grupoNombre;
+  final String urlCompartida;
+  final PublicacionesFiltro filtro;
+}
 
 class AdminSocialPublicacionesScreen extends ConsumerStatefulWidget {
   const AdminSocialPublicacionesScreen({super.key});
@@ -28,9 +46,201 @@ class AdminSocialPublicacionesScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminSocialPublicacionesScreenState
-    extends ConsumerState<AdminSocialPublicacionesScreen> {
+    extends ConsumerState<AdminSocialPublicacionesScreen>
+    with WidgetsBindingObserver {
   EstadoPublicacion? _estadoFiltro;
   RedSocial? _redFiltro;
+  _CompartidoPendiente? _pendiente;
+  bool _mostrandoDialogoConfirmacion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _pendiente != null &&
+        !_mostrandoDialogoConfirmacion &&
+        mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pendiente != null && !_mostrandoDialogoConfirmacion) {
+          _mostrarDialogoConfirmacion(_pendiente!);
+        }
+      });
+    }
+  }
+
+  Future<void> _mostrarDialogoConfirmacion(_CompartidoPendiente info) async {
+    _mostrandoDialogoConfirmacion = true;
+    try {
+      final estadoElegido = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirmar estado del compartir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Grupo: ${info.grupoNombre}'),
+              const SizedBox(height: 4),
+              Text(
+                'Ref: ${info.shareId}',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '¿En qué estado quedó la publicación al volver de Facebook?',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('cancelado'),
+              child: const Text('Cancelado'),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop('pendiente_aprobacion'),
+              child: const Text('Pendiente de aprobación'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop('publicado'),
+              child: const Text('Publicado'),
+            ),
+          ],
+        ),
+      );
+
+      if (estadoElegido != null && mounted) {
+        try {
+          await ref
+              .read(socialRepositoryProvider)
+              .confirmarCompartido(
+                shareId: info.shareId,
+                estadoReportado: estadoElegido,
+              );
+          ref.invalidate(publicacionesSocialesProvider(info.filtro));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Compartido ${info.shareId} marcado como: $estadoElegido',
+                ),
+              ),
+            );
+          }
+        } on ApiException catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('No se pudo confirmar: ${e.message}')),
+            );
+          }
+        }
+      }
+      if (estadoElegido != null) {
+        setState(() => _pendiente = null);
+      }
+    } finally {
+      _mostrandoDialogoConfirmacion = false;
+    }
+  }
+
+  Future<void> _iniciarCompartirConTrazabilidad(
+    PublicacionSocial pub,
+    String? urlPublicacion,
+    PublicacionesFiltro filtro,
+  ) async {
+    final grupoSeleccionado = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _SelectorGrupoSheet(urlDefecto: urlPublicacion),
+    );
+    if (grupoSeleccionado == null ||
+        grupoSeleccionado.trim().isEmpty ||
+        !mounted) {
+      return;
+    }
+
+    final grupoLimpio = grupoSeleccionado.trim();
+    final urlBase =
+        (pub.contenido['link']?.toString().trim().isNotEmpty == true)
+        ? pub.contenido['link'].toString().trim()
+        : (urlPublicacion ?? 'https://sealquilamarido.com/mecanica');
+
+    try {
+      final res = await ref
+          .read(socialRepositoryProvider)
+          .registrarCompartido(
+            grupoNombre: grupoLimpio,
+            publicacionId: pub.id,
+            red: pub.red.value,
+            urlBase: urlBase,
+          );
+
+      final shareId = (res['share_id'] as String?) ?? '';
+      final urlConUtm = (res['url_compartida'] as String?) ?? urlBase;
+      final cooldownSeg =
+          (res['cooldown_segundos_restantes'] as num?)?.toInt() ?? 0;
+
+      if (cooldownSeg > 0 && mounted) {
+        final mins = (cooldownSeg / 60).ceil();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Aviso anti-spam: quedan ~$mins min desde el último compartido en grupos.',
+            ),
+          ),
+        );
+      }
+
+      final mensajeRaw =
+          (pub.contenido['message']?.toString().trim().isNotEmpty == true)
+          ? pub.contenido['message'].toString().trim()
+          : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
+      final textoParaPegar = '$mensajeRaw\n\n$urlConUtm';
+
+      await Clipboard.setData(ClipboardData(text: textoParaPegar));
+
+      if (shareId.isNotEmpty) {
+        setState(() {
+          _pendiente = _CompartidoPendiente(
+            shareId: shareId,
+            grupoNombre: grupoLimpio,
+            urlCompartida: urlConUtm,
+            filtro: filtro,
+          );
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Copiado al portapapeles · Ref: $shareId'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      await SharePlus.instance.share(ShareParams(text: textoParaPegar));
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al registrar compartido: ${e.message}'),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +251,12 @@ class _AdminSocialPublicacionesScreenState
       appBar: AppBar(
         title: const Text('Cola de publicaciones'),
         actions: [
+          if (_pendiente != null)
+            IconButton(
+              icon: const Icon(Icons.fact_check_outlined),
+              tooltip: 'Confirmar último compartir',
+              onPressed: () => _mostrarDialogoConfirmacion(_pendiente!),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refrescar',
@@ -51,6 +267,19 @@ class _AdminSocialPublicacionesScreenState
       ),
       body: Column(
         children: [
+          if (_pendiente != null)
+            MaterialBanner(
+              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+              content: Text(
+                'Compartido pendiente de confirmar en ${_pendiente!.grupoNombre} (${_pendiente!.shareId})',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => _mostrarDialogoConfirmacion(_pendiente!),
+                  child: const Text('Confirmar ahora'),
+                ),
+              ],
+            ),
           _FiltersBar(
             estado: _estadoFiltro,
             red: _redFiltro,
@@ -80,8 +309,15 @@ class _AdminSocialPublicacionesScreenState
                     padding: const EdgeInsets.all(12),
                     itemCount: data.items.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, i) =>
-                        _PublicacionCard(pub: data.items[i]),
+                    itemBuilder: (ctx, i) => _PublicacionCard(
+                      pub: data.items[i],
+                      onCompartirConGrupo: (url) =>
+                          _iniciarCompartirConTrazabilidad(
+                            data.items[i],
+                            url,
+                            filtro,
+                          ),
+                    ),
                   ),
                 );
               },
@@ -93,9 +329,98 @@ class _AdminSocialPublicacionesScreenState
   }
 }
 
-// ---------------------------------------------------------
-// Filtros (chips horizontales)
-// ---------------------------------------------------------
+class _SelectorGrupoSheet extends StatefulWidget {
+  const _SelectorGrupoSheet({this.urlDefecto});
+
+  final String? urlDefecto;
+
+  @override
+  State<_SelectorGrupoSheet> createState() => _SelectorGrupoSheetState();
+}
+
+class _SelectorGrupoSheetState extends State<_SelectorGrupoSheet> {
+  final TextEditingController _customCtrl = TextEditingController();
+  String? _elegido;
+
+  @override
+  void dispose() {
+    _customCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Seleccionar grupo destino',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Se copiará el texto + enlace con UTM/share_id y se registrará el envío.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _gruposSugeridosNatales.map((g) {
+              final sel = _elegido == g && _customCtrl.text.trim().isEmpty;
+              return ChoiceChip(
+                label: Text(g),
+                selected: sel,
+                onSelected: (_) {
+                  setState(() {
+                    _elegido = g;
+                    _customCtrl.clear();
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customCtrl,
+            decoration: const InputDecoration(
+              labelText: 'O escribe otro grupo / destino',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () {
+                  final custom = _customCtrl.text.trim();
+                  final finalGrupo = custom.isNotEmpty ? custom : _elegido;
+                  if (finalGrupo != null && finalGrupo.isNotEmpty) {
+                    Navigator.of(context).pop(finalGrupo);
+                  }
+                },
+                icon: const Icon(Icons.share, size: 18),
+                label: const Text('Copiar y compartir'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FiltersBar extends StatelessWidget {
   const _FiltersBar({
     required this.estado,
@@ -221,9 +546,6 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------
-// Empty / Error states
-// ---------------------------------------------------------
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
 
@@ -295,13 +617,14 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------
-// Card de publicacion
-// ---------------------------------------------------------
 class _PublicacionCard extends ConsumerStatefulWidget {
-  const _PublicacionCard({required this.pub});
+  const _PublicacionCard({
+    required this.pub,
+    required this.onCompartirConGrupo,
+  });
 
   final PublicacionSocial pub;
+  final Future<void> Function(String? urlPublicacion) onCompartirConGrupo;
 
   @override
   ConsumerState<_PublicacionCard> createState() => _PublicacionCardState();
@@ -336,10 +659,6 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
     }
   }
 
-  Future<void> _compartirEnlace(String url) async {
-    await SharePlus.instance.share(ShareParams(text: url));
-  }
-
   Future<void> _reencolar() async {
     setState(() => _reencolando = true);
     try {
@@ -369,6 +688,7 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
     final pub = widget.pub;
     final theme = Theme.of(context);
     final estadoColor = Color(pub.estado.colorValue);
+    final urlPub = _resolverUrlPublicacion(pub);
 
     return Card(
       child: Padding(
@@ -376,7 +696,6 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: red + estado + intentos
             Row(
               children: [
                 Icon(
@@ -417,16 +736,12 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Preview
             Text(
               pub.mensajePreview,
               style: theme.textTheme.bodyMedium,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-
-            // Metadata
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -442,8 +757,6 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
                 _Meta(icon: Icons.schedule, text: _fmt(pub.createdAt)),
               ],
             ),
-
-            // Error (si aplica)
             if (pub.errorUltimo != null &&
                 pub.errorUltimo!.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -475,8 +788,6 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
                 ),
               ),
             ],
-
-            // Proximo intento + external id
             if (pub.proximoIntentoEn != null) ...[
               const SizedBox(height: 6),
               _Meta(
@@ -488,31 +799,24 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
               const SizedBox(height: 6),
               _Meta(icon: Icons.link, text: 'ID: ${pub.externalPostId}'),
             ],
-
-            if (pub.estado == EstadoPublicacion.publicado &&
-                _resolverUrlPublicacion(pub) != null) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (pub.estado == EstadoPublicacion.publicado && urlPub != null)
                   OutlinedButton.icon(
-                    onPressed: () =>
-                        _abrirEnFacebook(_resolverUrlPublicacion(pub)!),
+                    onPressed: () => _abrirEnFacebook(urlPub),
                     icon: const Icon(Icons.open_in_new, size: 16),
                     label: const Text('Abrir en Facebook'),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _compartirEnlace(_resolverUrlPublicacion(pub)!),
-                    icon: const Icon(Icons.share, size: 16),
-                    label: const Text('Compartir'),
-                  ),
-                ],
-              ),
-            ],
-
-            // Boton Reencolar (solo para estados que pueden reintentar)
+                OutlinedButton.icon(
+                  onPressed: () => widget.onCompartirConGrupo(urlPub),
+                  icon: const Icon(Icons.share, size: 16),
+                  label: const Text('Compartir en grupo'),
+                ),
+              ],
+            ),
             if (pub.estado == EstadoPublicacion.fallado ||
                 pub.estado == EstadoPublicacion.agotado) ...[
               const SizedBox(height: 8),
