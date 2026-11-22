@@ -278,7 +278,12 @@ async def encolar_servicio_nuevo(
             lineas.append(servicio.descripcion)
 
         lineas.append("")
-        lineas.append(f"Pedilo en: {web}/prestadores/{prestador.slug}")
+        enlace_servicio = (
+            "https://sealquilamarido.com/mecanica"
+            if getattr(prestador, "slug", None) == "se-alquila-marido"
+            else f"{web}/prestadores/{prestador.slug}"
+        )
+        lineas.append(f"Pedilo en: {enlace_servicio}")
         mensaje = "\n".join(lineas)
 
         image_url = _url_absoluta(

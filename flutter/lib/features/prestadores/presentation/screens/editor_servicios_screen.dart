@@ -82,6 +82,15 @@ class _ContenidoState extends State<_Contenido> {
     super.dispose();
   }
 
+  int get _totalActivos =>
+      widget.prestador.servicios.where((s) => s.activo).length;
+
+  int get _totalPausados =>
+      widget.prestador.servicios.where((s) => !s.activo).length;
+
+  String get _etiquetaActivos => 'Activos ($_totalActivos)';
+  String get _etiquetaPausados => 'Pausados ($_totalPausados)';
+
   List<String> get _filtrosDisponibles {
     final categorias = <String>{};
     for (final s in widget.prestador.servicios) {
@@ -90,15 +99,29 @@ class _ContenidoState extends State<_Contenido> {
         categorias.add(cat);
       }
     }
-    return ['Todos', 'Destacados', ...categorias];
+    return [
+      'Todos',
+      _etiquetaActivos,
+      _etiquetaPausados,
+      'Destacados',
+      ...categorias,
+    ];
   }
 
   List<PrestadorServicio> get _serviciosFiltrados {
     return widget.prestador.servicios.where((s) {
+      if (_filtroSeleccionado.startsWith('Activos (') && !s.activo) {
+        return false;
+      }
+      if (_filtroSeleccionado.startsWith('Pausados (') && s.activo) {
+        return false;
+      }
       if (_filtroSeleccionado == 'Destacados' && !s.destacado) {
         return false;
       }
       if (_filtroSeleccionado != 'Todos' &&
+          !_filtroSeleccionado.startsWith('Activos (') &&
+          !_filtroSeleccionado.startsWith('Pausados (') &&
           _filtroSeleccionado != 'Destacados') {
         final cat = (s.categoriaServicio ?? '').trim().toLowerCase();
         if (cat != _filtroSeleccionado.toLowerCase()) {
