@@ -1,3 +1,4 @@
+import re
 """Integracion del modulo social con el vertical prestadores.
 
 Cuando pasa algo relevante en prestadores (nuevo aprobado, servicio
