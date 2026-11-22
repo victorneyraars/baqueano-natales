@@ -31,7 +31,7 @@ class EditorServiciosScreen extends ConsumerWidget {
     final asyncPrestador = ref.watch(miPrestadorDetalleProvider(prestadorId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Servicios')),
+      appBar: AppBar(title: const Text('Servicios y precios')),
       floatingActionButton: asyncPrestador.maybeWhen(
         data: (p) => FloatingActionButton.extended(
           onPressed: () => _abrirFormulario(context, ref, p, null),
@@ -53,15 +53,77 @@ class EditorServiciosScreen extends ConsumerWidget {
   }
 }
 
-class _Contenido extends StatelessWidget {
+class _Contenido extends StatefulWidget {
   const _Contenido({required this.prestador, required this.ref});
 
   final Prestador prestador;
   final WidgetRef ref;
 
   @override
+  State<_Contenido> createState() => _ContenidoState();
+}
+
+class _ContenidoState extends State<_Contenido> {
+  final TextEditingController _filtroCtrl = TextEditingController();
+  String _consulta = '';
+  String _filtroSeleccionado = 'Todos';
+
+  @override
+  void initState() {
+    super.initState();
+    _filtroCtrl.addListener(() {
+      setState(() => _consulta = _filtroCtrl.text.trim().toLowerCase());
+    });
+  }
+
+  @override
+  void dispose() {
+    _filtroCtrl.dispose();
+    super.dispose();
+  }
+
+  List<String> get _filtrosDisponibles {
+    final categorias = <String>{};
+    for (final s in widget.prestador.servicios) {
+      final cat = s.categoriaServicio?.trim() ?? '';
+      if (cat.isNotEmpty) {
+        categorias.add(cat);
+      }
+    }
+    return ['Todos', 'Destacados', ...categorias];
+  }
+
+  List<PrestadorServicio> get _serviciosFiltrados {
+    return widget.prestador.servicios.where((s) {
+      if (_filtroSeleccionado == 'Destacados' && !s.destacado) {
+        return false;
+      }
+      if (_filtroSeleccionado != 'Todos' &&
+          _filtroSeleccionado != 'Destacados') {
+        final cat = (s.categoriaServicio ?? '').trim().toLowerCase();
+        if (cat != _filtroSeleccionado.toLowerCase()) {
+          return false;
+        }
+      }
+      if (_consulta.isNotEmpty) {
+        final nombre = s.nombre.toLowerCase();
+        final desc = (s.descripcion ?? '').toLowerCase();
+        final cat = (s.categoriaServicio ?? '').toLowerCase();
+        if (!nombre.contains(_consulta) &&
+            !desc.contains(_consulta) &&
+            !cat.contains(_consulta)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final prestador = widget.prestador;
+    final ref = widget.ref;
 
     if (prestador.servicios.isEmpty) {
       return _EmptyState(
@@ -69,34 +131,97 @@ class _Contenido extends StatelessWidget {
       );
     }
 
+    final filtrados = _serviciosFiltrados;
+    final filtros = _filtrosDisponibles;
+
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(miPrestadorDetalleProvider(prestador.id));
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-        itemCount: prestador.servicios.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                '${prestador.servicios.length} servicio(s) en tu catálogo',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+        children: [
+          Text(
+            '${filtrados.length} de ${prestador.servicios.length} servicio(s) en tu catálogo',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _filtroCtrl,
+            decoration: InputDecoration(
+              hintText: 'Buscar por nombre, categoría o detalle...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _consulta.isNotEmpty
+                  ? IconButton(
+                      tooltip: 'Limpiar búsqueda',
+                      icon: const Icon(Icons.clear),
+                      onPressed: _filtroCtrl.clear,
+                    )
+                  : null,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: filtros.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                final filtro = filtros[index];
+                final activo = _filtroSeleccionado == filtro;
+                return ChoiceChip(
+                  label: Text(filtro),
+                  selected: activo,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (_) =>
+                      setState(() => _filtroSeleccionado = filtro),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (filtrados.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.filter_list_off,
+                    size: 36,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No hay servicios que coincidan con el filtro.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      _filtroCtrl.clear();
+                      setState(() => _filtroSeleccionado = 'Todos');
+                    },
+                    child: const Text('Limpiar filtros'),
+                  ),
+                ],
               ),
-            );
-          }
-          final srv = prestador.servicios[index - 1];
-          return _ServicioCard(
-            servicio: srv,
-            onEditar: () => _abrirFormulario(context, ref, prestador, srv),
-            onEliminar: () => _confirmarEliminar(context, ref, prestador, srv),
-            onPublicarRedes: () =>
-                _publicarServicioRedes(context, ref, prestador, srv),
-          );
-        },
+            )
+          else
+            for (final srv in filtrados)
+              _ServicioCard(
+                servicio: srv,
+                onEditar: () => _abrirFormulario(context, ref, prestador, srv),
+                onEliminar: () =>
+                    _confirmarEliminar(context, ref, prestador, srv),
+                onPublicarRedes: () =>
+                    _publicarServicioRedes(context, ref, prestador, srv),
+              ),
+        ],
       ),
     );
   }
