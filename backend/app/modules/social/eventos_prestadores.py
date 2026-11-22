@@ -322,10 +322,42 @@ async def encolar_servicio_nuevo(
 
         mensaje = "\n".join(lineas)
 
-        image_url = _url_absoluta(
-            getattr(prestador, "foto_portada_url", None)
-            or getattr(prestador, "foto_url", None)
-        )
+        image_url = None
+        if es_sealquilamarido:
+            try:
+                from app.modules.social.grafica_servicio import (
+                    generar_png_servicio_sealquilamarido,
+                    subir_grafica_servicio_r2,
+                )
+
+                d_min = None
+                g_dias = None
+                try:
+                    if duracion is not None and int(duracion) > 0:
+                        d_min = int(duracion)
+                except (TypeError, ValueError):
+                    pass
+                try:
+                    if garantia is not None and int(garantia) > 0:
+                        g_dias = int(garantia)
+                except (TypeError, ValueError):
+                    pass
+
+                png_bytes = generar_png_servicio_sealquilamarido(
+                    titulo=servicio.nombre or "",
+                    texto_precio=texto_precio,
+                    duracion_min=d_min,
+                    garantia_dias=g_dias,
+                )
+                image_url = subir_grafica_servicio_r2(servicio.id, png_bytes)
+            except Exception as e:
+                logger.warning("Social: error generando gráfica para servicio: %s", e)
+
+        if not image_url:
+            image_url = _url_absoluta(
+                getattr(prestador, "foto_portada_url", None)
+                or getattr(prestador, "foto_url", None)
+            )
 
         return await _encolar_para_redes_configuradas(
             db,
