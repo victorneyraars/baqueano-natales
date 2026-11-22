@@ -237,21 +237,15 @@ async def encolar_servicio_nuevo(
             return 0
 
         web = settings.PUBLIC_WEB_URL.rstrip("/")
-        encabezado = (
-            f"{prestador.nombre} — Servicio disponible"
-            if forzar
-            else f"{prestador.nombre} agrego:"
-        )
-        lineas = [encabezado, "", servicio.nombre]
-        if servicio.categoria_servicio:
-            lineas.append(f"({servicio.categoria_servicio})")
+        es_sealquilamarido = getattr(prestador, "slug", None) == "se-alquila-marido"
 
         desde = servicio.precio_desde_clp
         hasta = servicio.precio_hasta_clp
+        texto_precio = None
         if desde is not None and hasta is not None and desde != hasta:
-            lineas.append(f"{_precio_clp(desde)} - {_precio_clp(hasta)}")
+            texto_precio = f"{_precio_clp(desde)} - {_precio_clp(hasta)}"
         elif desde is not None:
-            lineas.append(f"Desde {_precio_clp(desde)}")
+            texto_precio = f"Desde {_precio_clp(desde)}"
 
         duracion = getattr(servicio, "duracion_estimada_min", None)
         garantia = getattr(servicio, "garantia_dias", None)
@@ -260,30 +254,56 @@ async def encolar_servicio_nuevo(
             try:
                 m = int(duracion)
                 if m > 0:
-                    detalles.append(f"Duracion estimada: {m} min")
+                    detalles.append(f"Duración estimada: {m} min")
             except (TypeError, ValueError):
                 pass
         if garantia is not None:
             try:
                 d = int(garantia)
                 if d > 0:
-                    detalles.append(f"Garantia: {d} dias")
+                    detalles.append(f"Garantía: {d} días")
             except (TypeError, ValueError):
                 pass
-        if detalles:
-            lineas.append(" · ".join(detalles))
 
-        if servicio.descripcion:
+        if es_sealquilamarido:
+            titulo = (servicio.nombre or "").strip().rstrip(".")
+            primera_linea = (
+                f"{titulo} — {texto_precio}" if texto_precio else titulo
+            )
+            lineas = [
+                primera_linea,
+                f"Puerto Natales · {prestador.nombre}",
+                "",
+                "• A domicilio en Puerto Natales (tú aportas aceite y filtro)",
+                "• Bandeja de contención, apriete controlado y revisión de nivel",
+                "• Retiro de aceite usado opcional (+$5.000)",
+            ]
+            if detalles:
+                lineas.append(" · ".join(detalles))
+            lineas.extend([
+                "",
+                "Solicítalo o revisa detalles aquí:",
+                "https://sealquilamarido.com/mecanica",
+            ])
+        else:
+            encabezado = (
+                f"{prestador.nombre} — Servicio disponible"
+                if forzar
+                else f"{prestador.nombre} agregó:"
+            )
+            lineas = [encabezado, "", servicio.nombre]
+            if servicio.categoria_servicio:
+                lineas.append(f"({servicio.categoria_servicio})")
+            if texto_precio:
+                lineas.append(texto_precio)
+            if detalles:
+                lineas.append(" · ".join(detalles))
+            if servicio.descripcion:
+                lineas.append("")
+                lineas.append(servicio.descripcion)
             lineas.append("")
-            lineas.append(servicio.descripcion)
+            lineas.append(f"Pídelo en: {web}/prestadores/{prestador.slug}")
 
-        lineas.append("")
-        enlace_servicio = (
-            "https://sealquilamarido.com/mecanica"
-            if getattr(prestador, "slug", None) == "se-alquila-marido"
-            else f"{web}/prestadores/{prestador.slug}"
-        )
-        lineas.append(f"Pedilo en: {enlace_servicio}")
         mensaje = "\n".join(lineas)
 
         image_url = _url_absoluta(
