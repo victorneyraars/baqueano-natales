@@ -698,6 +698,34 @@ class SocialRepository {
   // Trazabilidad de compartidos por grupo
   // =========================================================
 
+  Future<List<String>> listarDestinosGuardados({int limit = 200}) async {
+    try {
+      final resp = await _dio.get(
+        '$_base/compartidos',
+        queryParameters: {'limit': limit},
+      );
+      final data = resp.data;
+      final rawItems = data is Map ? data['items'] : null;
+      if (rawItems is! List) return const [];
+      final vistos = <String>{};
+      final destinos = <String>[];
+      for (final item in rawItems) {
+        if (item is! Map) continue;
+        final nombre = (item['grupo_nombre'] ?? '').toString().trim();
+        if (nombre.isEmpty) continue;
+        if (vistos.add(nombre.toLowerCase())) destinos.add(nombre);
+      }
+      return destinos;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error as ApiException;
+      throw const UnknownException();
+    } catch (e) {
+      throw UnknownException('Error inesperado: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> registrarCompartido({
     required String grupoNombre,
     String? publicacionId,
