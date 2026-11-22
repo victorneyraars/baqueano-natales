@@ -223,6 +223,8 @@ class _ContenidoState extends State<_Contenido> {
                   null,
                   plantillaCopia: srv,
                 ),
+                onToggleActivo: () =>
+                    _alternarActivo(context, ref, prestador, srv),
                 onEliminar: () =>
                     _confirmarEliminar(context, ref, prestador, srv),
                 onPublicarRedes: () =>
@@ -239,6 +241,7 @@ class _ServicioCard extends StatelessWidget {
     required this.servicio,
     required this.onEditar,
     required this.onDuplicar,
+    required this.onToggleActivo,
     required this.onEliminar,
     required this.onPublicarRedes,
   });
@@ -246,6 +249,7 @@ class _ServicioCard extends StatelessWidget {
   final PrestadorServicio servicio;
   final VoidCallback onEditar;
   final VoidCallback onDuplicar;
+  final VoidCallback onToggleActivo;
   final VoidCallback onEliminar;
   final VoidCallback onPublicarRedes;
 
@@ -253,114 +257,152 @@ class _ServicioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          servicio.nombre,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
+    return Opacity(
+      opacity: servicio.activo ? 1.0 : 0.65,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            servicio.nombre,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      if (servicio.destacado) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.local_fire_department,
-                          size: 18,
-                          color: Colors.orange.shade700,
-                        ),
+                        if (servicio.destacado) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.local_fire_department,
+                            size: 18,
+                            color: Colors.orange.shade700,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: onEditar,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Editar',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.copy_outlined, size: 20),
-                  onPressed: onDuplicar,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Duplicar',
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: Colors.red.shade700,
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    onPressed: onEditar,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Editar',
                   ),
-                  onPressed: onEliminar,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Eliminar',
+                  IconButton(
+                    icon: const Icon(Icons.copy_outlined, size: 20),
+                    onPressed: onDuplicar,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Duplicar',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      servicio.activo
+                          ? Icons.pause_circle_outline
+                          : Icons.play_circle_outline,
+                      size: 20,
+                      color: servicio.activo
+                          ? theme.colorScheme.onSurfaceVariant
+                          : Colors.orange.shade800,
+                    ),
+                    onPressed: onToggleActivo,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: servicio.activo
+                        ? 'Pausar servicio'
+                        : 'Activar servicio',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: Colors.red.shade700,
+                    ),
+                    onPressed: onEliminar,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Eliminar',
+                  ),
+                ],
+              ),
+              if (servicio.categoriaServicio != null || !servicio.activo) ...[
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (servicio.categoriaServicio != null)
+                      Chip(
+                        label: Text(servicio.categoriaServicio!),
+                        visualDensity: VisualDensity.compact,
+                        labelStyle: theme.textTheme.labelSmall,
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    if (!servicio.activo)
+                      Chip(
+                        label: const Text('Pausado'),
+                        visualDensity: VisualDensity.compact,
+                        labelStyle: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        side: BorderSide(color: Colors.orange.shade300),
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                  ],
                 ),
               ],
-            ),
-            if (servicio.categoriaServicio != null) ...[
-              const SizedBox(height: 4),
-              Chip(
-                label: Text(servicio.categoriaServicio!),
-                visualDensity: VisualDensity.compact,
-                labelStyle: theme.textTheme.labelSmall,
-                padding: EdgeInsets.zero,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ],
-            if (servicio.descripcion != null &&
-                servicio.descripcion!.isNotEmpty) ...[
+              if (servicio.descripcion != null &&
+                  servicio.descripcion!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  servicio.descripcion!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
-              Text(
-                servicio.descripcion!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                _metaChip(
-                  theme,
-                  Icons.attach_money,
-                  servicio.precioLegible,
-                  bold: true,
-                ),
-                if (servicio.duracionLegible != null)
-                  _metaChip(theme, Icons.schedule, servicio.duracionLegible!),
-                if (servicio.garantiaLegible != null)
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
                   _metaChip(
                     theme,
-                    Icons.verified_user_outlined,
-                    'Garantía ${servicio.garantiaLegible}',
-                    color: Colors.green.shade700,
+                    Icons.attach_money,
+                    servicio.precioLegible,
+                    bold: true,
                   ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onPublicarRedes,
-                icon: const Icon(Icons.campaign_outlined, size: 18),
-                label: const Text('Publicar en redes'),
+                  if (servicio.duracionLegible != null)
+                    _metaChip(theme, Icons.schedule, servicio.duracionLegible!),
+                  if (servicio.garantiaLegible != null)
+                    _metaChip(
+                      theme,
+                      Icons.verified_user_outlined,
+                      'Garantía ${servicio.garantiaLegible}',
+                      color: Colors.green.shade700,
+                    ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: onPublicarRedes,
+                  icon: const Icon(Icons.campaign_outlined, size: 18),
+                  label: const Text('Publicar en redes'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -503,6 +545,35 @@ Future<void> _abrirFormulario(
   }
 }
 
+Future<void> _alternarActivo(
+  BuildContext context,
+  WidgetRef ref,
+  Prestador prestador,
+  PrestadorServicio servicio,
+) async {
+  final nuevoEstado = !servicio.activo;
+  try {
+    final repo = ref.read(prestadorRepositoryProvider);
+    await repo.editarServicio(
+      prestadorId: prestador.id,
+      servicioId: servicio.id,
+      cambios: {'activo': nuevoEstado},
+    );
+    ref.invalidate(miPrestadorDetalleProvider(prestador.id));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(nuevoEstado ? 'Servicio activado' : 'Servicio pausado'),
+      ),
+    );
+  } on ApiException catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.message), backgroundColor: Colors.red.shade700),
+    );
+  }
+}
+
 Future<void> _confirmarEliminar(
   BuildContext context,
   WidgetRef ref,
@@ -582,6 +653,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
   final _garantiaCtrl = TextEditingController();
 
   bool _destacado = false;
+  bool _activo = true;
   bool _guardando = false;
 
   bool get _esEdicion => widget.servicio != null;
@@ -656,6 +728,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
       _duracionCtrl.text = s.duracionEstimadaMin?.toString() ?? '';
       _garantiaCtrl.text = s.garantiaDias?.toString() ?? '';
       _destacado = widget.servicio != null ? s.destacado : false;
+      _activo = widget.servicio != null ? s.activo : true;
     }
   }
 
@@ -693,6 +766,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
           'duracion_estimada_min': _parseIntOrNull(_duracionCtrl.text),
           'garantia_dias': _parseIntOrNull(_garantiaCtrl.text),
           'destacado': _destacado,
+          'activo': _activo,
         };
         await repo.editarServicio(
           prestadorId: widget.prestadorId,
@@ -1113,6 +1187,15 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                       ),
                       value: _destacado,
                       onChanged: (v) => setState(() => _destacado = v),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    SwitchListTile(
+                      title: const Text('Servicio activo'),
+                      subtitle: const Text(
+                        'Si lo pausas, se conserva en el catálogo sin eliminarlo',
+                      ),
+                      value: _activo,
+                      onChanged: (v) => setState(() => _activo = v),
                       contentPadding: EdgeInsets.zero,
                     ),
                     if (!_esEdicion) ...[
