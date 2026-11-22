@@ -56,6 +56,38 @@ def _dibujar_icono_escudo(draw: ImageDraw.ImageDraw, cx: int, cy: int, r: int, c
     draw.polygon(pts, outline=color, width=3)
 
 
+def _hex_a_rgb(valor_hex: str, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+    limpio = (valor_hex or "").strip().lstrip("#")
+    if len(limpio) == 6:
+        try:
+            return tuple(int(limpio[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+        except ValueError:
+            pass
+    return fallback
+
+
+def _envolver_titulo_inteligente(
+    draw: ImageDraw.ImageDraw,
+    titulo_limpio: str,
+    ancho_max: int,
+    tamano_inicial: int = 58,
+) -> tuple[list[str], ImageFont.ImageFont, int]:
+    """Ajusta tamaño de fuente y salto de línea para que títulos largos entren sin cortarse."""
+    for tamano, ancho_wrap in [(tamano_inicial, 25), (50, 29), (44, 33), (38, 38)]:
+        fuente = _cargar_fuente(tamano, negrita=True)
+        lineas = textwrap.wrap(titulo_limpio, width=ancho_wrap)
+        if len(lineas) <= 3 and all(_medir_texto(draw, ln, fuente)[0] <= ancho_max for ln in lineas):
+            return lineas, fuente, tamano
+
+    fuente_min = _cargar_fuente(38, negrita=True)
+    lineas_finales = textwrap.wrap(titulo_limpio, width=38)[:3]
+    for i, ln in enumerate(lineas_finales):
+        while _medir_texto(draw, ln, fuente_min)[0] > ancho_max and len(ln) > 4:
+            ln = ln[:-1]
+        lineas_finales[i] = ln
+    return lineas_finales, fuente_min, 38
+
+
 def generar_png_servicio_sealquilamarido(
     *,
     titulo: str,
@@ -63,8 +95,27 @@ def generar_png_servicio_sealquilamarido(
     duracion_min: int | None,
     garantia_dias: int | None,
 ) -> bytes:
-    """Genera una gráfica cuadrada 1080x1080 refinada y de alto contraste para feed social."""
+    """Genera una gráfica cuadrada 1080x1080 refinada y configurable por variables de entorno."""
     w, h = 1080, 1080
+
+    acento_rgb = _hex_a_rgb(os.getenv("GRAFICA_SERVICIO_COLOR_ACENTO", "#F97316"), (249, 115, 22))
+    acento_hex = f"#{acento_rgb[0]:02X}{acento_rgb[1]:02X}{acento_rgb[2]:02X}"
+    precio_hex = (os.getenv("GRAFICA_SERVICIO_COLOR_PRECIO", "#4ADE80") or "#4ADE80").strip()
+    sello_txt = (os.getenv("GRAFICA_SERVICIO_TEXTO_SELLO", "PUERTO NATALES") or "PUERTO NATALES").strip()
+    nota_txt = (
+        os.getenv(
+            "GRAFICA_SERVICIO_TEXTO_NOTA",
+            "Atención directa en tu domicilio · Reserva en línea",
+        )
+        or "Atención directa en tu domicilio · Reserva en línea"
+    ).strip()
+    cta_txt = (
+        os.getenv(
+            "GRAFICA_SERVICIO_TEXTO_CTA",
+            "Agenda en sealquilamarido.com/mecanica",
+        )
+        or "Agenda en sealquilamarido.com/mecanica"
+    ).strip()
 
     # 1. Fondo con degradado vertical sutil y resplandor cálido controlado
     base_img = Image.new("RGBA", (w, h), (11, 17, 32, 255))
@@ -83,33 +134,31 @@ def generar_png_servicio_sealquilamarido(
     for radio, alpha in [(380, 8), (260, 12), (160, 16)]:
         glow_draw.ellipse(
             [w - 150 - radio, 110 - radio, w - 150 + radio, 110 + radio],
-            fill=(249, 115, 22, alpha),
+            fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], alpha),
         )
     base_img = Image.alpha_composite(base_img, glow)
     draw = ImageDraw.Draw(base_img)
 
-    # Tipografías
+    # Tipografías base
     f_marca = _cargar_fuente(36, negrita=True)
     f_sub = _cargar_fuente(24, negrita=False)
     f_tag_top = _cargar_fuente(20, negrita=True)
     f_badge = _cargar_fuente(26, negrita=True)
-    f_titulo = _cargar_fuente(58, negrita=True)
     f_label = _cargar_fuente(22, negrita=True)
     f_precio = _cargar_fuente(76, negrita=True)
     f_chip = _cargar_fuente(28, negrita=True)
     f_nota = _cargar_fuente(26, negrita=False)
     f_cta = _cargar_fuente(27, negrita=True)
 
-    # 2. Cabecera superior con barra naranja izquierda y sello de ubicación de alto contraste
+    # 2. Cabecera superior con barra de acento izquierda y sello de ubicación
     header_h = 148
     draw.rectangle([0, 0, w, header_h], fill=(22, 32, 50, 255))
-    draw.rectangle([0, 0, 12, header_h], fill=(249, 115, 22, 255))
-    draw.rectangle([0, header_h, w, header_h + 4], fill=(249, 115, 22, 255))
+    draw.rectangle([0, 0, 12, header_h], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
+    draw.rectangle([0, header_h, w, header_h + 4], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
 
     draw.text((56, 30), "SE ALQUILA MARIDO", fill="#FFFFFF", font=f_marca)
     draw.text((56, 84), "Puerto Natales · Mecánica a domicilio", fill="#CBD5E1", font=f_sub)
 
-    sello_txt = "PUERTO NATALES"
     sw, sh = _medir_texto(draw, sello_txt, f_tag_top)
     sello_w = sw + 36
     sello_h = sh + 20
@@ -119,7 +168,7 @@ def generar_png_servicio_sealquilamarido(
         [sello_x1, sello_y1, sello_x1 + sello_w, sello_y1 + sello_h],
         radius=12,
         fill=(39, 53, 79, 255),
-        outline=(249, 115, 22, 255),
+        outline=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255),
         width=2,
     )
     draw.text(
@@ -129,7 +178,7 @@ def generar_png_servicio_sealquilamarido(
         font=f_tag_top,
     )
 
-    # 3. Badge de modalidad + Título del servicio
+    # 3. Badge de modalidad + Título del servicio con ajuste automático
     badge_txt = "A DOMICILIO"
     bw, bh = _medir_texto(draw, badge_txt, f_badge)
     badge_w = bw + 48
@@ -139,7 +188,7 @@ def generar_png_servicio_sealquilamarido(
     draw.rounded_rectangle(
         [badge_x1, badge_y1, badge_x1 + badge_w, badge_y1 + badge_h],
         radius=badge_h // 2,
-        fill=(249, 115, 22, 255),
+        fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255),
     )
     draw.text(
         (badge_x1 + (badge_w - bw) // 2, badge_y1 + (badge_h - bh) // 2 - 2),
@@ -154,7 +203,12 @@ def generar_png_servicio_sealquilamarido(
         (titulo or "Servicio mecánico").strip().rstrip("."),
         flags=re.IGNORECASE,
     )
-    lineas_titulo = textwrap.wrap(titulo_limpio, width=25)[:3]
+    lineas_titulo, f_titulo, _ = _envolver_titulo_inteligente(
+        draw,
+        titulo_limpio,
+        ancho_max=w - 112,
+        tamano_inicial=58,
+    )
     y_actual = badge_y1 + badge_h + 28
     _, alto_linea_t = _medir_texto(draw, "Ag", f_titulo)
     interlinea_t = alto_linea_t + 14
@@ -162,7 +216,7 @@ def generar_png_servicio_sealquilamarido(
         draw.text((56, y_actual), linea, fill="#F8FAFC", font=f_titulo)
         y_actual += interlinea_t
 
-    # 4. Tarjeta principal de tarifa con acento lateral y sombra limpia
+    # 4. Tarjeta principal de tarifa
     card_x1 = 56
     card_x2 = w - 56
     card_y1 = max(y_actual + 26, 480)
@@ -184,7 +238,7 @@ def generar_png_servicio_sealquilamarido(
     draw.rounded_rectangle(
         [card_x1, card_y1, card_x1 + 12, card_y2],
         radius=6,
-        fill=(249, 115, 22, 255),
+        fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255),
     )
 
     lbl_txt = "TARIFA REFERENCIAL"
@@ -192,11 +246,10 @@ def generar_png_servicio_sealquilamarido(
     draw.text((card_x1 + 36, card_y1 + 24), lbl_txt, fill="#94A3B8", font=f_label)
 
     precio_str = (texto_precio or "Consultar precio").strip()
-    _, pr_h = _medir_texto(draw, precio_str, f_precio)
     draw.text(
         (card_x1 + 36, card_y1 + 24 + lbl_h + 14),
         precio_str,
-        fill="#4ADE80",
+        fill=precio_hex,
         font=f_precio,
     )
 
@@ -223,7 +276,7 @@ def generar_png_servicio_sealquilamarido(
         ico_cx = x_chip + 22 + 12
         ico_cy = y_chips + chip_h // 2
         if tipo_ico == "reloj":
-            _dibujar_icono_reloj(draw, ico_cx, ico_cy, 12, "#F97316")
+            _dibujar_icono_reloj(draw, ico_cx, ico_cy, 12, acento_hex)
         else:
             _dibujar_icono_escudo(draw, ico_cx, ico_cy, 12, "#38BDF8")
 
@@ -247,7 +300,6 @@ def generar_png_servicio_sealquilamarido(
             width=2,
         )
         draw.rectangle([56, y_respaldo + 16, 64, y_respaldo + respaldo_h - 16], fill=(56, 189, 248, 255))
-        nota_txt = "Atención directa en tu domicilio · Reserva en línea"
         _, nh = _medir_texto(draw, nota_txt, f_nota)
         draw.text(
             (86, y_respaldo + (respaldo_h - nh) // 2 - 2),
@@ -259,9 +311,8 @@ def generar_png_servicio_sealquilamarido(
     # 7. Banda inferior de cierre con URL y marca
     footer_y1 = h - 104
     draw.rectangle([0, footer_y1, w, h], fill=(22, 32, 50, 255))
-    draw.rectangle([0, footer_y1, w, footer_y1 + 3], fill=(249, 115, 22, 255))
+    draw.rectangle([0, footer_y1, w, footer_y1 + 3], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
 
-    cta_txt = "Agenda en sealquilamarido.com/mecanica"
     _, ctah = _medir_texto(draw, cta_txt, f_cta)
     draw.text(
         (56, footer_y1 + (104 - ctah) // 2 - 2),
