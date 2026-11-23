@@ -1038,7 +1038,7 @@ def _slug_grupo(nombre: str) -> str:
 
 def _construir_url_utm(base_url: str, grupo_slug: str, share_id: str) -> str:
     limpia = (base_url or "https://sealquilamarido.com/mecanica").strip()
-    if not limpia.startswith("http"):
+    if not limpia.startswith("http") or "facebook.com/" in limpia.lower() or "fb.com/" in limpia.lower():
         limpia = "https://sealquilamarido.com/mecanica"
     parts = _urlsplit(limpia)
     params = dict(_parse_qsl(parts.query, keep_blank_values=True))

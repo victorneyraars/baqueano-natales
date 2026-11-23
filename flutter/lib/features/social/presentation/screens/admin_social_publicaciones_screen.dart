@@ -176,10 +176,16 @@ class _AdminSocialPublicacionesScreenState
     try {
       final grupoLimpio = seleccion.grupoNombre.trim();
       final incluirEnlace = seleccion.incluirEnlace;
-      final urlBase =
+      final rawLink =
           (pub.contenido['link']?.toString().trim().isNotEmpty == true)
           ? pub.contenido['link'].toString().trim()
-          : (urlPublicacion ?? 'https://sealquilamarido.com/mecanica');
+          : (urlPublicacion ?? '');
+      final urlBase =
+          (rawLink.isEmpty ||
+              rawLink.toLowerCase().contains('facebook.com/') ||
+              rawLink.toLowerCase().contains('fb.com/'))
+          ? 'https://sealquilamarido.com/mecanica'
+          : rawLink;
 
       try {
         final res = await ref
@@ -207,13 +213,34 @@ class _AdminSocialPublicacionesScreenState
           );
         }
 
-        final mensajeRaw =
+        final mensajeBase =
             (pub.contenido['message']?.toString().trim().isNotEmpty == true)
             ? pub.contenido['message'].toString().trim()
             : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
-        final textoParaPegar = incluirEnlace
-            ? '$mensajeRaw\n\n$urlConUtm'
-            : '$mensajeRaw\n\nBúscanos en la web como Se Alquila Marido en Puerto Natales.';
+        final mensajeRaw = mensajeBase.replaceAll(RegExp(r'\.\s*—'), ' —');
+        final urlServicioRe = RegExp(
+          r'https?://(?:www\.)?sealquilamarido\.com[^\s]*',
+          caseSensitive: false,
+        );
+        final String textoParaPegar;
+        if (incluirEnlace) {
+          textoParaPegar = urlServicioRe.hasMatch(mensajeRaw)
+              ? mensajeRaw.replaceFirst(urlServicioRe, urlConUtm)
+              : '$mensajeRaw\n\n$urlConUtm';
+        } else {
+          final sinUrl = mensajeRaw
+              .replaceAll(
+                RegExp(
+                  r'\n*Solicítalo o revisa detalles aquí:\s*https?://[^\s]+',
+                  caseSensitive: false,
+                ),
+                '',
+              )
+              .replaceAll(urlServicioRe, '')
+              .trim();
+          textoParaPegar =
+              '$sinUrl\n\nBúscanos en la web como Se Alquila Marido en Puerto Natales.';
+        }
 
         await Clipboard.setData(ClipboardData(text: textoParaPegar));
 
