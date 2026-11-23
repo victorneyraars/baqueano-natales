@@ -797,6 +797,10 @@ class _PublicacionCardState extends ConsumerState<_PublicacionCard> {
     final extId = pub.externalPostId?.trim();
     if (extId == null || extId.isEmpty) return null;
     if (pub.red == RedSocial.facebook) {
+      final partes = extId.split('_');
+      if (partes.length == 2 && partes[0].isNotEmpty && partes[1].isNotEmpty) {
+        return 'https://www.facebook.com/${partes[0]}/posts/${partes[1]}';
+      }
       return 'https://www.facebook.com/$extId';
     }
     return null;
