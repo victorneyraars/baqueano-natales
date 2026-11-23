@@ -233,12 +233,17 @@ class _AdminSocialPublicacionesScreenState
           );
         }
 
-        final uriGrupos = Uri.parse('https://www.facebook.com/groups/');
-        final abrioGrupos = await launchUrl(
-          uriGrupos,
-          mode: LaunchMode.externalApplication,
-        );
-        if (!abrioGrupos) {
+        final uriPublicacion =
+            (urlPublicacion != null && urlPublicacion.trim().isNotEmpty)
+            ? Uri.tryParse(urlPublicacion.trim())
+            : null;
+        final abrioPost = uriPublicacion != null
+            ? await launchUrl(
+                uriPublicacion,
+                mode: LaunchMode.externalApplication,
+              )
+            : false;
+        if (!abrioPost) {
           await SharePlus.instance.share(ShareParams(text: textoParaPegar));
         }
       } on ApiException catch (e) {
