@@ -233,19 +233,7 @@ class _AdminSocialPublicacionesScreenState
           );
         }
 
-        final uriPublicacion =
-            (urlPublicacion != null && urlPublicacion.trim().isNotEmpty)
-            ? Uri.tryParse(urlPublicacion.trim())
-            : null;
-        final abrioPost = uriPublicacion != null
-            ? await launchUrl(
-                uriPublicacion,
-                mode: LaunchMode.externalApplication,
-              )
-            : false;
-        if (!abrioPost) {
-          await SharePlus.instance.share(ShareParams(text: textoParaPegar));
-        }
+        await SharePlus.instance.share(ShareParams(text: textoParaPegar));
       } on ApiException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
