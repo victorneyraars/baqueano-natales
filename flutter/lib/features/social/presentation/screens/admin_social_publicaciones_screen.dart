@@ -4,9 +4,13 @@
 /// en grupos externos con trazabilidad de share_id + UTM o texto sin enlace.
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -233,7 +237,45 @@ class _AdminSocialPublicacionesScreenState
           );
         }
 
-        await SharePlus.instance.share(ShareParams(text: textoParaPegar));
+        final files = <XFile>[];
+        if (pub.tieneImagen) {
+          final rawUrls = pub.contenido['image_urls'] as List;
+          final primeraUrl = rawUrls
+              .map((e) => e?.toString().trim() ?? '')
+              .firstWhere((u) => u.isNotEmpty, orElse: () => '');
+          final imgUri = primeraUrl.isNotEmpty
+              ? Uri.tryParse(primeraUrl)
+              : null;
+          if (imgUri != null &&
+              (imgUri.scheme == 'http' || imgUri.scheme == 'https')) {
+            try {
+              final resp = await http.get(imgUri);
+              if (resp.statusCode >= 200 &&
+                  resp.statusCode < 300 &&
+                  resp.bodyBytes.isNotEmpty) {
+                final dir = await getTemporaryDirectory();
+                final contentType =
+                    resp.headers['content-type']?.toLowerCase() ?? '';
+                final ext = contentType.contains('png')
+                    ? 'png'
+                    : (contentType.contains('webp') ? 'webp' : 'jpg');
+                final tempFile = File('${dir.path}/share_pub_${pub.id}.$ext');
+                await tempFile.writeAsBytes(resp.bodyBytes, flush: true);
+                files.add(XFile(tempFile.path));
+              }
+            } catch (_) {
+              // Fallback a compartir solo texto si falla la descarga de imagen.
+            }
+          }
+        }
+
+        if (files.isNotEmpty) {
+          await SharePlus.instance.share(
+            ShareParams(text: textoParaPegar, files: files),
+          );
+        } else {
+          await SharePlus.instance.share(ShareParams(text: textoParaPegar));
+        }
       } on ApiException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
