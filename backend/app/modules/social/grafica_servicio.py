@@ -88,20 +88,26 @@ def _envolver_titulo_inteligente(
     return lineas_finales, fuente_min, 38
 
 
-def generar_png_servicio_sealquilamarido(
+def generar_png_servicio_prestador(
     *,
     titulo: str,
     texto_precio: str | None,
     duracion_min: int | None,
     garantia_dias: int | None,
+    nombre_prestador: str = "SE ALQUILA MARIDO",
+    subtitulo_prestador: str = "Puerto Natales · Mecánica a domicilio",
+    sello_ubicacion: str | None = None,
+    badge_texto: str = "A DOMICILIO",
+    cta_texto: str | None = None,
+    limpiar_motor: bool = True,
 ) -> bytes:
-    """Genera una gráfica cuadrada 1080x1080 refinada y configurable por variables de entorno."""
+    """Genera una gráfica cuadrada 1080x1080 para cualquier prestador y servicio."""
     w, h = 1080, 1080
 
     acento_rgb = _hex_a_rgb(os.getenv("GRAFICA_SERVICIO_COLOR_ACENTO", "#F97316"), (249, 115, 22))
     acento_hex = f"#{acento_rgb[0]:02X}{acento_rgb[1]:02X}{acento_rgb[2]:02X}"
     precio_hex = (os.getenv("GRAFICA_SERVICIO_COLOR_PRECIO", "#4ADE80") or "#4ADE80").strip()
-    sello_txt = (os.getenv("GRAFICA_SERVICIO_TEXTO_SELLO", "PUERTO NATALES") or "PUERTO NATALES").strip()
+    sello_txt = ((sello_ubicacion or os.getenv("GRAFICA_SERVICIO_TEXTO_SELLO", "PUERTO NATALES")) or "PUERTO NATALES").strip()
     nota_txt = (
         os.getenv(
             "GRAFICA_SERVICIO_TEXTO_NOTA",
@@ -116,6 +122,8 @@ def generar_png_servicio_sealquilamarido(
         )
         or "Agenda en sealquilamarido.com/mecanica"
     ).strip()
+    if cta_texto:
+        cta_txt = cta_texto.strip()
 
     # 1. Fondo con degradado vertical sutil y resplandor cálido controlado
     base_img = Image.new("RGBA", (w, h), (11, 17, 32, 255))
@@ -156,8 +164,8 @@ def generar_png_servicio_sealquilamarido(
     draw.rectangle([0, 0, 12, header_h], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
     draw.rectangle([0, header_h, w, header_h + 4], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
 
-    draw.text((56, 30), "SE ALQUILA MARIDO", fill="#FFFFFF", font=f_marca)
-    draw.text((56, 84), "Puerto Natales · Mecánica a domicilio", fill="#CBD5E1", font=f_sub)
+    draw.text((56, 30), (nombre_prestador or "BAQUEANO NATALES").strip().upper(), fill="#FFFFFF", font=f_marca)
+    draw.text((56, 84), (subtitulo_prestador or "Puerto Natales").strip(), fill="#CBD5E1", font=f_sub)
 
     sw, sh = _medir_texto(draw, sello_txt, f_tag_top)
     sello_w = sw + 36
@@ -179,7 +187,7 @@ def generar_png_servicio_sealquilamarido(
     )
 
     # 3. Badge de modalidad + Título del servicio con ajuste automático
-    badge_txt = "A DOMICILIO"
+    badge_txt = (badge_texto or "SERVICIO").strip().upper()"
     bw, bh = _medir_texto(draw, badge_txt, f_badge)
     badge_w = bw + 48
     badge_h = bh + 22
@@ -197,11 +205,11 @@ def generar_png_servicio_sealquilamarido(
         font=f_badge,
     )
 
-    titulo_limpio = re.sub(
-        r"\s+de\s+motor(?=\s+a\s+domicilio|$)",
-        "",
-        (titulo or "Servicio mecánico").strip().rstrip("."),
-        flags=re.IGNORECASE,
+    titulo_base = (titulo or "Servicio disponible").strip().rstrip(".")
+    titulo_limpio = (
+        re.sub(r"\s+de\s+motor(?=\s+a\s+domicilio|$)", "", titulo_base, flags=re.IGNORECASE)
+        if limpiar_motor
+        else titulo_base
     )
     lineas_titulo, f_titulo, _ = _envolver_titulo_inteligente(
         draw,
@@ -374,3 +382,24 @@ def publicar_grafica_servicio(servicio_id, png_bytes: bytes) -> str | None:
     except Exception as e:
         logger.warning("Social: no se pudo guardar gráfica en /static: %s", e)
         return None
+
+
+def generar_png_servicio_sealquilamarido(
+    *,
+    titulo: str,
+    texto_precio: str | None,
+    duracion_min: int | None,
+    garantia_dias: int | None,
+) -> bytes:
+    return generar_png_servicio_prestador(
+        titulo=titulo,
+        texto_precio=texto_precio,
+        duracion_min=duracion_min,
+        garantia_dias=garantia_dias,
+        nombre_prestador="SE ALQUILA MARIDO",
+        subtitulo_prestador="Puerto Natales · Mecánica a domicilio",
+        sello_ubicacion="PUERTO NATALES",
+        badge_texto="A DOMICILIO",
+        cta_texto="Agenda en sealquilamarido.com/mecanica",
+        limpiar_motor=True,
+    )

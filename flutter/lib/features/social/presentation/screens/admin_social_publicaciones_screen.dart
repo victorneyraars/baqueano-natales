@@ -219,7 +219,7 @@ class _AdminSocialPublicacionesScreenState
             : 'Servicio mecánico en Puerto Natales — atención rápida y transparente.';
         final mensajeRaw = mensajeBase.replaceAll(RegExp(r'\.\s*—'), ' —');
         final urlServicioRe = RegExp(
-          r'https?://(?:www\.)?sealquilamarido\.com[^\s]*',
+          r'https?://(?:www\.)?(?:sealquilamarido\.com|(?:api\.)?baqueanonatales\.com/prestadores/)[^\s]*',
           caseSensitive: false,
         );
         final String textoParaPegar;

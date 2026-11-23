@@ -302,12 +302,13 @@ async def encolar_servicio_nuevo(
                 "https://sealquilamarido.com/mecanica?utm_source=facebook&utm_medium=social&utm_campaign=servicio_mecanica",
             ])
         else:
+            titulo_gen = (servicio.nombre or "Servicio disponible").strip().rstrip(".")
             encabezado = (
                 f"{prestador.nombre} — Servicio disponible"
                 if forzar
                 else f"{prestador.nombre} agregó:"
             )
-            lineas = [encabezado, "", servicio.nombre]
+            lineas = [encabezado, "", titulo_gen]
             if servicio.categoria_servicio:
                 lineas.append(f"({servicio.categoria_servicio})")
             if texto_precio:
@@ -323,35 +324,59 @@ async def encolar_servicio_nuevo(
         mensaje = "\n".join(lineas)
 
         image_url = None
-        if es_sealquilamarido:
+        try:
+            from app.modules.social.grafica_servicio import (
+                generar_png_servicio_prestador,
+                publicar_grafica_servicio,
+            )
+
+            d_min = None
+            g_dias = None
             try:
-                from app.modules.social.grafica_servicio import (
-                    generar_png_servicio_sealquilamarido,
-                    publicar_grafica_servicio,
-                )
+                if duracion is not None and int(duracion) > 0:
+                    d_min = int(duracion)
+            except (TypeError, ValueError):
+                pass
+            try:
+                if garantia is not None and int(garantia) > 0:
+                    g_dias = int(garantia)
+            except (TypeError, ValueError):
+                pass
 
-                d_min = None
-                g_dias = None
-                try:
-                    if duracion is not None and int(duracion) > 0:
-                        d_min = int(duracion)
-                except (TypeError, ValueError):
-                    pass
-                try:
-                    if garantia is not None and int(garantia) > 0:
-                        g_dias = int(garantia)
-                except (TypeError, ValueError):
-                    pass
-
-                png_bytes = generar_png_servicio_sealquilamarido(
+            if es_sealquilamarido:
+                png_bytes = generar_png_servicio_prestador(
                     titulo=servicio.nombre or "",
                     texto_precio=texto_precio,
                     duracion_min=d_min,
                     garantia_dias=g_dias,
+                    nombre_prestador="SE ALQUILA MARIDO",
+                    subtitulo_prestador="Puerto Natales · Mecánica a domicilio",
+                    sello_ubicacion="PUERTO NATALES",
+                    badge_texto="A DOMICILIO",
+                    cta_texto="Agenda en sealquilamarido.com/mecanica",
+                    limpiar_motor=True,
                 )
-                image_url = _url_absoluta(publicar_grafica_servicio(servicio.id, png_bytes))
-            except Exception as e:
-                logger.warning("Social: error generando gráfica para servicio: %s", e)
+            else:
+                sub_txt = (
+                    f"Puerto Natales · {servicio.categoria_servicio}"
+                    if getattr(servicio, "categoria_servicio", None)
+                    else "Puerto Natales · Servicio local"
+                )
+                png_bytes = generar_png_servicio_prestador(
+                    titulo=(servicio.nombre or "").strip().rstrip("."),
+                    texto_precio=texto_precio,
+                    duracion_min=d_min,
+                    garantia_dias=g_dias,
+                    nombre_prestador=getattr(prestador, "nombre", None) or "BAQUEANO NATALES",
+                    subtitulo_prestador=sub_txt,
+                    sello_ubicacion="PUERTO NATALES",
+                    badge_texto="DISPONIBLE",
+                    cta_texto=f"Ver en {web.replace('https://', '').replace('http://', '')}/prestadores/{prestador.slug}",
+                    limpiar_motor=False,
+                )
+            image_url = _url_absoluta(publicar_grafica_servicio(servicio.id, png_bytes))
+        except Exception as e:
+            logger.warning("Social: error generando gráfica para servicio: %s", e)
 
         if not image_url:
             image_url = _url_absoluta(
