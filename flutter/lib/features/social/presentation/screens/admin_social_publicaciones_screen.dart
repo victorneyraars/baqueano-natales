@@ -238,6 +238,7 @@ class _AdminSocialPublicacionesScreenState
         }
 
         final files = <XFile>[];
+        String? motivoSinImagen;
         if (pub.tieneImagen) {
           final rawUrls = pub.contenido['image_urls'] as List;
           final primeraUrl = rawUrls
@@ -246,8 +247,10 @@ class _AdminSocialPublicacionesScreenState
           final imgUri = primeraUrl.isNotEmpty
               ? Uri.tryParse(primeraUrl)
               : null;
-          if (imgUri != null &&
-              (imgUri.scheme == 'http' || imgUri.scheme == 'https')) {
+          if (imgUri == null ||
+              (imgUri.scheme != 'http' && imgUri.scheme != 'https')) {
+            motivoSinImagen = 'URL de imagen inválida o vacía';
+          } else {
             try {
               final resp = await http.get(imgUri);
               if (resp.statusCode >= 200 &&
@@ -256,17 +259,42 @@ class _AdminSocialPublicacionesScreenState
                 final dir = await getTemporaryDirectory();
                 final contentType =
                     resp.headers['content-type']?.toLowerCase() ?? '';
-                final ext = contentType.contains('png')
-                    ? 'png'
-                    : (contentType.contains('webp') ? 'webp' : 'jpg');
+                final String ext;
+                final String mimeType;
+                if (contentType.contains('png')) {
+                  ext = 'png';
+                  mimeType = 'image/png';
+                } else if (contentType.contains('webp')) {
+                  ext = 'webp';
+                  mimeType = 'image/webp';
+                } else {
+                  ext = 'jpg';
+                  mimeType = 'image/jpeg';
+                }
                 final tempFile = File('${dir.path}/share_pub_${pub.id}.$ext');
                 await tempFile.writeAsBytes(resp.bodyBytes, flush: true);
-                files.add(XFile(tempFile.path));
+                files.add(XFile(tempFile.path, mimeType: mimeType));
+              } else {
+                motivoSinImagen =
+                    'HTTP ${resp.statusCode} al descargar gráfica';
               }
-            } catch (_) {
-              // Fallback a compartir solo texto si falla la descarga de imagen.
+            } catch (e) {
+              motivoSinImagen = 'Error descargando gráfica: $e';
             }
           }
+        } else {
+          motivoSinImagen = 'Publicación sin image_urls';
+        }
+
+        if (files.isEmpty && motivoSinImagen != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Sin gráfica adjunta ($motivoSinImagen); se envía texto.',
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
 
         if (files.isNotEmpty) {
