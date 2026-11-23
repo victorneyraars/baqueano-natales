@@ -326,7 +326,7 @@ async def publicar_post_en_pagina(
         local_png = None
         if parsed_path.startswith("/static/social/servicios/"):
             nombre_archivo = os.path.basename(parsed_path)
-            candidato = os.path.join("/tmp/baqueano_static/social/servicios", nombre_archivo)
+            candidato = os.path.join("/var/lib/baqueano-natales/static/social/servicios", nombre_archivo)
             if os.path.isfile(candidato):
                 local_png = candidato
 

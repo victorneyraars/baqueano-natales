@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
-STATIC_SOCIAL_DIR = "/tmp/baqueano_static/social/servicios"
+STATIC_SOCIAL_DIR = "/var/lib/baqueano-natales/static/social/servicios"
 
 
 def _cargar_fuente(tamano: int, negrita: bool = False):

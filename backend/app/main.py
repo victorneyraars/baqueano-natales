@@ -248,7 +248,7 @@ app.include_router(ops_admin_router, prefix="/api/v1")
 # Analytics (Cloudflare Web Analytics)
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(revalidate_router, prefix="/api/v1")
-_static_dir = "/tmp/baqueano_static"
+_static_dir = "/var/lib/baqueano-natales/static"
 os.makedirs(_static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
