@@ -692,38 +692,173 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
     'Reparaciones',
   ];
 
-  static const _clausulasRapidas = <(String, String)>[
-    (
-      'Solo mano de obra',
-      'Servicio solo de mano de obra; insumos o repuestos a cargo del cliente.',
-    ),
-    (
-      'Retiro aceite \$5.000',
-      'Retiro y disposición responsable de aceite usado por \$5.000 adicionales.',
-    ),
-    (
-      'Estanqueidad y torque',
-      'Apriete controlado, revisión sin fugas y verificación final de niveles.',
-    ),
-    (
-      'Según acceso/diagnóstico',
-      'Tiempo y alcance sujetos a acceso físico y estado previo de piezas.',
-    ),
-  ];
+  List<(String, String)> _clausulasParaCategoria() {
+    final cat = _categoriaCtrl.text.trim().toLowerCase();
+    if (cat.contains('freno')) {
+      return const [
+        ('Valor por eje', 'Tarifa referencial por eje (par de ruedas).'),
+        (
+          'Solo mano de obra',
+          'Solo mano de obra; cliente aporta pastillas o se cotizan aparte.',
+        ),
+        (
+          'Limpieza y guías',
+          'Incluye limpieza de caliper, lubricación de pasadores y prueba de frenado.',
+        ),
+        (
+          'Sin discos ni EPB',
+          'No incluye rectificado/cambio de discos ni freno eléctrico (EPB).',
+        ),
+      ];
+    }
+    if (cat.contains('eléctric') || cat.contains('electric')) {
+      return const [
+        (
+          'Valor por visita',
+          'Tarifa base por visita y diagnóstico en terreno.',
+        ),
+        (
+          'Multímetro / carga',
+          'Incluye medición de batería, carga de alternador y consumo básico.',
+        ),
+        (
+          'Sin repuestos',
+          'No incluye repuestos eléctricos; fallas mayores se cotizan aparte.',
+        ),
+        (
+          'Presupuesto previo',
+          'Cualquier intervención adicional se informa antes de ejecutar.',
+        ),
+      ];
+    }
+    if (cat.contains('suspensi')) {
+      return const [
+        (
+          'Valor por rueda',
+          'Tarifa referencial por rueda; según acceso y estado de pernos.',
+        ),
+        (
+          'Solo mano de obra',
+          'Solo mano de obra; cliente aporta repuestos o se cotizan aparte.',
+        ),
+        (
+          'Superficie plana',
+          'Requiere vehículo en superficie plana, firme y segura.',
+        ),
+        (
+          'Sin elevador',
+          'No incluye alineación ni trabajos que requieran elevador de taller.',
+        ),
+      ];
+    }
+    if (cat.contains('emergencia')) {
+      return const [
+        (
+          'Valor por visita',
+          'Tarifa base de salida y asistencia en terreno en Puerto Natales.',
+        ),
+        (
+          'Diagnóstico rápido',
+          'Evaluación en terreno para partida o solución segura.',
+        ),
+        (
+          'Presupuesto previo',
+          'Reparaciones adicionales o repuestos se cotizan antes de intervenir.',
+        ),
+        (
+          'Zona segura',
+          'Sujeto a condiciones seguras de estacionamiento y clima.',
+        ),
+      ];
+    }
+    if (cat.contains('mantenimiento') || cat.contains('motor')) {
+      return const [
+        (
+          'Solo mano de obra',
+          'Solo mano de obra; cliente aporta lubricante y filtros.',
+        ),
+        (
+          'Retiro aceite \$5.000',
+          'Retiro y disposición responsable de aceite usado opcional por \$5.000 adicionales.',
+        ),
+        (
+          'Estanqueidad y torque',
+          'Bandeja de contención, apriete controlado y control final de nivel.',
+        ),
+        (
+          'Sin cubre cárter complejo',
+          'No incluye golilla ni desarme de cubre cárter complejo; fallas previas se informan.',
+        ),
+      ];
+    }
+    return const [
+      (
+        'Solo mano de obra',
+        'Solo mano de obra; cliente aporta repuestos o se cotizan aparte.',
+      ),
+      (
+        'Presupuesto previo',
+        'Se informa cualquier falla adicional antes de intervenir.',
+      ),
+      (
+        'Superficie plana',
+        'Requiere vehículo estacionado en superficie plana, segura y accesible.',
+      ),
+      (
+        'Mecánica ligera',
+        'Alcance de mecánica ligera; trabajos de elevador se derivan a taller.',
+      ),
+    ];
+  }
+
+  String _plantillaParaCategoria() {
+    final cat = _categoriaCtrl.text.trim().toLowerCase();
+    if (cat.contains('freno')) {
+      return '• Incluye: cambio de pastillas de frenos por eje a domicilio, limpieza de caliper, lubricación de guías y prueba de frenado.\n'
+          '• Insumos: solo mano de obra (cliente aporta pastillas o se cotizan aparte).\n'
+          '• Condiciones: requiere superficie plana y segura. No incluye rectificado/cambio de discos, purgado completo ni freno eléctrico (EPB).\n'
+          '• Garantía: cubre mano de obra ejecutada (no cubre fallas de repuestos aportados por el cliente).';
+    }
+    if (cat.contains('eléctric') || cat.contains('electric')) {
+      return '• Incluye: revisión eléctrica básica a domicilio, prueba de batería, carga de alternador y diagnóstico en terreno.\n'
+          '• Insumos: no incluye repuestos eléctricos ni fusibles especiales (se cotizan aparte).\n'
+          '• Condiciones: presupuesto previo antes de intervenir; fallas de electrónica compleja se derivan a taller.\n'
+          '• Garantía: cubre la mano de obra de la reparación ejecutada.';
+    }
+    if (cat.contains('suspensi')) {
+      return '• Incluye: desmontaje, recambio de componente liviano en terreno y verificación de apriete.\n'
+          '• Insumos: solo mano de obra (cliente aporta repuestos o se cotizan aparte).\n'
+          '• Condiciones: requiere superficie plana y segura. No incluye alineación ni trabajos de elevador; pernos trabados o fallas previas se informan antes.\n'
+          '• Garantía: cubre mano de obra ejecutada (no cubre fallas de repuestos aportados por el cliente).';
+    }
+    if (cat.contains('emergencia')) {
+      return '• Incluye: asistencia mecánica ligera en terreno en Puerto Natales y diagnóstico inicial.\n'
+          '• Insumos: repuestos o insumos requeridos se cotizan aparte.\n'
+          '• Condiciones: sujeto a ubicación segura y accesible; presupuesto previo antes de reparar.\n'
+          '• Garantía: cubre mano de obra ejecutada en la intervención.';
+    }
+    if (cat.contains('mantenimiento')) {
+      return '• Incluye: mantención preventiva a domicilio con bandeja de contención, apriete controlado y verificación final.\n'
+          '• Insumos: solo mano de obra (cliente aporta lubricante, filtros o repuestos).\n'
+          '• Condiciones: requiere superficie plana y segura; fallas previas o trabajos complejos se informan antes de intervenir.\n'
+          '• Garantía: cubre mano de obra y estanqueidad en el trabajo realizado.';
+    }
+    return '• Incluye: servicio de mecánica ligera a domicilio con protocolo de limpieza y seguridad.\n'
+        '• Insumos: solo mano de obra (cliente aporta repuestos o se cotizan aparte).\n'
+        '• Condiciones: requiere superficie plana y segura; trabajos de elevador o mecánica mayor se derivan a taller.\n'
+        '• Garantía: cubre mano de obra ejecutada (no cubre fallas de repuestos aportados por el cliente).';
+  }
 
   void _aplicarPlantillaDescripcion() {
-    const plantilla =
-        '• Alcance / incluye: \n'
-        '• Ejecución y cuidado: \n'
-        '• Condiciones / extras: \n'
-        '• Garantía: ';
-    if (_descripcionCtrl.text.trim().isEmpty) {
+    final plantilla = _plantillaParaCategoria();
+    final actual = _descripcionCtrl.text.trim();
+    if (actual.isEmpty) {
       setState(() => _descripcionCtrl.text = plantilla);
       return;
     }
-    if (!_descripcionCtrl.text.contains('• Alcance / incluye:')) {
+    if (!actual.contains('• Incluye:')) {
       setState(() {
-        _descripcionCtrl.text = '$plantilla\n${_descripcionCtrl.text.trim()}';
+        _descripcionCtrl.text = '$plantilla\n\n$actual';
       });
     }
   }
@@ -732,7 +867,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
     final actual = _descripcionCtrl.text.trim();
     if (actual.contains(texto)) return;
     setState(() {
-      _descripcionCtrl.text = actual.isEmpty ? texto : '$actual $texto';
+      _descripcionCtrl.text = actual.isEmpty ? '• $texto' : '$actual\n• $texto';
     });
   }
 
@@ -938,6 +1073,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
 
                     TextFormField(
                       controller: _categoriaCtrl,
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'Categoría de servicio',
                         hintText: 'Ej: Mantenimiento, Frenos, Motor',
@@ -1026,7 +1162,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                       spacing: 4,
                       runSpacing: 4,
                       children: [
-                        for (final item in _clausulasRapidas)
+                        for (final item in _clausulasParaCategoria())
                           ActionChip(
                             label: Text('+ ${item.$1}'),
                             visualDensity: VisualDensity.compact,
