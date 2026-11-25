@@ -47,7 +47,40 @@ def _url_absoluta(url: str | None) -> str | None:
     base = settings.PUBLIC_API_URL.rstrip("/")
     return f"{base}/{url.lstrip('/')}"
 
-
+def _datos_whatsapp_prestador(prestador) -> dict | None:
+    if not prestador:
+        return None
+    raw_phone = ""
+    for attr in ("whatsapp", "telefono", "phone", "fono"):
+        val = prestador.get(attr) if hasattr(prestador, "get") else getattr(prestador, attr, None)
+        if val and str(val).strip():
+            raw_phone = str(val).strip()
+            break
+    digits = "".join(ch for ch in raw_phone if ch.isdigit())
+    if not digits:
+        return None
+    if len(digits) == 9 and digits.startswith("9"):
+        digits = "56" + digits
+    elif len(digits) == 8:
+        digits = "569" + digits
+    if len(digits) == 11 and digits.startswith("569"):
+        visible = f"+{digits[:2]} {digits[2]} {digits[3:7]} {digits[7:]}"
+    else:
+        visible = raw_phone if raw_phone.startswith("+") else f"+{digits}"
+    mensaje = ""
+    for attr in ("whatsapp_mensaje", "mensaje_whatsapp"):
+        m = prestador.get(attr) if hasattr(prestador, "get") else getattr(prestador, attr, None)
+        if m and str(m).strip():
+            mensaje = str(m).strip()
+            break
+    wa_url = f"https://wa.me/{digits}"
+    return {
+        "digits": digits,
+        "e164": f"+{digits}",
+        "visible": visible,
+        "mensaje": mensaje,
+        "url": wa_url,
+    }
 async def _resolver_config_prestador(
     db: AsyncSession,
     prestador_id: UUID | None,
@@ -299,8 +332,11 @@ async def encolar_servicio_nuevo(
             lineas.extend([
                 "",
                 "Solicítalo o revisa detalles aquí:",
-                "https://sealquilamarido.com/mecanica?utm_source=facebook&utm_medium=social&utm_campaign=servicio_mecanica",
+                "https://sealquilamarido.com/mecanica",
             ])
+            wa_info = _datos_whatsapp_prestador(prestador)
+            if wa_info:
+                lineas.append(f"WhatsApp directo: {wa_info['visible']}\n{wa_info['url']}")
         else:
             titulo_gen = (servicio.nombre or "Servicio disponible").strip().rstrip(".")
             encabezado = (
@@ -320,6 +356,9 @@ async def encolar_servicio_nuevo(
                 lineas.append(servicio.descripcion)
             lineas.append("")
             lineas.append(f"Pídelo en: {web}/prestadores/{prestador.slug}")
+            wa_info = _datos_whatsapp_prestador(prestador)
+            if wa_info:
+                lineas.append(f"WhatsApp directo: {wa_info['visible']}\n{wa_info['url']}")
 
         mensaje = "\n".join(lineas)
 
@@ -354,6 +393,7 @@ async def encolar_servicio_nuevo(
                     sello_ubicacion="PUERTO NATALES",
                     badge_texto="A DOMICILIO",
                     cta_texto="Agenda en sealquilamarido.com/mecanica",
+                    whatsapp_texto=(f"WA: {wa_info['visible']}" if wa_info else None),
                     limpiar_motor=True,
                 )
             else:
@@ -372,6 +412,7 @@ async def encolar_servicio_nuevo(
                     sello_ubicacion="PUERTO NATALES",
                     badge_texto="DISPONIBLE",
                     cta_texto=f"Ver en {web.replace('https://', '').replace('http://', '')}/prestadores/{prestador.slug}",
+                    whatsapp_texto=(f"WA: {wa_info['visible']}" if wa_info else None),
                     limpiar_motor=False,
                 )
             image_url = _url_absoluta(publicar_grafica_servicio(servicio.id, png_bytes))
@@ -379,10 +420,32 @@ async def encolar_servicio_nuevo(
             logger.warning("Social: error generando gráfica para servicio: %s", e)
 
         if not image_url:
-            image_url = _url_absoluta(
-                getattr(prestador, "foto_portada_url", None)
-                or getattr(prestador, "foto_url", None)
-            )
+            try:
+                from pathlib import Path as _Path
+                from app.modules.social.grafica_servicio import generar_png_servicio_prestador as _gen_png
+                _png = _gen_png(
+                    titulo=(servicio.nombre or "").strip().rstrip("."),
+                    texto_precio=texto_precio,
+                    duracion_min=d_min,
+                    garantia_dias=g_dias,
+                    nombre_prestador=(getattr(prestador, "nombre", None) or "BAQUEANO NATALES").upper(),
+                    subtitulo_prestador="Puerto Natales · Mecánica a domicilio" if es_sealquilamarido else "Puerto Natales · Servicio local",
+                    sello_ubicacion="PUERTO NATALES",
+                    badge_texto="A DOMICILIO" if es_sealquilamarido else "DISPONIBLE",
+                    cta_texto="Agenda en sealquilamarido.com/mecanica" if es_sealquilamarido else f"Ver en {web.replace('https://', '').replace('http://', '')}/prestadores/{prestador.slug}",
+                    whatsapp_texto=(f"WA: {wa_info['visible']}" if wa_info else None),
+                    limpiar_motor=es_sealquilamarido,
+                )
+                _out = _Path(f"/var/lib/baqueano-natales/static/social/servicios/{servicio.id}.png")
+                _out.parent.mkdir(parents=True, exist_ok=True)
+                _out.write_bytes(_png)
+                image_url = _url_absoluta(f"/static/social/servicios/{servicio.id}.png")
+            except Exception as _e2:
+                logger.warning("Social: fallback PNG local falló: %s", _e2)
+                image_url = _url_absoluta(
+                    getattr(prestador, "foto_portada_url", None)
+                    or getattr(prestador, "foto_url", None)
+                )
 
         return await _encolar_para_redes_configuradas(
             db,
