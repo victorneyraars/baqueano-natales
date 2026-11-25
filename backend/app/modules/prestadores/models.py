@@ -114,6 +114,13 @@ class CategoriaOficio(TimestampMixin, SoftDeleteMixin, Base):
         default=0,
         server_default="0",
     )
+    campos_extra: Mapped[list[dict]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default="[]",
+        comment="Campos dinámicos clave/valor editables desde la app",
+    )
 
     def __repr__(self) -> str:
         return (

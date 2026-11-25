@@ -303,6 +303,7 @@ class PrestadorRepository {
     int? garantiaDias,
     bool destacado = false,
     int orden = 0,
+    List<CampoExtraServicio> camposExtra = const [],
   }) async {
     try {
       final res = await _dio.post(
@@ -317,6 +318,7 @@ class PrestadorRepository {
           'garantia_dias': garantiaDias,
           'destacado': destacado,
           'orden': orden,
+          'campos_extra': camposExtra.map((c) => c.toJson()).toList(),
         },
       );
       return PrestadorServicio.fromJson(res.data as Map<String, dynamic>);

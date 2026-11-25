@@ -677,6 +677,8 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
 
   bool _destacado = false;
   bool _activo = true;
+  final List<CampoExtraServicio> _camposExtra = [];
+  final List<String> _clausulasCustom = [];
   bool _guardando = false;
 
   bool get _esEdicion => widget.servicio != null;
@@ -871,6 +873,159 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
     });
   }
 
+  static const List<(String, String)> _presetsCamposIndustria = [
+    (
+      'Modalidad / Unidad',
+      'Por servicio (o especificar por eje / rueda / hora)',
+    ),
+    (
+      'Repuestos e insumos',
+      'Solo mano de obra; cliente aporta o se cotizan aparte',
+    ),
+    (
+      'Terreno y seguridad',
+      'Superficie plana y firme; sujeto a clima y zona segura',
+    ),
+    (
+      'Cobertura y traslado',
+      'Radio urbano incluido; sector rural/ripio con recargo',
+    ),
+    ('Vehículo / Alcance', 'Auto, SUV, camioneta 4x4 o furgón liviano'),
+    (
+      'Diagnóstico / Espera',
+      'Diagnóstico descontable si repara; espera máx. 15 min',
+    ),
+  ];
+
+  Future<void> _abrirDialogoCampoExtra({
+    int? index,
+    String? claveInicial,
+    String? valorInicial,
+  }) async {
+    final claveCtrl = TextEditingController(
+      text: index != null ? _camposExtra[index].clave : (claveInicial ?? ''),
+    );
+    final valorCtrl = TextEditingController(
+      text: index != null ? _camposExtra[index].valor : (valorInicial ?? ''),
+    );
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(index != null ? 'Editar campo' : 'Agregar campo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: claveCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del campo *',
+                hintText: 'Ej: Unidad de cobro, Repuestos, Zona',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: valorCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Detalle / Valor *',
+                hintText: 'Ej: Por eje (par de ruedas)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              minLines: 1,
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (claveCtrl.text.trim().isEmpty ||
+                  valorCtrl.text.trim().isEmpty)
+                return;
+              Navigator.of(ctx).pop(true);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) {
+      final nuevo = CampoExtraServicio(
+        clave: claveCtrl.text.trim(),
+        valor: valorCtrl.text.trim(),
+      );
+      setState(() {
+        if (index != null) {
+          _camposExtra[index] = nuevo;
+        } else {
+          final existente = _camposExtra.indexWhere(
+            (c) => c.clave.toLowerCase() == nuevo.clave.toLowerCase(),
+          );
+          if (existente >= 0) {
+            _camposExtra[existente] = nuevo;
+          } else {
+            _camposExtra.add(nuevo);
+          }
+        }
+      });
+    }
+    claveCtrl.dispose();
+    valorCtrl.dispose();
+  }
+
+  Future<void> _abrirDialogoNuevaClausula() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva cláusula rápida'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(
+            labelText: 'Texto de la cláusula',
+            hintText: 'Ej: Incluye escaneo OBD2 básico sin costo adicional.',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          minLines: 2,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (ctrl.text.trim().isEmpty) return;
+              Navigator.of(ctx).pop(true);
+            },
+            child: const Text('Insertar'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) {
+      final texto = ctrl.text.trim();
+      setState(() {
+        if (!_clausulasCustom.contains(texto)) {
+          _clausulasCustom.add(texto);
+        }
+      });
+      _insertarClausula(texto);
+    }
+    ctrl.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -887,6 +1042,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
       _garantiaCtrl.text = s.garantiaDias?.toString() ?? '';
       _destacado = widget.servicio != null ? s.destacado : false;
       _activo = widget.servicio != null ? s.activo : true;
+      _camposExtra.addAll(s.camposExtra);
     }
   }
 
@@ -925,6 +1081,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
           'garantia_dias': _parseIntOrNull(_garantiaCtrl.text),
           'destacado': _destacado,
           'activo': _activo,
+          'campos_extra': _camposExtra.map((c) => c.toJson()).toList(),
         };
         await repo.editarServicio(
           prestadorId: widget.prestadorId,
@@ -942,6 +1099,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
           duracionEstimadaMin: _parseIntOrNull(_duracionCtrl.text),
           garantiaDias: _parseIntOrNull(_garantiaCtrl.text),
           destacado: _destacado,
+          camposExtra: _camposExtra,
         );
       }
 
@@ -1168,6 +1326,20 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                             visualDensity: VisualDensity.compact,
                             onPressed: () => _insertarClausula(item.$2),
                           ),
+                        for (final custom in _clausulasCustom)
+                          ActionChip(
+                            label: Text(
+                              '+ ${custom.length > 24 ? '${custom.substring(0, 24)}…' : custom}',
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => _insertarClausula(custom),
+                          ),
+                        ActionChip(
+                          avatar: const Icon(Icons.add, size: 16),
+                          label: const Text('Nueva cláusula'),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: _abrirDialogoNuevaClausula,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -1338,6 +1510,72 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                       ],
                     ),
                     const SizedBox(height: 8),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Detalles técnicos y condiciones',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _abrirDialogoCampoExtra(),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Agregar campo'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (final preset in _presetsCamposIndustria)
+                          ActionChip(
+                            label: Text('+ ${preset.$1}'),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => _abrirDialogoCampoExtra(
+                              claveInicial: preset.$1,
+                              valorInicial: preset.$2,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (_camposExtra.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      for (var i = 0; i < _camposExtra.length; i++)
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          elevation: 0,
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.45),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 2,
+                            ),
+                            title: Text(
+                              _camposExtra[i].clave,
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            subtitle: Text(_camposExtra[i].valor),
+                            onTap: () => _abrirDialogoCampoExtra(index: i),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              tooltip: 'Quitar campo',
+                              onPressed: () =>
+                                  setState(() => _camposExtra.removeAt(i)),
+                            ),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 12),
 
                     SwitchListTile(
                       title: const Text('Servicio destacado'),

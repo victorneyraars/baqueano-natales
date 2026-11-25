@@ -501,6 +501,7 @@ async def setear_servicios(
             garantia_dias=sdata.garantia_dias,
             destacado=sdata.destacado,
             orden=sdata.orden if sdata.orden > 0 else idx,
+            campos_extra=[c.model_dump() for c in sdata.campos_extra],
         )
         db.add(srv)
         nuevos.append(srv)
@@ -530,6 +531,7 @@ async def agregar_servicio(
         garantia_dias=data.garantia_dias,
         destacado=data.destacado,
         orden=orden,
+        campos_extra=[c.model_dump() for c in data.campos_extra],
     )
     db.add(srv)
     await db.flush()

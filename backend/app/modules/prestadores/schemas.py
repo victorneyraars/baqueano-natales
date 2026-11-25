@@ -87,6 +87,11 @@ class CategoriaOficioResponse(CategoriaOficioBase):
 # =========================================================
 # Servicios del prestador
 # =========================================================
+class CampoExtraServicio(BaseModel):
+    clave: str = Field(min_length=1, max_length=80)
+    valor: str = Field(min_length=1, max_length=300)
+
+
 class PrestadorServicioBase(BaseModel):
     nombre: str = Field(min_length=3, max_length=150)
     descripcion: str | None = None
@@ -99,6 +104,9 @@ class PrestadorServicioBase(BaseModel):
     garantia_dias: int | None = Field(default=None, ge=0, le=3650)
     destacado: bool = False
     orden: int = Field(default=0, ge=0)
+    campos_extra: list[CampoExtraServicio] = Field(
+        default_factory=list, max_length=30
+    )
 
     @field_validator("precio_hasta_clp")
     @classmethod
@@ -133,6 +141,9 @@ class PrestadorServicioUpdate(BaseModel):
     destacado: bool | None = None
     activo: bool | None = None
     orden: int | None = Field(default=None, ge=0)
+    campos_extra: list[CampoExtraServicio] | None = Field(
+        default=None, max_length=30
+    )
 
 
 class PrestadorServicioResponse(PrestadorServicioBase):

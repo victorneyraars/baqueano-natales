@@ -11,6 +11,25 @@
 /// - `destacado` (servicio estrella / hook comercial)
 library;
 
+class CampoExtraServicio {
+  const CampoExtraServicio({required this.clave, required this.valor});
+
+  final String clave;
+  final String valor;
+
+  factory CampoExtraServicio.fromJson(Map<String, dynamic> json) {
+    return CampoExtraServicio(
+      clave: (json['clave'] as String? ?? '').trim(),
+      valor: (json['valor'] as String? ?? '').trim(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'clave': clave.trim(),
+    'valor': valor.trim(),
+  };
+}
+
 class PrestadorServicio {
   const PrestadorServicio({
     required this.id,
@@ -25,6 +44,7 @@ class PrestadorServicio {
     this.destacado = false,
     required this.activo,
     required this.orden,
+    this.camposExtra = const [],
   });
 
   final String id;
@@ -39,6 +59,7 @@ class PrestadorServicio {
   final bool destacado;
   final bool activo;
   final int orden;
+  final List<CampoExtraServicio> camposExtra;
 
   // =========================================================
   // Helpers
@@ -111,6 +132,12 @@ class PrestadorServicio {
       destacado: json['destacado'] as bool? ?? false,
       activo: json['activo'] as bool? ?? true,
       orden: (json['orden'] as num?)?.toInt() ?? 0,
+      camposExtra:
+          (json['campos_extra'] as List<dynamic>? ?? const []).whereType >
+          ()
+              .map(CampoExtraServicio.fromJson)
+              .where((c) => c.clave.isNotEmpty && c.valor.isNotEmpty)
+              .toList(),
     );
   }
 
@@ -128,6 +155,7 @@ class PrestadorServicio {
       'destacado': destacado,
       'activo': activo,
       'orden': orden,
+      'campos_extra': camposExtra.map((c) => c.toJson()).toList(),
     };
   }
 
