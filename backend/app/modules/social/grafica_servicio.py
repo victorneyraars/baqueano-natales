@@ -99,6 +99,7 @@ def generar_png_servicio_prestador(
     sello_ubicacion: str | None = None,
     badge_texto: str = "A DOMICILIO",
     cta_texto: str | None = None,
+    whatsapp_texto: str | None = None,
     limpiar_motor: bool = True,
 ) -> bytes:
     """Genera una gráfica cuadrada 1080x1080 para cualquier prestador y servicio."""
@@ -187,7 +188,7 @@ def generar_png_servicio_prestador(
     )
 
     # 3. Badge de modalidad + Título del servicio con ajuste automático
-    badge_txt = (badge_texto or "SERVICIO").strip().upper()"
+    badge_txt = (badge_texto or "SERVICIO").strip().upper()
     bw, bh = _medir_texto(draw, badge_txt, f_badge)
     badge_w = bw + 48
     badge_h = bh + 22
@@ -227,7 +228,7 @@ def generar_png_servicio_prestador(
     # 4. Tarjeta principal de tarifa
     card_x1 = 56
     card_x2 = w - 56
-    card_y1 = max(y_actual + 26, 480)
+    card_y1 = max(y_actual + 24, 435)
     card_h = 176
     card_y2 = card_y1 + card_h
 
@@ -262,7 +263,7 @@ def generar_png_servicio_prestador(
     )
 
     # 5. Chips de duración y garantía con íconos limpios
-    y_chips = card_y2 + 28
+    y_chips = card_y2 + 24
     x_chip = 56
     chip_h = 62
     chips_data: list[tuple[str, str]] = []
@@ -297,9 +298,9 @@ def generar_png_servicio_prestador(
         x_chip += ancho_chip + 18
 
     # 6. Bloque de respaldo en el espacio inferior
-    y_respaldo = (y_chips + chip_h + 34) if chips_data else (card_y2 + 34)
-    respaldo_h = 84
-    if y_respaldo + respaldo_h < h - 135:
+    y_respaldo = (y_chips + chip_h + 24) if chips_data else (card_y2 + 24)
+    respaldo_h = 74
+    if y_respaldo + respaldo_h < h - 200:
         draw.rounded_rectangle(
             [56, y_respaldo, w - 56, y_respaldo + respaldo_h],
             radius=18,
@@ -307,7 +308,7 @@ def generar_png_servicio_prestador(
             outline=(51, 65, 85, 255),
             width=2,
         )
-        draw.rectangle([56, y_respaldo + 16, 64, y_respaldo + respaldo_h - 16], fill=(56, 189, 248, 255))
+        draw.rectangle([56, y_respaldo + 14, 64, y_respaldo + respaldo_h - 14], fill=(56, 189, 248, 255))
         _, nh = _medir_texto(draw, nota_txt, f_nota)
         draw.text(
             (86, y_respaldo + (respaldo_h - nh) // 2 - 2),
@@ -316,19 +317,43 @@ def generar_png_servicio_prestador(
             font=f_nota,
         )
 
-    # 7. Banda inferior de cierre con URL y marca
+    # 6b. Cápsula de WhatsApp en línea individual (centrada y destacada)
     footer_y1 = h - 104
+    if whatsapp_texto and whatsapp_texto.strip():
+        wa_txt = whatsapp_texto.strip()
+        f_wa = _cargar_fuente(32, negrita=True)
+        waw, wah = _medir_texto(draw, wa_txt, f_wa)
+        pad_x, pad_y = 38, 18
+        pill_w = min(waw + pad_x * 2, w - 112)
+        pill_h = wah + pad_y * 2
+        y_espacio_inicio = y_respaldo + respaldo_h
+        pill_y1 = y_espacio_inicio + max(24, (footer_y1 - y_espacio_inicio - pill_h) // 2)
+        pill_y2 = pill_y1 + pill_h
+        pill_x1 = (w - pill_w) // 2
+        pill_x2 = pill_x1 + pill_w
+        draw.rounded_rectangle(
+            [pill_x1, pill_y1, pill_x2, pill_y2],
+            radius=pill_h // 2,
+            fill=(22, 163, 74, 255),
+        )
+        draw.text(
+            (pill_x1 + (pill_w - waw) // 2, pill_y1 + (pill_h - wah) // 2 - 2),
+            wa_txt,
+            fill="#FFFFFF",
+            font=f_wa,
+        )
+
+    # 7. Banda inferior de cierre con URL centrada
     draw.rectangle([0, footer_y1, w, h], fill=(22, 32, 50, 255))
     draw.rectangle([0, footer_y1, w, footer_y1 + 3], fill=(acento_rgb[0], acento_rgb[1], acento_rgb[2], 255))
 
-    _, ctah = _medir_texto(draw, cta_txt, f_cta)
+    ctaw, ctah = _medir_texto(draw, cta_txt, f_cta)
     draw.text(
-        (56, footer_y1 + (104 - ctah) // 2 - 2),
+        ((w - ctaw) // 2, footer_y1 + (104 - ctah) // 2 - 2),
         cta_txt,
         fill="#F8FAFC",
         font=f_cta,
     )
-
     out_rgb = base_img.convert("RGB")
     buf = BytesIO()
     out_rgb.save(buf, format="PNG", optimize=True)
