@@ -132,12 +132,11 @@ class PrestadorServicio {
       destacado: json['destacado'] as bool? ?? false,
       activo: json['activo'] as bool? ?? true,
       orden: (json['orden'] as num?)?.toInt() ?? 0,
-      camposExtra:
-          (json['campos_extra'] as List<dynamic>? ?? const []).whereType >
-          ()
-              .map(CampoExtraServicio.fromJson)
-              .where((c) => c.clave.isNotEmpty && c.valor.isNotEmpty)
-              .toList(),
+      camposExtra: (json['campos_extra'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(CampoExtraServicio.fromJson)
+          .where((c) => c.clave.isNotEmpty && c.valor.isNotEmpty)
+          .toList(),
     );
   }
 
