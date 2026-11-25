@@ -1005,7 +1005,9 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
           ),
           FilledButton(
             onPressed: () {
-              if (ctrl.text.trim().isEmpty) return;
+              if (ctrl.text.trim().isEmpty) {
+                return;
+              }
               Navigator.of(ctx).pop(true);
             },
             child: const Text('Insertar'),
@@ -1521,7 +1523,7 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
                           ),
                         ),
                         TextButton.icon(
-                          onPressed: () => _abrirDialogoCampoExtra(),
+                          onPressed: _abrirDialogoCampoExtra,
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text('Agregar campo'),
                           style: TextButton.styleFrom(
