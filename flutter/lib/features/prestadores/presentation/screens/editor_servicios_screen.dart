@@ -947,8 +947,9 @@ class _FormularioServicioSheetState extends State<_FormularioServicioSheet> {
           FilledButton(
             onPressed: () {
               if (claveCtrl.text.trim().isEmpty ||
-                  valorCtrl.text.trim().isEmpty)
+                  valorCtrl.text.trim().isEmpty) {
                 return;
+              }
               Navigator.of(ctx).pop(true);
             },
             child: const Text('Guardar'),
