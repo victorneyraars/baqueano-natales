@@ -73,7 +73,10 @@ def _datos_whatsapp_prestador(prestador) -> dict | None:
         if m and str(m).strip():
             mensaje = str(m).strip()
             break
-    wa_url = f"https://wa.me/{digits}"
+    from urllib.parse import quote_plus
+
+    texto_wa = mensaje or "Hola quiero cotizar un servicio"
+    wa_url = f"https://wa.me/{digits}?text={quote_plus(texto_wa)}"
     return {
         "digits": digits,
         "e164": f"+{digits}",
