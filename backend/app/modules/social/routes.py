@@ -1042,11 +1042,7 @@ def _construir_url_utm(base_url: str, grupo_slug: str, share_id: str) -> str:
         limpia = "https://sealquilamarido.com/mecanica"
     parts = _urlsplit(limpia)
     params = dict(_parse_qsl(parts.query, keep_blank_values=True))
-    params["utm_source"] = "facebook"
-    params["utm_medium"] = "grupo"
-    params["utm_campaign"] = "natales_mecanica"
-    params["utm_content"] = grupo_slug
-    params["utm_term"] = share_id
+    params["s"] = share_id
     return _urlunsplit((parts.scheme, parts.netloc, parts.path, _urlencode(params), parts.fragment))
 
 
@@ -1142,8 +1138,7 @@ async def registrar_compartido(
         if transcurridos < _COOLDOWN_SEGUNDOS:
             segundos_restantes = _COOLDOWN_SEGUNDOS - transcurridos
 
-    sufijo = _secrets.token_hex(2).upper()
-    share_id = f"sh_{ahora.strftime('%Y%m%d_%H%M%S')}_{sufijo}"
+    share_id = _secrets.token_hex(3)
     grupo_nombre = data.grupo_nombre.strip()
     grupo_slug = _slug_grupo(grupo_nombre)
     url_utm = _construir_url_utm(data.url_base, grupo_slug, share_id)
